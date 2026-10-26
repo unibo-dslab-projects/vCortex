@@ -1,0 +1,6 @@
+# Saved maps for offline mode (mounted at /data in the backend container)
+/data/*
+!/data/.gitkeep
+
+# Local secrets for compose
+.env

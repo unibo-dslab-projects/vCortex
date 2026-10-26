@@ -1,0 +1,32 @@
+{
+  "building_name": "vCortex building",
+  "model_period_s": 3.0,
+  "wall_height": 2.70,
+  "min_scans": 5,
+  "outliers": { "mean_k": 20, "stddev_mul": 2.0 },
+  "candidates": {
+    "band_lo": 0.30,
+    "band_top_margin": 0.10,
+    "cell": 0.05,
+    "min_column": 2,
+    "max_gap": 0.30,
+    "min_length": 1.0,
+    "merge_distance": 0.10
+  },
+  "walls": {
+    "span_margin": 0.5,
+    "both_sides_range": 5.0,
+    "max_depth": 1.5,
+    "overlap_widen": 1.0,
+    "collinear_tolerance": 0.10,
+    "min_gap": 0.30,
+    "door_max": 1.2,
+    "corner_gap": 0.5,
+    "thickness": 0.10,
+    "object_clearance": 0.10,
+    "cluster_tolerance": 0.10,
+    "cluster_min_points": 20,
+    "against_wall_distance": 0.15
+  },
+  "rooms": { "min_area": 1.0, "wall_touch_distance": 0.15 }
+}

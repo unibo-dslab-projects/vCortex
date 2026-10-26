@@ -1,0 +1,15 @@
+# CMake build trees
+build/
+build-*/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+
+# clangd / ccache
+.cache/
+.ccache/
+
+# Editors
+.vscode/
+.idea/
+*.swp

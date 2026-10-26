@@ -1,0 +1,31 @@
+name: vcortex
+
+services:
+  backend:
+    build: ./backend
+    image: vcortex-backend:latest
+    ports:
+      - "9002:9002"                 # the robot's bridge connects to /ingest here
+    environment:
+      VCORTEX_INGEST_TOKEN: ${VCORTEX_INGEST_TOKEN:-}   # empty: no token check
+    volumes:
+      - ./data:/data:ro,Z           # saved maps for offline mode; Z relabels for SELinux (Fedora)
+    command: ["--port", "9002"]     # offline mode (step 16): add "--map", "/data/maps/<map>.pcd"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: vcortex-frontend:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp # Caddy's autosave and storage (XDG_*_HOME)
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped

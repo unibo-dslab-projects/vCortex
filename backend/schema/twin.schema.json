@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/NickGhignatti/vCortex/backend/schema/twin.schema.json",
+  "title": "Twin",
+  "description": "Building description produced by the vCortex model. Names follow IFC: walls = IfcWall, rooms = IfcSpace, objects = IfcBuildingElementProxy.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "seq", "frame", "report", "levels"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "run_id": { "type": "integer", "minimum": 0 },
+    "seq": { "type": "integer", "minimum": 0 },
+    "frame": {
+      "type": "object",
+      "required": ["id", "up", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Map frame named by the source, e.g. camera_init." },
+        "up": { "const": "z" },
+        "unit": { "const": "m" }
+      }
+    },
+    "report": {
+      "type": "object",
+      "required": ["points_in", "after_transient", "after_outliers", "transient_skipped", "floor_tilt_deg", "yaw_deg", "duration_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "points_in": { "type": "integer", "minimum": 0 },
+        "after_transient": { "type": "integer", "minimum": 0 },
+        "after_outliers": { "type": "integer", "minimum": 0 },
+        "transient_skipped": { "type": "boolean" },
+        "floor_tilt_deg": { "type": "number" },
+        "yaw_deg": { "type": "number" },
+        "duration_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "levels": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/level" } }
+  },
+  "$defs": {
+    "xy": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+    "id": { "type": "string", "minLength": 1 },
+    "level": {
+      "type": "object",
+      "required": ["id", "floor_z", "wall_height", "wall_height_source", "walls", "rooms", "objects"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "floor_z": { "type": "number" },
+        "wall_height": { "type": "number", "exclusiveMinimum": 0 },
+        "wall_height_source": { "enum": ["default", "user"] },
+        "walls": { "type": "array", "items": { "$ref": "#/$defs/wall" } },
+        "rooms": { "type": "array", "items": { "$ref": "#/$defs/room" } },
+        "objects": { "type": "array", "items": { "$ref": "#/$defs/object" } }
+      }
+    },
+    "wall": {
+      "type": "object",
+      "required": ["id", "start", "end", "thickness", "points", "coverage"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "start": { "$ref": "#/$defs/xy", "description": "Centreline start, metres." },
+        "end": { "$ref": "#/$defs/xy" },
+        "thickness": { "type": "number", "exclusiveMinimum": 0 },
+        "points": { "type": "integer", "minimum": 0 },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of the length where points were seen; the rest was filled in." }
+      }
+    },
+    "room": {
+      "type": "object",
+      "required": ["id", "name", "closed", "outline", "wall_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": ["string", "null"] },
+        "closed": { "type": "boolean", "description": "false: the free space leaked out through a missing wall." },
+        "outline": { "type": "array", "items": { "$ref": "#/$defs/xy" }, "minItems": 3 },
+        "wall_ids": { "type": "array", "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "object": {
+      "type": "object",
+      "required": ["id", "kind", "room_id", "against_wall_id", "center", "size", "yaw", "bottom_z", "top_z_seen", "points"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["unknown"] },
+        "room_id": { "type": ["string", "null"] },
+        "against_wall_id": { "type": ["string", "null"] },
+        "center": { "$ref": "#/$defs/xy" },
+        "size": { "$ref": "#/$defs/xy", "description": "Footprint along the object's own axes after turning by yaw." },
+        "yaw": { "type": "number", "description": "Radians, counter-clockwise from x." },
+        "bottom_z": { "type": "number" },
+        "top_z_seen": { "type": "number", "description": "Highest point seen. A sensor may not see the top, so the real top may be higher." },
+        "points": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

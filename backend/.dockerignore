@@ -1,0 +1,15 @@
+# Only CMakeLists.txt, include/, src/, config/ and schema/ are needed in the image.
+build/
+build-*/
+cmake-build-*/
+CMakeUserPresets.json
+compile_commands.json
+.cache/
+.ccache/
+.vscode/
+.idea/
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.md

@@ -1,0 +1,16 @@
+# Only package*.json, configs, index.html, public/ and src/ are needed in the image.
+node_modules
+dist
+dev-dist
+coverage
+.vscode
+.idea
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.log
+*.local
+.eslintcache
+*.tsbuildinfo
+README.md

@@ -68,16 +68,6 @@ After a change to `backend/schema/twin.schema.json`, run `npm run generate-types
 Both run as a non-root user, with no shell, a read-only root file system and every Linux
 capability dropped (see `compose.yaml`).
 
-## Protocols
-
-### Ingest (source to backend)
-
-To be written with step 14 of the plan.
-
-### `/ws/raw` (backend to browser)
-
-To be written with step 15 of the plan.
-
 ## License
 
 GPL-3.0. See `LICENSE`.

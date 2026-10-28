@@ -11,7 +11,7 @@ namespace vcortex {
 
 // z = a x + b y + c
 struct Plane {
-    double a, b, c;
+    double a = 0.0, b = 0.0, c = 0.0;
 };
 
 // Throws if no floor is found.

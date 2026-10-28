@@ -10,6 +10,7 @@
 
 namespace vcortex {
 
+// Summary of the model's progress and results (diagnostic).
 struct ModelReport {
     std::size_t points_in = 0, after_transient = 0, after_outliers = 0;
     bool transient_skipped = false;  // the input had no hits

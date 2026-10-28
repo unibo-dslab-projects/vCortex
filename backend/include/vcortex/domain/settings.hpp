@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <string>
 
 namespace vcortex {
 
@@ -42,12 +44,28 @@ struct RoomParams {
 struct ModelSettings {
     double wall_height = 2.70;  // metres, replaced by the user's value
     HeightSource wall_height_source = HeightSource::Default;
-    std::uint16_t min_scans = 5;  // the UI allows 1..64, map_builder's hits_report_cap
+    std::uint16_t min_scans = 5;
     int outlier_mean_k = 20;
     double outlier_stddev_mul = 2.0;
     CandidateParams candidates;
     WallParams walls;
     RoomParams rooms;
 };
+
+// Below 1.5 m the candidate band (band_lo up to wall_height - band_top_margin) gets too thin to
+// tell walls from furniture; above 6 m it is no longer one storey. Both ends are excluded.
+inline constexpr double kWallHeightMin = 1.5;
+inline constexpr double kWallHeightMax = 6.0;
+
+// map_builder stops counting hits at 64 (hits_report_cap), so a higher threshold would drop every
+// point. 0 would keep everything and hide that drop_transient was asked for.
+inline constexpr std::uint16_t kMinScansMin = 1;
+inline constexpr std::uint16_t kMinScansMax = 64;
+
+// The same rules guard config/model.json at start-up and PUT /api/settings at run time, so a bad
+// value is refused where it enters instead of failing deep inside a model run.
+// Returns the first problem, named by its config/model.json key (e.g. "candidates.cell"), or
+// nothing when the settings are usable.
+std::optional<std::string> validate(const ModelSettings& s);
 
 }  // namespace vcortex

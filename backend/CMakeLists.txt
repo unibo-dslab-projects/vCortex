@@ -58,6 +58,7 @@ target_compile_options(vcortex_warnings INTERFACE
 # ---------------------------------------------------------------------------
 
 add_library(vcortex_core STATIC
+  src/domain/settings.cpp
   src/model/clean.cpp
   src/model/floor.cpp
   src/model/align.cpp
@@ -67,7 +68,7 @@ add_library(vcortex_core STATIC
   src/model/rooms.cpp
   src/model/model.cpp
   src/connectors/connector.cpp
-  src/connectors/twin_json.cpp
+  src/connectors/json.cpp
   src/connectors/dxf.cpp
   src/connectors/ply.cpp
   src/protocol/ingest.cpp

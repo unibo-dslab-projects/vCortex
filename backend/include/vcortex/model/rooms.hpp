@@ -8,8 +8,7 @@
 
 namespace vcortex {
 
-// Flood fill from each trajectory pose: the robot only walks on free floor, so every pose is a
-// seed that is surely inside a room.
+// flood fill from each pose: the robot walks only on free floor, so each pose is in a room
 std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
                              const Trajectory& aligned_traj, const RoomParams& p);
 

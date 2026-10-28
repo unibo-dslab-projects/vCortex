@@ -6,8 +6,8 @@
 
 namespace vcortex {
 
-// Offline mode: a saved map.pcd, plus trajectory.tum from the same folder when present, so a
-// map can be studied and the model tuned without the robot.
+// offline mode: saved map.pcd (plus trajectory.tum beside it), to study a map and tune the
+// model without the robot
 struct OfflineInput {
     Snapshot snapshot;
     Trajectory trajectory;

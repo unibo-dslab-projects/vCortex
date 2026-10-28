@@ -6,7 +6,7 @@
 
 namespace vcortex {
 
-// Start values for map_builder's 5 cm voxel maps, not tuned yet. config/model.json overrides them.
+// start values for map_builder's 5 cm voxel maps, untuned; config/model.json overrides
 
 enum class HeightSource { Default, User };
 
@@ -52,20 +52,18 @@ struct ModelSettings {
     RoomParams rooms;
 };
 
-// Below 1.5 m the candidate band (band_lo up to wall_height - band_top_margin) gets too thin to
-// tell walls from furniture; above 6 m it is no longer one storey. Both ends are excluded.
+// below 1.5 m the band is too thin to tell walls from furniture; above 6 m it is not one
+// storey; both ends excluded
 inline constexpr double kWallHeightMin = 1.5;
 inline constexpr double kWallHeightMax = 6.0;
 
-// map_builder stops counting hits at 64 (hits_report_cap), so a higher threshold would drop every
-// point. 0 would keep everything and hide that drop_transient was asked for.
+// map_builder caps hits at 64 (hits_report_cap), so higher drops every point; 0 keeps all
+// and hides that drop_transient was asked for
 inline constexpr std::uint16_t kMinScansMin = 1;
 inline constexpr std::uint16_t kMinScansMax = 64;
 
-// The same rules guard config/model.json at start-up and PUT /api/settings at run time, so a bad
-// value is refused where it enters instead of failing deep inside a model run.
-// Returns the first problem, named by its config/model.json key (e.g. "candidates.cell"), or
-// nothing when the settings are usable.
+// guards config/model.json and PUT /api/settings, so bad values fail at entry, not mid-run
+// returns the first problem by json key (e.g. "candidates.cell"), or nothing
 std::optional<std::string> validate(const ModelSettings& s);
 
 }  // namespace vcortex

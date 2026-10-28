@@ -12,7 +12,7 @@ namespace vcortex {
 
 std::vector<Point> drop_transient(const std::vector<Point>& in, std::uint16_t min_scans) {
     std::vector<Point> out;
-    // Most voxels of a mapped room are structure, so the output is close to the input size.
+    // most voxels are structure, so output is near input size
     out.reserve(in.size());
     std::copy_if(in.begin(), in.end(), std::back_inserter(out),
                  [min_scans](const Point& p) { return p.hits >= min_scans; });
@@ -20,8 +20,8 @@ std::vector<Point> drop_transient(const std::vector<Point>& in, std::uint16_t mi
 }
 
 std::vector<Point> drop_outliers(const std::vector<Point>& in, int mean_k, double stddev_mul) {
-    // PCL searches mean_k + 1 neighbours (the first is the point itself), and its k-search fails
-    // when the cloud has fewer points than that. Too few points carry no statistics anyway.
+    // pcl searches mean_k + 1 neighbours (incl. the point) and fails with fewer points;
+    // too few points carry no statistics anyway
     if (in.size() <= static_cast<std::size_t>(mean_k)) {
         return in;
     }
@@ -30,7 +30,7 @@ std::vector<Point> drop_outliers(const std::vector<Point>& in, int mean_k, doubl
     sor.setInputCloud(to_pcl(in));
     sor.setMeanK(mean_k);
     sor.setStddevMulThresh(stddev_mul);
-    pcl::Indices kept;  // ascending, so the input order is kept
+    pcl::Indices kept;  // ascending, keeps input order
     sor.filter(kept);
     return pick(in, kept);
 }

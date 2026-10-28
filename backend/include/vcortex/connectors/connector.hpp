@@ -9,12 +9,12 @@
 namespace vcortex {
 
 struct Connector {
-    std::string id;         // "twin-json"; used in /ws/twin?format=<id> and /api/twin/<id>
+    std::string id;         // "twin-json"; in /ws/twin?format=<id> and /api/twin/<id>
     std::string label;      // "Digital twin (JSON)"; shown in the dropdown
     std::string mime;       // "application/json"
     std::string extension;  // ".json"; for the download name
-    bool binary;            // true: send as a binary WebSocket frame
-    std::function<std::string(const ModelResult&)> write;  // std::string also holds binary bytes
+    bool binary;            // true: send as a binary websocket frame
+    std::function<std::string(const ModelResult&)> write;  // std::string holds binary bytes too
 };
 
 const std::vector<Connector>& connectors();

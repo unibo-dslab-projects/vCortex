@@ -1,4 +1,4 @@
-# Only package*.json, configs, index.html, public/ and src/ are needed in the image.
+# only package*.json, configs, index.html, public/ and src/ are needed in the image
 node_modules
 dist
 dev-dist

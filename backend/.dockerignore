@@ -1,4 +1,4 @@
-# Only CMakeLists.txt, include/, src/, config/ and schema/ are needed in the image.
+# only CMakeLists.txt, include/, src/, config/ and schema/ are needed in the image
 build/
 build-*/
 cmake-build-*/

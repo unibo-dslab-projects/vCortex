@@ -10,18 +10,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# ---------------------------------------------------------------------------
-# Dependencies
-# ---------------------------------------------------------------------------
+# --- dependencies ---
 
-# Point-cloud algorithms (core) and PCD reading (io). PCL is an algorithm library here:
-# domain types never contain PCL types.
+# point-cloud algorithms (core) and pcd reading (io); pcl is an algorithm library here,
+# domain types never hold pcl types
 find_package(PCL 1.14 REQUIRED COMPONENTS common io kdtree search sample_consensus filters segmentation)
-# Static build (Docker): PCL's per-module targets leave FLANN out (it is only in PCL_LIBRARIES),
-# and FLANN's pkg-config file names the shared liblz4.so. Link FLANN explicitly (below) and
-# point it at the LZ4 archive.
+# static build (docker): pcl module targets leave flann out, and flann's pkg-config names the
+# shared liblz4.so, so link flann explicitly against the lz4 archive
 if(TARGET FLANN::FLANN)
-  get_target_property(_flann FLANN::FLANN ALIASED_TARGET)  # PCL makes it an alias of flann's own
+  get_target_property(_flann FLANN::FLANN ALIASED_TARGET)  # pcl makes it an alias of flann's own
   if(NOT _flann)
     set(_flann FLANN::FLANN)
   endif()
@@ -34,28 +31,24 @@ endif()
 find_package(nlohmann_json 3.11 REQUIRED)
 find_package(Threads REQUIRED)
 
-# HTTP + WebSocket server. Pinned: v1.3.4 fixed an authentication bypass in the WebSocket upgrade.
-# The Docker build passes -DFETCHCONTENT_SOURCE_DIR_CROW=<dir> so nothing is downloaded there.
+# http + websocket server, pinned: v1.3.4 fixed an auth bypass in the websocket upgrade
+# docker passes -DFETCHCONTENT_SOURCE_DIR_CROW=<dir>, so nothing is downloaded there
 include(FetchContent)
 FetchContent_Declare(Crow
   URL https://github.com/CrowCpp/Crow/archive/refs/tags/v1.3.4.tar.gz
   URL_HASH SHA256=6be759b3a648b41f0adc3a8408a53fd0243775217b4e32e8101d69e4aadf48cc
   DOWNLOAD_EXTRACT_TIMESTAMP ON
-  SYSTEM)  # Crow headers are not ours: no warnings from them
+  SYSTEM)  # crow headers are not ours: no warnings from them
 set(CROW_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(Crow)
 
-# ---------------------------------------------------------------------------
-# Warnings
-# ---------------------------------------------------------------------------
+# --- warnings ---
 
 add_library(vcortex_warnings INTERFACE)
 target_compile_options(vcortex_warnings INTERFACE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic -Wshadow -Wconversion>)
 
-# ---------------------------------------------------------------------------
-# vcortex_core: domain, model, connectors, protocol. Plain C++ + PCL algorithms. No Crow, no files.
-# ---------------------------------------------------------------------------
+# --- vcortex_core: domain, model, connectors, protocol; c++ and pcl only, no crow, no files ---
 
 add_library(vcortex_core STATIC
   src/domain/settings.cpp
@@ -86,9 +79,7 @@ target_link_libraries(vcortex_core
   PRIVATE
     vcortex_warnings)
 
-# ---------------------------------------------------------------------------
-# vcortex_io: frameworks and drivers. Crow, PCD files, threads.
-# ---------------------------------------------------------------------------
+# --- vcortex_io: frameworks and drivers (crow, pcd files, threads) ---
 
 add_library(vcortex_io STATIC
   src/io/pcd_input.cpp
@@ -100,9 +91,7 @@ target_link_libraries(vcortex_io
   PUBLIC vcortex_core pcl_io Crow::Crow Threads::Threads
   PRIVATE vcortex_warnings)
 
-# ---------------------------------------------------------------------------
-# vcortex: the server
-# ---------------------------------------------------------------------------
+# --- vcortex: the server ---
 
 add_executable(vcortex src/main.cpp)
 target_link_libraries(vcortex PRIVATE vcortex_io vcortex_warnings)

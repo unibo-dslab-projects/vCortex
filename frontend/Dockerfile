@@ -12,16 +12,15 @@ RUN --mount=type=cache,target=/root/.npm \
 
 # ------------------------------------------------------------------------------------------
 FROM deps AS build
-# Only what the build reads, so editing the Caddyfile or lint config reuses this layer.
+# only what the build reads, so editing the Caddyfile or lint config reuses this layer
 COPY index.html env.d.ts vite.config.ts pwa-assets.config.ts tsconfig*.json ./
 COPY public public
 COPY src src
 RUN npm run build
 
 # ------------------------------------------------------------------------------------------
-# The official binary carries cap_net_bind_service (to bind port 80). We listen on 8080, and
-# with cap_drop: ALL the kernel refuses to start a binary whose file capabilities it cannot
-# grant. A plain cp drops the capability.
+# official binary carries cap_net_bind_service (port 80); we use 8080, and under cap_drop: ALL
+# the kernel refuses file caps it cannot grant; a plain cp drops them
 FROM caddy:${CADDY_VERSION}-alpine AS caddy
 RUN cp /usr/bin/caddy /caddy
 
@@ -32,7 +31,7 @@ LABEL org.opencontainers.image.title="vcortex-frontend" \
       org.opencontainers.image.source="https://github.com/NickGhignatti/vCortex" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 
-# Caddy writes its autosave and storage under these; /tmp is writable (tmpfs in compose).
+# caddy writes autosave and storage here; /tmp is writable (tmpfs in compose)
 ENV XDG_CONFIG_HOME=/tmp/caddy XDG_DATA_HOME=/tmp/caddy
 
 COPY --from=caddy /caddy /usr/local/bin/caddy

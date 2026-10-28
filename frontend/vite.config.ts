@@ -6,19 +6,19 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import { VitePWA } from 'vite-plugin-pwa'
 import { templateCompilerOptions } from '@tresjs/core'
 
-// The backend (Crow) listens on 9002. In development Vite forwards /api and /ws to it,
-// so the browser sees one origin and no CORS setup is needed. In Docker, Caddy does the same.
+// backend (crow) listens on 9002; vite (dev) and caddy (docker) forward /api and /ws to it:
+// one origin, no cors
 const backend = process.env.VCORTEX_BACKEND ?? 'http://localhost:9002'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    // TresJS: tell the Vue compiler that <TresMesh>, <TresGroup>, ... are three.js objects.
+    // tresjs: tells the vue compiler <TresMesh>, <TresGroup>, ... are three.js objects
     vue({ ...templateCompilerOptions }),
     vueDevTools(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Favicon and icons are generated from public/logo.svg (see pwa-assets.config.ts).
+      // favicon and icons generated from public/logo.svg (see pwa-assets.config.ts)
       pwaAssets: { config: true },
       manifest: {
         name: 'vCortex',
@@ -30,7 +30,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // /api and /ws are live data from the backend: never answer them from the cache.
+        // /api and /ws are live backend data: never served from cache
         navigateFallbackDenylist: [/^\/api\//, /^\/ws\//],
       },
     }),

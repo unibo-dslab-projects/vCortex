@@ -1,0 +1,23 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Host debug build",
+      "description": "Debug build on the host, with PCL from ~/.local/opt/pcl (see README).",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/.local/opt/pcl"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev"
+    }
+  ]
+}

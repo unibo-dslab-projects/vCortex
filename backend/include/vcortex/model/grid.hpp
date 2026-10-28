@@ -8,7 +8,8 @@
 
 namespace vcortex {
 
-// Occupancy grid seen from above, shared by stages C, D and F.
+// Seen from above. dominant_yaw, find_candidates and find_rooms share it, so the points are
+// binned once per model run.
 struct Grid {
     double cell;
     Vec2 origin;

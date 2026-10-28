@@ -1,0 +1,12 @@
+// clangd reads backend/build/compile_commands.json (written by `cmake --preset dev` in backend/),
+// which holds the include paths of PCL, Crow, Eigen and nlohmann/json.
+{
+  "lsp": {
+    "clangd": {
+      "binary": {
+        "path": "/usr/bin/clangd",
+        "arguments": ["--header-insertion=never"]
+      }
+    }
+  }
+}

@@ -6,8 +6,7 @@
 
 #include <crow.h>
 
-// vcortex [--port 9002]
-// Step 15 adds --config and --map, the full route table, the map store and the model worker.
+// TODO: --config and --map, the full route table, the map store and the model worker.
 int main(int argc, char** argv) {
     std::uint16_t port = 9002;
     for (int i = 1; i < argc; ++i) {

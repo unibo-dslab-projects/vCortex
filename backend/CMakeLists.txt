@@ -68,7 +68,6 @@ add_library(vcortex_core STATIC
   src/model/model.cpp
   src/connectors/connector.cpp
   src/connectors/twin_json.cpp
-  src/connectors/crowdvision_json.cpp
   src/connectors/dxf.cpp
   src/connectors/ply.cpp
   src/protocol/ingest.cpp

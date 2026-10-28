@@ -11,7 +11,7 @@
 
 namespace vcortex {
 
-// Mirrors schema/twin.schema.json (step 12). Names follow IFC.
+// Mirrors schema/twin.schema.json. Names follow IFC.
 
 // IfcWall. start/end are the centreline.
 struct Wall {

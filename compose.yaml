@@ -10,7 +10,7 @@ services:
       VCORTEX_INGEST_TOKEN: ${VCORTEX_INGEST_TOKEN:-}   # empty: no token check
     volumes:
       - ./data:/data:ro,Z           # saved maps for offline mode; Z relabels for SELinux (Fedora)
-    command: ["--port", "9002"]     # offline mode (step 16): add "--map", "/data/maps/<map>.pcd"
+    command: ["--port", "9002"]     # TODO: offline mode, once --map exists: "--map", "/data/maps/<map>.pcd"
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

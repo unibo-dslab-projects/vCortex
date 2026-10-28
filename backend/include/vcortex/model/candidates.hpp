@@ -8,8 +8,9 @@
 
 namespace vcortex {
 
-// Stage D (step 8): straight runs of occupied cells parallel to x or y.
-// Walls and furniture faces both show up here; stage E sorts them apart.
+// Only runs parallel to x or y: the map is turned by dominant_yaw first, which reduces the search
+// to one pass per grid row and column. Walls and furniture faces both show up here;
+// split_walls_objects sorts them apart.
 
 enum class Axis { X, Y };  // X: the line has constant x (runs along y)
 

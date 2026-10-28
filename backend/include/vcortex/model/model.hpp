@@ -10,8 +10,6 @@
 
 namespace vcortex {
 
-// Stage G (step 11): run A -> F and assemble the building in the source's map frame.
-
 struct ModelReport {
     std::size_t points_in, after_transient, after_outliers;
     bool transient_skipped;
@@ -24,11 +22,13 @@ struct ModelReport {
 
 struct ModelResult {
     Building building;
-    std::vector<Point> cleaned;  // after stage A, for the PLY connector
+    std::vector<Point> cleaned;  // after drop_transient and drop_outliers, for the PLY connector
     ModelReport report;
 };
 
-// Pure function: same input, same output, no I/O.
+// Pure function, no I/O: live mode, offline mode and tests run the same code on the same input.
+// The building comes back in the source's map frame, not the aligned one, so it overlays the raw
+// cloud in the browser without a transform.
 ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelSettings& settings);
 
 }  // namespace vcortex

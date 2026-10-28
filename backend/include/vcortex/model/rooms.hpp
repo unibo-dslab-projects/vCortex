@@ -8,7 +8,8 @@
 
 namespace vcortex {
 
-// Stage F (step 10): split the free floor into rooms with a flood fill per trajectory pose.
+// Flood fill from each trajectory pose: the robot only walks on free floor, so every pose is a
+// seed that is surely inside a room.
 std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
                              const Trajectory& aligned_traj, const RoomParams& p);
 

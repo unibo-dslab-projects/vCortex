@@ -2,7 +2,7 @@
 
 vCortex turns a point-cloud map of a building into a digital twin: walls, rooms and objects.
 A C++ backend cleans the map and reasons about its geometry (the **model**), then writes the
-result in several formats (the **connectors**: twin JSON, CrowdVision JSON, DXF, PLY). A Vue
+result in several formats (the **connectors**: twin JSON, DXF, PLY). A Vue
 frontend shows the raw cloud and the chosen output side by side, live.
 
 Any source that speaks the ingest protocol can feed it. The first one is the Unitree Go2
@@ -38,12 +38,23 @@ Open <http://localhost:8080>. The robot bridge connects to port 9002 (`/ingest`)
 
 ## Develop
 
-Backend, natively (Fedora: `sudo dnf install pcl-devel json-devel asio-devel`):
+Backend, natively on Fedora. Fedora's `pcl-devel` pulls in VTK and Qt (about 2 GiB), so build
+the few PCL modules we use once, with the same options as `backend/Dockerfile`:
 
 ```sh
-cmake -S backend -B backend/build
-cmake --build backend/build
-backend/build/vcortex --port 9002
+sudo dnf install json-devel asio-devel flann-devel lz4-devel ninja-build clang-tools-extra
+
+# PCL 1.15.1 into ~/.local/opt/pcl. Fedora ships Eigen 5, which PCL 1.15.1 rejects by version
+# number only: apply Fedora's own patch (pcl-1.15.1-eigen5.patch from the pcl source RPM) first.
+cmake -S pcl-1.15.1 -B pcl-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=$HOME/.local/opt/pcl -DPCL_FLANN_REQUIRED_TYPE=SHARED \
+  <the -DPCL_* -DWITH_* -DBUILD_* options from backend/Dockerfile>
+cmake --build pcl-build && cmake --install pcl-build
+
+cd backend
+cmake --preset dev              # writes build/compile_commands.json for clangd (Zed: .zed/)
+cmake --build --preset dev
+build/vcortex --port 9002
 ```
 
 Frontend, with hot reload. Vite forwards `/api` and `/ws` to `localhost:9002`

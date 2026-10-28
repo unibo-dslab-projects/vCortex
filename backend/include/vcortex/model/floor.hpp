@@ -6,7 +6,8 @@
 
 namespace vcortex {
 
-// Stage B (step 6): the floor plane, and heights measured from it.
+// Heights are measured from a fitted plane, not from z = 0: the lidar map frame starts where the
+// robot stood and is slightly tilted (0.86 degrees on a real map, 11 cm over a 7.6 m room).
 
 // z = a x + b y + c
 struct Plane {

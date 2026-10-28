@@ -73,4 +73,20 @@ Grid build_grid(const std::vector<Point>& aligned, const Plane& floor, double ba
     return grid;
 }
 
+std::vector<Vec2> band_cells(const Grid& grid, std::uint16_t min_column) {
+    std::vector<Vec2> out;
+    for (int iy = 0; iy < grid.height; ++iy) {
+        for (int ix = 0; ix < grid.width; ++ix) {
+            const std::size_t i = static_cast<std::size_t>(iy) *
+                                      static_cast<std::size_t>(grid.width) +
+                                  static_cast<std::size_t>(ix);
+            if (grid.column[i] >= min_column) {
+                out.push_back({grid.origin.x + (ix + 0.5) * grid.cell,
+                               grid.origin.y + (iy + 0.5) * grid.cell});
+            }
+        }
+    }
+    return out;
+}
+
 }  // namespace vcortex

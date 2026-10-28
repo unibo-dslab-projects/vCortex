@@ -21,4 +21,7 @@ struct Grid {
 Grid build_grid(const std::vector<Point>& aligned, const Plane& floor, double band_lo,
                 double band_hi, double cell);
 
+// same min_column as find_candidates, so one-voxel specks do not vote
+std::vector<Vec2> band_cells(const Grid& grid, std::uint16_t min_column);
+
 }  // namespace vcortex

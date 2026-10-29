@@ -145,6 +145,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
 
     res.building.run_id = snap.run_id;
     res.building.seq = snap.seq;
+    res.building.frame_id = snap.frame_id;
     res.building.levels.push_back(std::move(level));
     res.cleaned = std::move(pts);
     rep.duration_ms =

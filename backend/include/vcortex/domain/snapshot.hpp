@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "vcortex/domain/point.hpp"
@@ -12,6 +13,8 @@ namespace vcortex {
 struct Snapshot {
     std::uint32_t run_id = 0;
     std::uint32_t seq = 0;
+    // named by the source (ros header frame_id): another robot's map has another origin
+    std::string frame_id;
     std::vector<Point> points;    // source map frame, z up, metres
     bool has_hits = false;        // old map.pcd files lack hits: skip drop_transient
     bool has_intensity = false;

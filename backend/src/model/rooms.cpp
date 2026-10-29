@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <queue>
 #include <string>
+#include <tuple>
 
 namespace vcortex {
 
@@ -167,7 +168,6 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
         const double y0 = grid.origin.y + f.iy0 * grid.cell;
         const double y1 = grid.origin.y + (f.iy1 + 1) * grid.cell;
         Room r;
-        r.id = "room-" + std::to_string(out.size() + 1);
         r.outline = {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}};
         r.closed = !f.leaked;
         for (std::size_t i = 0; i < walls.size(); ++i) {
@@ -177,6 +177,12 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
         }
         out.push_back(r);
     }
+    // ids by lower-left corner, not by pose order: the same map gives the same ids however
+    // the robot walked it
+    std::sort(out.begin(), out.end(), [](const Room& a, const Room& b) {
+        return std::tie(a.outline[0].x, a.outline[0].y) < std::tie(b.outline[0].x, b.outline[0].y);
+    });
+    for (std::size_t i = 0; i < out.size(); ++i) out[i].id = "room-" + std::to_string(i + 1);
     return out;
 }
 

@@ -1,0 +1,667 @@
+<title>vCortex Model Atlas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* layout: engineer's notebook; sketches of each method in run order, then the file map, then a glossary */
+  :root {
+    --paper: #f3f6f7; --grid: #dde5e9; --card: #ffffff; --rule: #cfd9de;
+    --ink: #1d3a63; --pencil: #66717c; --pen: #c0392b; --marker: #f2cf3c;
+    --ok: #2c7a4b; --bad: #b2412b; --text: #1b232b; --muted: #56626d; --codebg: #f6f8f9;
+    --g-model: #1d3a63; --g-domain: #2c7a4b; --g-io: #8a5a00; --g-conn: #7b3fa0; --g-proto: #00788a;
+    --g-build: #66717c; --g-docs: #b5651d; --g-lib: #a33a5b; --g-in: #c0392b; --g-out: #3f6fb5;
+    --f-hand: "Kalam", "Comic Sans MS", cursive;
+    --f-body: "IBM Plex Sans", system-ui, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10161d; --grid: #1a232c; --card: #161f28; --rule: #26323d;
+      --ink: #9ec3f0; --pencil: #93a0ac; --pen: #ff7b63; --marker: #d6b52e;
+      --ok: #6cc591; --bad: #ff8b72; --text: #e4ebf1; --muted: #9eabb7; --codebg: #111a22;
+      --g-model: #9ec3f0; --g-domain: #6cc591; --g-io: #e0b450; --g-conn: #c49be0; --g-proto: #5fc9d8;
+      --g-build: #93a0ac; --g-docs: #f0a35e; --g-lib: #f08aaa; --g-in: #ff7b63; --g-out: #8fb5f0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10161d; --grid: #1a232c; --card: #161f28; --rule: #26323d;
+    --ink: #9ec3f0; --pencil: #93a0ac; --pen: #ff7b63; --marker: #d6b52e;
+    --ok: #6cc591; --bad: #ff8b72; --text: #e4ebf1; --muted: #9eabb7; --codebg: #111a22;
+    --g-model: #9ec3f0; --g-domain: #6cc591; --g-io: #e0b450; --g-conn: #c49be0; --g-proto: #5fc9d8;
+    --g-build: #93a0ac; --g-docs: #f0a35e; --g-lib: #f08aaa; --g-in: #ff7b63; --g-out: #8fb5f0;
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--paper);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--text);
+    font: 15px/1.55 var(--f-body);
+  }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+  .wrap {
+    max-width: 1200px; margin: 0 auto;
+    padding-block: 28px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 28px;
+  }
+  header { display: grid; gap: 8px; max-width: 72ch; }
+  h1 { margin: 0; font: 700 clamp(30px, 5vw, 46px)/1.08 var(--f-hand); color: var(--ink); text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); }
+  nav {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 8px 12px;
+    background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+    font: 17px var(--f-hand);
+  }
+  nav a { color: var(--ink); text-decoration: none; }
+  nav a:hover, nav a:focus-visible { text-decoration: underline; }
+  h2 { margin: 0; font: 700 30px/1.15 var(--f-hand); color: var(--ink); }
+  .lead { margin: 4px 0 0; color: var(--muted); max-width: 75ch; }
+  .stage { display: grid; gap: 14px; }
+  .stage h3 { margin: 10px 0 0; font: 700 22px var(--f-hand); color: var(--pencil); }
+  .step {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; padding: 16px;
+  }
+  .step.planned { border-style: dashed; }
+  @media (max-width: 760px) { .step { grid-template-columns: minmax(0, 1fr); } }
+  .step canvas { display: block; width: 100%; }
+  .step-body { display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .step-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  .step-title b { font: 600 18px var(--f-mono); color: var(--ink); }
+  .seq { font: 700 20px var(--f-hand); color: var(--pencil); }
+  .step p { margin: 0; }
+  table.io { border-collapse: collapse; width: 100%; font-size: 14px; }
+  table.io td { padding: 5px 6px; border-top: 1px solid var(--rule); vertical-align: top; }
+  table.io td:first-child { width: 6.5em; font: 600 11px/1.9 var(--f-body); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .real, .ex {
+    display: inline-block; font: 600 10px/1 var(--f-body); letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 6px; border-radius: 999px; border: 1px solid currentColor; vertical-align: 2px; margin-left: 4px;
+  }
+  .real { color: var(--ok); } .ex { color: var(--pencil); }
+  .chip-planned { color: var(--bad); border: 1px solid currentColor; border-radius: 999px; font: 600 11px/1 var(--f-body); padding: 4px 8px; letter-spacing: .05em; text-transform: uppercase; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.file {
+    font: 500 13px var(--f-mono); color: var(--ink); background: transparent;
+    border: 1.5px solid var(--ink); border-radius: 6px; padding: 4px 9px; cursor: pointer;
+  }
+  button.file:hover, button.file:focus-visible { background: var(--ink); color: var(--card); outline: none; }
+  code { font: 13px var(--f-mono); background: var(--codebg); padding: 1px 4px; border-radius: 3px; }
+  .map-card { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .controls input[type=search] {
+    font: 14px var(--f-body); padding: 6px 10px; border: 1px solid var(--rule); border-radius: 6px;
+    background: var(--paper); color: var(--text); min-width: 0; width: 220px; max-width: 100%;
+  }
+  .toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toggles label { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; padding: 3px 8px; border: 1px solid var(--rule); border-radius: 999px; cursor: pointer; user-select: none; }
+  .toggles i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend svg { overflow: visible; }
+  #graph { width: 100%; height: 600px; display: block; border: 1px dashed var(--rule); border-radius: 6px; touch-action: none; }
+  #graph text { font: 11px var(--f-mono); fill: var(--text); pointer-events: none; }
+  .hint { font: 15px var(--f-hand); color: var(--muted); margin: 0; }
+  dl.gloss { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px 22px; }
+  dl.gloss div { min-width: 0; }
+  dl.gloss dt { font: 700 17px var(--f-hand); color: var(--ink); }
+  dl.gloss dd { margin: 0; font-size: 14px; }
+  #shade { position: fixed; inset: 0; background: rgba(10, 16, 22, .35); z-index: 20; }
+  aside#drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 21;
+    width: min(720px, 100vw); background: var(--card); border-left: 1px solid var(--rule);
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) 18px;
+    display: grid; gap: 14px; align-content: start;
+  }
+  .d-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+  .d-head h3 { margin: 0; font: 600 19px var(--f-mono); color: var(--ink); overflow-wrap: anywhere; }
+  .d-close { font: 20px var(--f-body); background: none; border: 1px solid var(--rule); border-radius: 6px; color: var(--text); cursor: pointer; padding: 0 10px; }
+  .d-sec h4 { margin: 0 0 6px; font: 600 11px var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .d-sec p { margin: 0 0 6px; }
+  .gap { border: 1.5px solid var(--bad); color: var(--text); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
+  .gap b { color: var(--bad); }
+  .incs { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .incs td { border-top: 1px solid var(--rule); padding: 5px 4px; vertical-align: top; }
+  .incs td:first-child { white-space: nowrap; }
+  .blk { display: grid; gap: 4px; margin-bottom: 12px; }
+  .blk pre { margin: 0; background: var(--codebg); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font: 12.5px/1.5 var(--f-mono); }
+  .blk pre code { background: none; padding: 0; font: inherit; }
+  .blk pre .ln { color: var(--muted); user-select: none; display: inline-block; width: 3.2em; }
+  .blk p { margin: 0; font-size: 14px; border-left: 3px solid var(--marker); padding-left: 10px; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .links button { font: 12.5px var(--f-mono); background: transparent; color: var(--text); border: 1px solid var(--rule); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
+  .links button:hover, .links button:focus-visible { border-color: var(--ink); color: var(--ink); }
+  footer { color: var(--muted); font-size: 13px; max-width: 80ch; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>How the vCortex model turns a point cloud into walls</h1>
+    <p>Every method of the model package, in the order a run calls it: a sketch, what it does, and what goes in and comes out. Below: a map of the files, and a glossary. Click any file button or graph node to read its code block by block.</p>
+  </header>
+  <nav aria-label="Sections"><a href="#how">How it works</a><a href="#map">File map</a><a href="#glossary">Glossary</a></nav>
+
+  <section id="how" class="stage" aria-labelledby="how-h">
+    <div><h2 id="how-h">How it works</h2>
+    <p class="lead">Numbers tagged <span class="real">real</span> come from running the code on <code>maps/2026-10-19T14:35:23/map.pcd</code> and its <code>trajectory.tum</code>. Numbers tagged <span class="ex">example</span> are made up to show the idea. Dashed cards are not written yet.</p></div>
+    <div id="steps" class="stage"></div>
+  </section>
+
+  <section id="map" class="map-card" aria-labelledby="map-h">
+    <h2 id="map-h">File map</h2>
+    <p class="lead">Every file of the model package (full detail), the files around it (summaries), and what goes in and out. Drag nodes, scroll or pinch to zoom, click a node or a line.</p>
+    <div class="controls">
+      <input type="search" id="q" placeholder="Search files" aria-label="Search files">
+      <div class="toggles" id="toggles"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <svg id="graph" role="img" aria-label="Graph of files and their connections"></svg>
+    <p class="hint">Squares are headers (.hpp), circles are sources (.cpp), diamonds are summaries and build or doc files, triangles are things outside the code. Dashed outlines are not written yet.</p>
+  </section>
+
+  <section id="glossary" class="map-card" aria-labelledby="gl-h">
+    <h2 id="gl-h">Glossary</h2>
+    <dl class="gloss" id="gloss"></dl>
+  </section>
+
+  <footer>Built from the sources on 2026-10-28. Every non-blank line of the model files is explained (checked by script before publishing).</footer>
+</div>
+
+<div id="shade" hidden></div>
+<aside id="drawer" hidden aria-label="Details"></aside>
+
+<script id="data" type="application/json">__DATA__</script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const FILE = Object.fromEntries(D.files.map(f => [f.id, f]));
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const fmt = s => String(s).replace(/`([^`]+)`/g, (m, c) => "<code>" + esc(c) + "</code>");
+  const base = p => p.split("/").filter(Boolean).pop();
+
+  const GAPS = {
+    walls_cpp: [
+      "A wardrobe covering a whole wall from corner to corner is taken as the wall: the room comes out about 0.6 m too narrow (known limit).",
+      "A shelf in the middle that the robot passed on one side only becomes a false wall when the real wall is more than 1.5 m behind it.",
+      "A single free-standing panel the robot walked around (no far side) is now read as a thin wall. This is the price of handling thin walls between two walked rooms.",
+      "On the real map the robot walked one straight line (x 0 to 0.35, y &minus;5.43 to 0 in the aligned frame), so most faces had no pose nearby and used the fallback. The 7 walls have not been checked by eye yet.",
+      "Door gaps split a wall into two `Wall`s: `Wall` has no openings field yet."],
+    clean_cpp: ["`drop_outliers` removes 4.40% of the real map. Nobody has looked at which points those are yet; if wall edges or thin objects vanish later, raise `stddev_mul`."],
+    grid_hpp: ["The first parameter of `build_grid` is named `aligned`, but the first of the two calls passes the raw, unturned points."],
+    align_cpp: ["Angles within about 0.36&deg; of the axes come out as exactly 0 (the 5 cm lattice pulls them). Harmless: less than one cell of drift on an 8 m wall."],
+    model_cpp: ["Not written yet. When it turns the points by &minus;yaw it must turn the floor plane too: `z = a x + b y + c` depends on x and y, so (a, b) must turn by &minus;yaw, or the floor must be fitted again."],
+    rooms_cpp: ["Not written yet."],
+    floor_cpp: ["The real floor of map.pcd is a thick, bumpy layer (10 to 24 cm per square metre), so the tilt is only known to about &plusmn;0.2&deg;: a few centimetres across the room."],
+  };
+  const EDGE_GAPS = {
+    "model_cpp>floor_hpp": "The plane must be turned with the points by &minus;yaw (or fitted again), otherwise every height in the aligned frame is off by the tilt.",
+  };
+
+  function tokens() {
+    const s = getComputedStyle(document.documentElement);
+    const g = n => s.getPropertyValue("--" + n).trim();
+    const C = {};
+    for (const k of ["ink","pencil","pen","marker","ok","bad","muted","card","text","rule",
+                     "g-model","g-domain","g-io","g-conn","g-proto","g-build","g-docs","g-lib","g-in","g-out"]) C[k] = g(k);
+    return C;
+  }
+  function alpha(hex, a) {
+    const h = hex.replace("#", "");
+    const n = parseInt(h.length === 3 ? h.split("").map(x => x + x).join("") : h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // sketch toolkit: world 10 x 6 units, y up
+  function kit(canvas) {
+    const C = tokens();
+    const W = 10, H = 6, pad = 12;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 400;
+    const s = (cssW - 2 * pad) / W;
+    const cssH = Math.round(H * s + 2 * pad);
+    canvas.style.height = cssH + "px";
+    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cssW, cssH);
+    const rc = rough.canvas(canvas);
+    let seed = 3;
+    const col = c => C[c] || c || C.ink;
+    const o = x => Object.assign({ seed: seed++, roughness: 1.1, bowing: 1 }, x);
+    const X = x => pad + x * s, Y = y => cssH - pad - y * s;
+    const fs = Math.max(11, Math.min(15, s / 3.6));
+    const t = {
+      C, s, fs,
+      line(x1, y1, x2, y2, p = {}) { rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: col(p.c), strokeWidth: p.w || 1.8, strokeLineDash: p.dash ? [6, 5] : undefined, roughness: p.r ?? 1.1 })); },
+      mark(x1, y1, x2, y2, p = {}) { rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: alpha(C.marker, .65), strokeWidth: p.w || Math.max(8, s * .32), roughness: .7 })); },
+      rect(x, y, w, h, p = {}) {
+        const fill = p.fill ? (p.a !== undefined ? alpha(col(p.fill), p.a) : col(p.fill)) : undefined;
+        rc.rectangle(X(x), Y(y + h), w * s, h * s, o({ stroke: p.c === "none" ? "none" : col(p.c || "pencil"), strokeWidth: p.w || 1.4, fill, fillStyle: p.solid ? "solid" : (p.fill ? "hachure" : undefined), hachureGap: p.gap || 5, hachureAngle: -41, strokeLineDash: p.dash ? [5, 4] : undefined, roughness: p.r ?? 1 }));
+      },
+      dot(x, y, p = {}) { rc.circle(X(x), Y(y), p.r || 6, o({ stroke: col(p.c || "pen"), fill: col(p.c || "pen"), fillStyle: "solid", strokeWidth: 1, roughness: .5 })); },
+      ring(x, y, r, p = {}) { rc.ellipse(X(x), Y(y), 2 * r * s, 2 * (p.ry || r) * s, o({ stroke: col(p.c || "pencil"), strokeWidth: p.w || 1.3, strokeLineDash: p.dash ? [4, 4] : undefined, roughness: 1.4 })); },
+      text(x, y, str, p = {}) {
+        const size = p.size || fs;
+        ctx.save();
+        ctx.font = `${p.bold ? 700 : 400} ${size}px Kalam, "Comic Sans MS", cursive`;
+        ctx.textAlign = p.align || "left"; ctx.textBaseline = "middle";
+        ctx.translate(X(x), Y(y)); if (p.rot) ctx.rotate(p.rot);
+        if (p.bg) {
+          const w = ctx.measureText(str).width + 8;
+          const left = ctx.textAlign === "center" ? -w / 2 : ctx.textAlign === "right" ? -w + 4 : -4;
+          ctx.fillStyle = alpha(C.card, .88); ctx.fillRect(left, -size * .62, w, size * 1.24);
+        }
+        ctx.fillStyle = col(p.c || "text"); ctx.fillText(str, 0, 0); ctx.restore();
+      },
+      arrow(x1, y1, x2, y2, p = {}) {
+        t.line(x1, y1, x2, y2, p);
+        const a = Math.atan2(Y(y2) - Y(y1), X(x2) - X(x1)), h = 9;
+        for (const d of [-0.45, 0.45]) rc.line(X(x2), Y(y2), X(x2) - h * Math.cos(a + d), Y(y2) - h * Math.sin(a + d), o({ stroke: col(p.c), strokeWidth: p.w || 1.8 }));
+      },
+      cross(x, y, p = {}) { const k = p.k || .18; t.line(x - k, y - k, x + k, y + k, { c: "bad", w: 2 }); t.line(x - k, y + k, x + k, y - k, { c: "bad", w: 2 }); },
+      cells(x0, y0, nx, ny, sz, f) {
+        for (let iy = 0; iy < ny; iy++) for (let ix = 0; ix < nx; ix++) {
+          const v = f ? f(ix, iy) : null;
+          ctx.strokeStyle = alpha(C.pencil, .35); ctx.lineWidth = 1;
+          ctx.strokeRect(X(x0 + ix * sz), Y(y0 + (iy + 1) * sz), sz * s, sz * s);
+          if (v && v.fill) { ctx.fillStyle = alpha(col(v.fill), v.a ?? .55); ctx.fillRect(X(x0 + ix * sz) + 1, Y(y0 + (iy + 1) * sz) + 1, sz * s - 2, sz * s - 2); }
+          if (v && v.label !== undefined && v.label !== "") t.text(x0 + (ix + .5) * sz, y0 + (iy + .5) * sz, String(v.label), { align: "center", size: Math.min(fs, sz * s * .6), c: v.lc || "text" });
+        }
+      },
+      bars(x0, y0, bw, vals, maxH, p = {}) {
+        const m = Math.max(...vals);
+        vals.forEach((v, i) => {
+          const h = Math.max(.02, v / m * maxH);
+          rc.rectangle(X(x0 + i * bw), Y(y0 + h), bw * s * .85, h * s, o({ stroke: col(i === p.hi ? "ink" : "pencil"), fill: i === p.hi ? alpha(C.marker, .8) : alpha(C.pencil, .35), fillStyle: "solid", strokeWidth: 1, roughness: .6 }));
+        });
+      },
+      poly(pts, p = {}) { rc.linearPath(pts.map(q => [X(q[0]), Y(q[1])]), o({ stroke: col(p.c), strokeWidth: p.w || 1.8, strokeLineDash: p.dash ? [6, 5] : undefined })); },
+    };
+    return t;
+  }
+  const rot = (x, y, a, cx = 0, cy = 0) => [cx + (x - cx) * Math.cos(a) - (y - cy) * Math.sin(a), cy + (x - cx) * Math.sin(a) + (y - cy) * Math.cos(a)];
+  let rs = 7; const rnd = () => ((rs = (rs * 16807) % 2147483647) / 2147483647);
+
+  const SK = {
+    transient(t) {
+      for (let x = .6; x <= 9.4; x += .45) t.dot(x, 5.2, { c: "ink", r: 5 });
+      t.text(5, 5.65, "wall voxels: hits 30–60, kept", { align: "center", c: "ok" });
+      const trail = [[1.2, 1], [2, 1.6], [2.8, 2.1], [3.6, 2.4], [4.4, 2.5], [5.2, 2.4], [6, 2.1], [6.8, 1.7]];
+      trail.forEach(([x, y], i) => { t.dot(x, y, { c: "pen", r: 6 }); t.cross(x, y, { k: .17 }); t.text(x, y - .45, "hits " + [1, 2, 1, 3, 2, 1, 2, 1][i], { align: "center", size: t.fs - 2, c: "muted" }); });
+      t.text(5, 3.4, "person walking by: few sweeps → dropped", { align: "center", c: "bad" });
+      t.text(.3, .35, "min_scans = 5", { c: "muted" });
+    },
+    outliers(t) {
+      for (let x = .8; x <= 7.6; x += .3) t.dot(x, 1.8 + (rnd() - .5) * .25, { c: "ink", r: 5 });
+      for (let y = 1.8; y <= 4.4; y += .3) t.dot(7.6 + (rnd() - .5) * .25, y, { c: "ink", r: 5 });
+      t.ring(3.1, 1.8, .55, { c: "ok" }); t.text(3.1, .85, "neighbours close ✓", { align: "center", c: "ok" });
+      t.dot(4.6, 4.6, { c: "pen", r: 7 }); t.ring(4.6, 4.6, 1.2, { c: "bad", dash: true }); t.cross(4.6, 4.6, { k: .25 });
+      t.text(4.6, 5.75, "ghost: neighbours far → dropped", { align: "center", c: "bad" });
+      t.text(9.8, .4, "20 neighbours, mean + 2 × spread", { align: "right", c: "muted", size: t.fs - 1 });
+    },
+    bridge(t) {
+      const rows = [["A", "1,2,0", "hits 9"], ["B", "5,5,1", "hits 2"], ["C", "1,3,0", "hits 7"]];
+      rows.forEach((r, i) => { t.rect(.2, 4.4 - i * 1.15, 3.2, .9, { c: "ink" }); t.text(.4, 4.85 - i * 1.15, r[0] + "  (" + r[1] + ")  " + r[2], { size: t.fs - 2 }); });
+      t.arrow(3.6, 3.7, 4.6, 3.7, { c: "ink" }); t.text(4.1, 4.15, "to_pcl", { align: "center", size: t.fs - 1 });
+      t.rect(4.8, 2.3, 2, 2.9, { c: "g-lib" }); t.text(5.8, 4.8, "PCL", { align: "center", bold: true, c: "g-lib" });
+      ["x,y,z", "x,y,z", "x,y,z"].forEach((v, i) => t.text(5.8, 4.2 - i * .6, v, { align: "center", size: t.fs - 2 }));
+      t.arrow(6.9, 3.2, 7.6, 3.2, { c: "g-lib" }); t.text(7.6, 3.65, "keeps [0, 2]", { size: t.fs - 1, c: "g-lib" });
+      t.arrow(8.2, 2.9, 8.2, 1.9, { c: "ink" }); t.text(8.35, 2.4, "pick", { size: t.fs - 1 });
+      t.rect(6.2, .3, 3.6, 1.4, { c: "ok" }); t.text(8, 1.25, "A  hits 9", { align: "center", c: "ok", size: t.fs - 1 }); t.text(8, .7, "C  hits 7", { align: "center", c: "ok", size: t.fs - 1 });
+    },
+    floor_guess(t) {
+      const v = [799, 2403, 5875, 9927, 7996, 3209, 1541, 1276, 1161, 1024, 1045, 1002, 858, 692, 519, 474, 405, 505, 512, 432];
+      t.bars(.6, .9, .44, v, 4.4, { hi: 3 });
+      t.text(.6 + 3.5 * .44, 5.55, "−0.40…−0.35 m: 9,927", { align: "center", c: "ink", size: t.fs - 1 });
+      t.text(.6, .45, "−0.55 m", { size: t.fs - 2, c: "muted" }); t.text(9.4, .45, "+0.45 m", { align: "right", size: t.fs - 2, c: "muted" });
+      t.text(5.8, 3.6, "fullest bin = floor guess", { c: "ink" }); t.text(5.8, 3.0, "−0.375 m", { c: "ink", bold: true });
+    },
+    find_floor(t) {
+      const f = x => 1.6 + x * .09;
+      for (let x = .4; x <= 9.6; x += .32) t.dot(x, f(x) + (rnd() - .5) * .4, { c: "pencil", r: 4 });
+      t.line(.2, f(.2) + .45, 9.8, f(9.8) + .45, { c: "muted", dash: true, w: 1 }); t.line(.2, f(.2) - .45, 9.8, f(9.8) - .45, { c: "muted", dash: true, w: 1 });
+      t.line(.2, f(.2), 9.8, f(9.8), { c: "ink", w: 3 });
+      t.rect(5.2, f(5.2) + .1, 2.2, 2.1, { c: "pencil", fill: "pencil", a: .25 }); t.text(6.3, f(6.3) + 2.6, "table: above the ±8 cm band, ignored", { align: "center", size: t.fs - 1, c: "muted" });
+      t.text(.4, 4.9, "fitted plane, tilt 0.41°", { c: "ink", bold: true });
+      t.text(.4, .5, "points within ±8 cm of the guess", { c: "muted", size: t.fs - 1 });
+    },
+    height_above(t) {
+      t.line(.3, 1.2, 9.7, 2.0, { c: "ink", w: 3 }); t.text(9.7, 1.4, "floor plane", { align: "right", c: "ink", size: t.fs - 1 });
+      t.dot(5, 4.6, { c: "pen", r: 8 }); t.text(5.3, 4.9, "point z", { c: "pen" });
+      t.arrow(5, 4.4, 5, 1.7, { c: "pen" }); t.text(5.25, 3.1, "h = z − (a·x + b·y + c)", { c: "pen" });
+    },
+    cell_index(t) {
+      for (let i = 0; i <= 8; i++) { t.line(1 + i, 2.2, 1 + i, 3.4, { c: "pencil", w: 1.2 }); if (i < 8) t.text(1.5 + i, 1.8, String(i), { align: "center", c: "muted" }); }
+      t.line(1, 2.8, 9, 2.8, { c: "pencil", w: 1.2 });
+      t.text(1, 3.8, "origin", { align: "center", c: "muted", size: t.fs - 1 });
+      t.mark(4, 2.8, 5, 2.8); t.dot(4.6, 2.8, { c: "pen", r: 8 });
+      t.arrow(4.6, 4.8, 4.6, 3.1, { c: "pen" }); t.text(4.6, 5.2, "x → floor((x − origin) / 0.05)", { align: "center", c: "pen" });
+      t.text(4.5, 1.1, "cell 3", { align: "center", c: "ink", bold: true });
+      t.text(9.6, 3.6, "clamped", { align: "right", c: "muted", size: t.fs - 2 });
+    },
+    build_grid(t) {
+      t.line(.3, .5, 3.6, .5, { c: "pencil" }); t.rect(.3, 1.05, 3.3, 3.9, { c: "none", fill: "marker", a: .18, solid: true, r: 0 });
+      t.text(.4, 5.25, "band 0.30–2.60 m", { c: "muted", size: t.fs - 1 });
+      for (let z = .7; z < 4.6; z += .28) t.dot(2.6, z, { c: "ink", r: 5 });
+      for (let z = .7; z < 1.6; z += .28) t.dot(1.2, z, { c: "pencil", r: 5 });
+      t.text(2.6, .2, "wall", { align: "center", size: t.fs - 2 }); t.text(1.2, .2, "chair", { align: "center", size: t.fs - 2 });
+      t.arrow(3.9, 3, 4.7, 3, { c: "ink" }); t.text(4.3, 3.45, "count", { align: "center", size: t.fs - 2 });
+      t.cells(5, .7, 6, 6, .75, (ix, iy) => iy === 4 ? { fill: "ink", a: .5, label: 14, lc: "card" } : (ix === 1 && iy === 1 ? { fill: "pencil", a: .45, label: 3 } : null));
+      t.text(7.25, 5.55, "top view, 5 cm cells", { align: "center", c: "muted", size: t.fs - 1 });
+    },
+    band_cells(t) {
+      const g = [[0,1,0,0,2,0,0,1],[14,15,13,12,16,14,15,13],[0,0,1,0,0,0,2,0],[0,3,3,0,0,0,0,0],[1,0,0,0,1,0,0,0]];
+      t.cells(1, .4, 8, 5, 1, (ix, iy) => { const v = g[4 - iy][ix]; return { label: v || "", fill: v >= 2 ? "marker" : null, a: .35, lc: v >= 2 ? "text" : "muted" }; });
+      g.forEach((row, r) => row.forEach((v, c) => { if (v >= 2) t.dot(1.5 + c, 4.9 - r - .28, { c: "pen", r: 5 }); }));
+      t.text(5, 5.7, "count ≥ 2 → one centre each (red)", { align: "center", c: "pen" });
+    },
+    score(t) {
+      t.text(2.5, 5.6, "wrong angle", { align: "center", c: "muted" }); t.text(7.5, 5.6, "right angle", { align: "center", c: "ok" });
+      t.bars(.4, 1, .38, [3, 4, 3, 5, 4, 3, 4, 4, 3, 5, 4, 3], 1.6);
+      t.bars(5.4, 1, .38, [0, 1, 14, 1, 0, 0, 1, 0, 0, 1, 13, 0], 4);
+      t.text(2.5, .45, "score 3² + 4² + … = 190", { align: "center", c: "muted", size: t.fs - 1 }); t.text(7.5, .45, "score 14² + 13² + … = 369", { align: "center", c: "ok", size: t.fs - 1 });
+    },
+    yaw(t) {
+      const a = 23 * Math.PI / 180, cx = 2.6, cy = 3;
+      const corners = [[1, 1.6], [4.2, 1.6], [4.2, 4.4], [1, 4.4], [1, 1.6]].map(([x, y]) => rot(x, y, a, cx, cy));
+      t.poly(corners, { c: "ink", w: 2.6 });
+      t.line(cx, cy, cx + 2.2, cy, { c: "muted", dash: true, w: 1 }); t.line(cx, cy, ...rot(cx + 2.2, cy, a, cx, cy), { c: "pen", w: 1.4 });
+      t.text(cx + 1.8, cy + .35, "θ", { c: "pen", bold: true });
+      t.arrow(5.4, 3, 6.4, 3, { c: "ink" }); t.text(5.9, 3.45, "−θ", { align: "center", c: "ink" });
+      t.poly([[6.8, 1.6], [9.6, 1.6], [9.6, 4.4], [6.8, 4.4], [6.8, 1.6]], { c: "ok", w: 2.6 });
+      t.text(5, .5, "try 0°, 0.5°, … 89.5°, then ±0.5° in 0.1°: real map → 88.30°", { align: "center", c: "muted", size: t.fs - 1 });
+    },
+    turn(t) {
+      const a = 23 * Math.PI / 180;
+      t.poly([[.6, 1.8], [3, 1.8], [3, 4.2], [.6, 4.2], [.6, 1.8]].map(([x, y]) => rot(x, y, a, 1.8, 3)), { c: "ink", w: 2.2 });
+      t.text(1.8, .5, "map frame", { align: "center", c: "muted" });
+      t.arrow(3.6, 3.4, 5.2, 3.4, { c: "ink" }); t.text(4.4, 3.85, "−yaw", { align: "center" });
+      t.poly([[5.8, 1.8], [8.2, 1.8], [8.2, 4.2], [5.8, 4.2], [5.8, 1.8]], { c: "ok", w: 2.2 });
+      t.text(7, .5, "aligned frame", { align: "center", c: "muted" });
+      t.arrow(5.2, 2.4, 3.6, 2.4, { c: "pencil", dash: true }); t.text(4.4, 1.95, "+yaw at the end", { align: "center", c: "muted", size: t.fs - 2 });
+      t.text(9.8, 5.5, "points, poses AND floor plane", { align: "right", c: "bad", size: t.fs - 1 });
+    },
+    build_grid2(t) {
+      t.cells(.6, .4, 12, 7, .72, (ix, iy) => (iy === 0 || iy === 6 || ix === 0 || ix === 11) ? { fill: "ink", a: .5 } : (iy === 3 && ix > 3 && ix < 8 ? { fill: "pencil", a: .45 } : null));
+      t.text(9.6, 5.75, "walls fill whole rows and columns", { align: "right", c: "ink", size: t.fs - 1 });
+    },
+    view(t) {
+      t.cells(1, .6, 8, 5, .9);
+      t.arrow(1.1, 2.85, 8.1, 2.85, { c: "pen", w: 2.4 }); t.text(4.6, 3.3, "Axis::Y: walk a row (y constant)", { align: "center", c: "pen", bg: true });
+      t.arrow(5.95, .7, 5.95, 5.0, { c: "ink", w: 2.4 }); t.text(6.15, 5.4, "Axis::X: walk a column", { c: "ink", bg: true });
+    },
+    runs(t) {
+      const row = "####.####..####.........##########....######";
+      const sz = 10 / row.length * .96;
+      t.cells(.2, 3, row.length, 1, sz, i => row[i] === "#" ? { fill: "ink", a: .55 } : null);
+      t.line(.2, 2.6, .2 + 15 * sz, 2.6, { c: "bad", w: 2 }); t.text(.2 + 7.5 * sz, 2.1, "0.75 m < 1 m: too short", { align: "center", c: "bad", size: t.fs - 1 });
+      t.line(.2 + 24 * sz, 2.6, .2 + 44 * sz, 2.6, { c: "ok", w: 2 }); t.text(.2 + 34 * sz, 2.1, "gap 4 cells bridged → one run", { align: "center", c: "ok", size: t.fs - 1 });
+      t.text(.2 + 19.5 * sz, 4.6, "gap 9 > 6: cut", { align: "center", c: "pen", size: t.fs - 1 });
+      t.text(5, .7, "max_gap 0.30 m = 6 cells; runs under 0.5 m are wall cross-sections", { align: "center", c: "muted", size: t.fs - 2 });
+    },
+    merge(t) {
+      const sz = .3;
+      [[3, 4, 26], [2, 1, 30], [1, 3, 28]].forEach(([r, a, b]) => t.cells(.3, .9 + r * sz, 32, 1, sz, i => i >= a && i <= b ? { fill: "ink", a: .5 } : null));
+      t.cells(.3, .9 + 6 * sz, 32, 1, sz, i => i >= 6 && i <= 20 ? { fill: "pencil", a: .5 } : null);
+      t.mark(.3 + sz, .9 + 2.4 * sz, .3 + 31 * sz, .9 + 2.4 * sz);
+      t.text(5, .45, "3 neighbouring rows → one candidate at the weighted middle", { align: "center", c: "ink", size: t.fs - 1 });
+      t.text(.3 + 13 * sz, 3.4, "2 empty rows away: stays apart", { align: "center", c: "pencil", size: t.fs - 1 });
+      t.text(9.8, 4.6, "union-find joins them", { align: "right", c: "muted", size: t.fs - 1 });
+    },
+    cands(t) {
+      t.poly([[.6, .6], [9.4, .6], [9.4, 5.4], [.6, 5.4], [.6, .6]], { c: "ink", w: 2 });
+      t.rect(6.6, 2.2, 2, .9, { fill: "pencil", a: .4 });
+      t.mark(.6, .6, 9.4, .6); t.mark(.6, 5.4, 9.4, 5.4); t.mark(.6, .6, .6, 5.4); t.mark(9.4, .6, 9.4, 5.4); t.mark(6.6, 2.2, 8.6, 2.2);
+      t.text(7.6, 1.7, "furniture face: also a candidate", { align: "center", c: "pencil", size: t.fs - 1 });
+      t.text(3.4, 3.2, "every straight line ≥ 1 m", { align: "center", c: "ink" });
+    },
+    poses(t) {
+      t.mark(2, 3.6, 8, 3.6); t.text(5, 4.1, "candidate", { align: "center", c: "ink" });
+      t.rect(1.5, .3, 7, 5.1, { c: "muted", dash: true }); t.text(8.4, 5.1, "span ± 0.5 m", { align: "right", c: "muted", size: t.fs - 2 });
+      [[2.4, 1.4], [3.4, 1.6], [4.4, 1.7], [5.4, 1.6], [6.4, 1.4], [7.4, 1.2]].forEach(([x, y]) => t.dot(x, y, { c: "pen" }));
+      t.text(5, .7, "lo = 6, hi = 0 → room is below", { align: "center", c: "pen" });
+      t.dot(9.3, 4.6, { c: "pen" }); t.text(9.6, 5.5, "outside span: ignored", { align: "right", c: "muted", size: t.fs - 2 });
+    },
+    pair(t) {
+      t.mark(.8, 3.15, 9.2, 3.15); t.mark(.8, 2.75, 9.2, 2.75);
+      t.rect(.8, 2.75, 8.4, .4, { fill: "ink", a: .25, c: "ink" });
+      [[1.5, 1.3], [3, 1.1], [4.5, 1.3]].forEach(([x, y]) => t.dot(x, y, { c: "pen" }));
+      [[5.5, 4.6], [7, 4.8], [8.5, 4.6]].forEach(([x, y]) => t.dot(x, y, { c: "pen" }));
+      t.text(5, 5.6, "room B (poses above)", { align: "center", c: "pen" }); t.text(5, .4, "room A (poses below)", { align: "center", c: "pen" });
+      t.text(9.7, 2.95, "0.10 m", { align: "right", c: "ink", size: t.fs - 2 });
+      t.text(5, 3.85, "two faces → one wall, thickness measured", { align: "center", c: "ok", bg: true, size: t.fs - 1 });
+    },
+    far(t) {
+      t.text(2.4, 5.6, "desk walked around", { align: "center", c: "ok" });
+      t.rect(1, 2.4, 2.8, 1.2, { fill: "pencil", a: .35 }); t.mark(1, 2.4, 3.8, 2.4); t.mark(1, 3.6, 3.8, 3.6);
+      t.arrow(4.1, 2.4, 4.1, 3.6, { c: "muted", w: 1.2 }); t.text(4.25, 3, "0.6 m", { c: "muted", size: t.fs - 2 });
+      [[.6, 1.6], [2.4, 1.4], [4.2, 1.6], [.6, 4.4], [2.4, 4.6], [4.2, 4.4]].forEach(([x, y]) => t.dot(x, y, { c: "pen", r: 5 }));
+      t.text(2.4, .5, "far side found → furniture", { align: "center", c: "pencil", size: t.fs - 1 });
+      t.text(7.6, 5.6, "thin wall, two rooms", { align: "center", c: "ok" });
+      t.mark(5.6, 3, 9.6, 3); t.line(5.6, 3, 9.6, 3, { c: "ink", w: 3 });
+      [[6, 1.8], [7.6, 1.6], [9.2, 1.8], [6, 4.2], [7.6, 4.4], [9.2, 4.2]].forEach(([x, y]) => t.dot(x, y, { c: "pen", r: 5 }));
+      t.text(7.6, .5, "no far side → thin wall", { align: "center", c: "ink", size: t.fs - 1 });
+    },
+    centre(t) {
+      for (let i = 0; i < 70; i++) { const x = 1 + rnd() * 6, y = .8 + rnd() * 4.4; t.dot(x, y, { c: "pencil", r: 4 }); }
+      t.text(4, 3, "★", { align: "center", c: "pen", size: t.fs + 10 }); t.text(4, 2.35, "centre of busy cells", { align: "center", c: "pen", size: t.fs - 1, bg: true });
+      t.mark(7.6, .8, 7.6, 5.2); t.mark(8.8, .8, 8.8, 5.2);
+      t.text(7.6, .35, "inner", { align: "center", c: "pencil", size: t.fs - 2 }); t.text(8.9, .35, "outer = wall", { align: "center", c: "ink", size: t.fs - 2 });
+      t.arrow(4.6, 3, 7.4, 3, { c: "muted", dash: true });
+    },
+    wardrobe(t) {
+      t.line(9, .3, 9, 1.8, { c: "ink", w: 3.5 }); t.line(9, 4.2, 9, 5.7, { c: "ink", w: 3.5 }); t.line(9, 1.8, 9, 4.2, { c: "ink", w: 2, dash: true });
+      t.rect(7.6, 1.8, 1.4, 2.4, { fill: "pencil", a: .5 });
+      t.mark(7.6, 1.85, 7.6, 4.15); t.text(7.35, 3.6, "A", { align: "right", bold: true, c: "ink" });
+      t.mark(9, .4, 9, 1.8); t.mark(9, 4.2, 9, 5.6); t.text(9.35, 1, "B", { bold: true, c: "ink" }); t.text(9.35, 5, "B", { bold: true, c: "ink" });
+      [[1.5, 1], [3, 1.4], [4.5, 2.6], [5.6, 4], [3.2, 4.8], [1.4, 3.6]].forEach(([x, y]) => t.dot(x, y, { c: "pen" }));
+      t.arrow(5.6, 2.6, 7.4, 2.6, { c: "ink" }); t.text(5.5, 2.2, "look behind A", { align: "right", c: "ink", size: t.fs - 1 });
+      t.text(5, .4, "B 0.6 m behind, ≤ 1.5 m, overlapping → A is furniture", { align: "center", c: "ok", size: t.fs - 1 });
+    },
+    join(t) {
+      t.line(.5, 3, 3, 3, { c: "ink", w: 3.5 }); t.line(5.4, 3, 6.6, 3, { c: "ink", w: 3.5 }); t.line(8.4, 3, 9.6, 3, { c: "ink", w: 3.5 });
+      t.rect(3, 1.9, 2.4, .9, { fill: "pencil", a: .45 }); t.line(3, 3, 5.4, 3, { c: "ok", w: 2, dash: true });
+      t.text(4.2, 3.55, "behind furniture: joined", { align: "center", c: "ok", size: t.fs - 1 });
+      t.text(7.5, 3.55, "0.9 m open: door", { align: "center", c: "bad", size: t.fs - 1 });
+      t.text(5, 5.2, "gaps ≤ 0.30 m always joined", { align: "center", c: "muted" });
+      t.text(5, .7, "result: wall 0.5–6.6 and wall 8.4–9.6", { align: "center", c: "ink", size: t.fs - 1 });
+    },
+    corners(t) {
+      t.line(8.4, .5, 8.4, 5.5, { c: "ink", w: 3.5 }); t.text(8.6, 5.3, "other wall", { c: "ink", size: t.fs - 1 });
+      t.line(1, 3, 7.4, 3, { c: "ink", w: 3.5 }); t.line(7.4, 3, 8.4, 3, { c: "ok", w: 2.4, dash: true });
+      t.arrow(7.4, 2.3, 8.3, 2.3, { c: "ok" }); t.text(7.9, 1.8, "≤ 0.5 m: snap", { align: "center", c: "ok", size: t.fs - 1 });
+      t.text(4, 3.55, "wall end", { align: "center", c: "muted" });
+    },
+    dist(t) {
+      t.rect(.6, 2.6, 8.8, .8, { fill: "ink", a: .3, c: "ink" }); t.line(.6, 3, 9.4, 3, { c: "ink", w: 1, dash: true });
+      t.text(.6, 3.75, "wall body = centreline ± thickness / 2", { c: "ink", size: t.fs - 1 });
+      t.dot(2.4, 4.9, { c: "pen" }); t.arrow(2.4, 4.75, 2.4, 3.5, { c: "pen" }); t.text(2.6, 4.4, "> 0.10 m → furniture point", { c: "pen", size: t.fs - 1 });
+      t.rect(5.8, .4, 2.2, 1.8, { fill: "pencil", a: .4 }); t.arrow(6.9, 2.2, 6.9, 2.55, { c: "ok" }); t.text(8.1, 1.3, "gap ≤ 0.15 m → against", { c: "ok", size: t.fs - 2 });
+    },
+    objects(t) {
+      t.line(.4, 5.6, 9.6, 5.6, { c: "ink", w: 3.5 }); t.line(.4, .4, .4, 5.6, { c: "ink", w: 3.5 });
+      const cl = [[2.2, 4.4, .9, .5], [6.2, 4.4, 1.2, .5], [4.4, 1.8, .8, .8]];
+      cl.forEach(([cx, cy, rx, ry], i) => { for (let k = 0; k < 18; k++) t.dot(cx + (rnd() - .5) * 2 * rx * .8, cy + (rnd() - .5) * 2 * ry * .8, { c: "pencil", r: 4 }); t.ring(cx, cy, rx + .2, { ry: ry + .2, dash: true }); t.text(cx, cy - ry - .45, "object-" + (i + 1), { align: "center", c: "ink", size: t.fs - 1 }); });
+      for (let x = .8; x < 9.4; x += .5) t.dot(x, 5.45, { c: "ink", r: 4 });
+      t.text(9.6, .6, "near a wall → wall points; the rest → clusters", { align: "right", c: "muted", size: t.fs - 2 });
+    },
+    rooms(t) {
+      t.poly([[.5, .5], [9.5, .5], [9.5, 5.5], [.5, 5.5], [.5, .5]], { c: "ink", w: 3 });
+      t.line(5, .5, 5, 2.2, { c: "ink", w: 3 }); t.line(5, 3.3, 5, 5.5, { c: "ink", w: 3 }); t.line(5, 2.2, 5, 3.3, { c: "pen", w: 1.6, dash: true });
+      t.rect(.6, .6, 4.3, 4.8, { c: "none", fill: "ok", a: .5, gap: 7 }); t.rect(5.1, .6, 4.3, 4.8, { c: "none", fill: "g-out", a: .5, gap: 7 });
+      t.dot(2.6, 3, { c: "pen", r: 9 }); t.dot(7.4, 3, { c: "pen", r: 9 });
+      t.text(2.7, 1.2, "room-1", { align: "center", bold: true, bg: true }); t.text(7.3, 1.2, "room-2", { align: "center", bold: true, bg: true });
+      t.text(5.2, 2.75, "door closed for the fill", { c: "pen", size: t.fs - 2, bg: true });
+    },
+    run(t) {
+      const st = ["clean", "floor", "grid", "yaw", "turn", "lines", "walls", "rooms", "turn back"];
+      st.forEach((s, i) => { const x = .2 + (i % 5) * 1.95, y = i < 5 ? 3.8 : 1.4; t.rect(x, y, 1.6, 1, { c: i === 4 || i >= 7 ? "pen" : "ink", dash: i === 4 || i >= 7 }); t.text(x + .8, y + .5, s, { align: "center", size: t.fs - 1 }); if (i % 5 !== 4 && i < 8) t.arrow(x + 1.6, y + .5, x + 1.95, y + .5, { c: "muted", w: 1.2 }); });
+      t.arrow(.2 + 4 * 1.95 + .8, 3.8, .2 + .8, 2.4, { c: "muted", w: 1.2, dash: true });
+      t.text(5, .5, "red dashed = still to write", { align: "center", c: "pen", size: t.fs - 1 });
+    },
+  };
+
+  const stepsEl = document.getElementById("steps");
+  let lastStage = null, n = 0, stageEl = null;
+  for (const st of D.steps) {
+    if (st.stage !== lastStage) {
+      stageEl = document.createElement("div"); stageEl.className = "stage";
+      stageEl.innerHTML = `<h3>${st.stage}</h3>`; stepsEl.appendChild(stageEl); lastStage = st.stage;
+    }
+    n++;
+    const card = document.createElement("article");
+    card.className = "step" + (st.planned ? " planned" : "");
+    card.innerHTML = `
+      <canvas data-sketch="${st.sketch}" role="img" aria-label="Sketch: ${esc(st.fn)}"></canvas>
+      <div class="step-body">
+        <div class="step-title"><span class="seq">${n}</span><b>${st.fn}</b>${st.planned ? '<span class="chip-planned">not written yet</span>' : ""}</div>
+        <p>${st.text}</p>
+        <table class="io">${st.io.map(([k, v, tag]) => `<tr><td>${k}</td><td>${v}<span class="${tag === "real" ? "real" : "ex"}">${tag === "real" ? "real" : "example"}</span></td></tr>`).join("")}</table>
+        <div class="btns">${st.files.map(id => `<button class="file" data-open="${id}">${base(FILE[id].path)}</button>`).join("")}</div>
+      </div>`;
+    stageEl.appendChild(card);
+  }
+  function drawSketches() {
+    if (typeof rough === "undefined") return;
+    rs = 7;
+    document.querySelectorAll("canvas[data-sketch]").forEach(c => { const f = SK[c.dataset.sketch]; if (f) { try { f(kit(c)); } catch (e) { console.error(e); } } });
+  }
+
+  document.getElementById("gloss").innerHTML = D.glossary.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+
+  const drawer = document.getElementById("drawer"), shade = document.getElementById("shade");
+  let lastFocus = null;
+  function openDrawer(html) {
+    lastFocus = document.activeElement;
+    drawer.innerHTML = html; drawer.hidden = false; shade.hidden = false; drawer.scrollTop = 0;
+    const b = drawer.querySelector(".d-close"); if (b) b.focus();
+  }
+  function closeDrawer() { drawer.hidden = true; shade.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  shade.addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !drawer.hidden) closeDrawer(); });
+  const edgeKey = e => e.s + ">" + e.t;
+  function openFile(id) {
+    const f = FILE[id]; if (!f) return;
+    const links = D.edges.filter(e => e.s === id || e.t === id);
+    const gaps = GAPS[id] || [];
+    let h = `<div class="d-head"><h3>${esc(f.path)}</h3><button class="d-close" aria-label="Close">×</button></div>
+      <div class="d-sec"><h4>${f.kind} · ${f.group}</h4><p>${fmt(f.what)}</p></div>`;
+    if (gaps.length) h += `<div class="d-sec">${gaps.map(g => `<div class="gap"><b>Gap:</b> ${fmt(g)}</div>`).join("")}</div>`;
+    if (links.length) h += `<div class="d-sec"><h4>Connections (click for what passes)</h4><div class="links">${links.map(e => `<button data-edge="${D.edges.indexOf(e)}">${e.s === id ? "→ " + esc(base(FILE[e.t].path)) : "← " + esc(base(FILE[e.s].path))} · ${e.type}</button>`).join("")}</div></div>`;
+    if (f.includes.length) h += `<div class="d-sec"><h4>Every include, explained</h4><table class="incs">${f.includes.map(([k, v]) => `<tr><td><code>${esc(k)}</code></td><td>${fmt(v)}</td></tr>`).join("")}</table></div>`;
+    if (f.example) h += `<div class="d-sec"><h4>Worked example</h4><p>${f.example}</p></div>`;
+    if (f.blocks.length) {
+      h += `<div class="d-sec"><h4>Every line, block by block</h4>`;
+      for (const [a, b, text] of f.blocks) {
+        const code = f.lines.slice(a - 1, b).map((l, i) => `<span class="ln">${a + i}</span>${esc(l)}`).join("\n");
+        h += `<div class="blk"><pre><code>${code}</code></pre><p>${fmt(text)}</p></div>`;
+      }
+      h += `</div>`;
+    } else {
+      h += `<div class="d-sec"><p class="hint">Summary node: outside the model package, so only its role is shown here.</p></div>`;
+    }
+    openDrawer(h);
+  }
+  function openEdge(i) {
+    const e = D.edges[i];
+    const gap = EDGE_GAPS[edgeKey(e)];
+    let h = `<div class="d-head"><h3>${esc(base(FILE[e.s].path))} → ${esc(base(FILE[e.t].path))}</h3><button class="d-close" aria-label="Close">×</button></div>
+      <div class="d-sec"><h4>${e.type}</h4><p>${fmt(e.what)}</p></div>
+      <div class="d-sec"><h4>Where</h4><p><code>${esc(e.where)}</code></p></div>`;
+    if (e.ein || e.eout) h += `<div class="d-sec"><h4>Example</h4><table class="incs"><tr><td>In</td><td>${e.ein || "–"}</td></tr><tr><td>Out</td><td>${e.eout || "–"}</td></tr></table></div>`;
+    if (gap) h += `<div class="gap"><b>Gap:</b> ${fmt(gap)}</div>`;
+    h += `<div class="links"><button data-open="${e.s}">open ${esc(base(FILE[e.s].path))}</button><button data-open="${e.t}">open ${esc(base(FILE[e.t].path))}</button></div>`;
+    openDrawer(h);
+  }
+  document.addEventListener("click", ev => {
+    const o = ev.target.closest("[data-open]"); if (o) { openFile(o.dataset.open); return; }
+    const ed = ev.target.closest("[data-edge]"); if (ed) { openEdge(+ed.dataset.edge); return; }
+    if (ev.target.closest(".d-close")) closeDrawer();
+  });
+
+  const GROUPS = [["model","Model package"],["domain","Domain"],["io","IO"],["connectors","Connectors"],["protocol","Protocol"],["library","Library"],["input","Inputs"],["output","Outputs"],["build","Build"],["docs","Docs"]];
+  const GCOL = { model: "g-model", domain: "g-domain", io: "g-io", connectors: "g-conn", protocol: "g-proto", library: "g-lib", input: "g-in", output: "g-out", build: "g-build", docs: "g-docs" };
+  const ESTYLE = {
+    implements: { w: 2.6, dash: null, key: "ink", label: "implements (.cpp → its .hpp)" },
+    include: { w: 1.2, dash: null, key: "pencil", label: "includes / uses types" },
+    calls: { w: 2, dash: null, key: "pen", label: "calls a function" },
+    data: { w: 1.8, dash: "8 5", key: "g-out", label: "data flows" },
+    planned: { w: 1.4, dash: "2 4", key: "bad", label: "planned (not written)" },
+    build: { w: 1, dash: "4 4", key: "muted", label: "build" },
+    doc: { w: 1, dash: "1 4", key: "g-docs", label: "documents" },
+  };
+  const hidden = new Set();
+  const tog = document.getElementById("toggles");
+  tog.innerHTML = GROUPS.map(([g, l]) => `<label><input type="checkbox" id="tg-${g}" data-g="${g}" checked><i data-dot="${g}"></i>${l}</label>`).join("");
+  const svg = d3.select("#graph");
+  const root = svg.append("g");
+  const nodes = D.files.map(f => ({ id: f.id, f }));
+  const links = D.edges.map((e, i) => ({ source: e.s, target: e.t, e, i }));
+  const SHAPE = k => k === "header" ? d3.symbolSquare : (k === "source" || k === "planned") ? d3.symbolCircle : (k === "external") ? d3.symbolTriangle : d3.symbolDiamond;
+  const linkSel = root.append("g").selectAll("g").data(links).join("g").style("cursor", "pointer");
+  linkSel.append("line").attr("class", "vis");
+  linkSel.append("line").attr("class", "hit").attr("stroke", "transparent").attr("stroke-width", 12);
+  linkSel.on("click", (ev, d) => openEdge(d.i));
+  const nodeSel = root.append("g").selectAll("g").data(nodes).join("g").style("cursor", "pointer").attr("tabindex", 0).attr("role", "button")
+    .attr("aria-label", d => d.f.path);
+  nodeSel.append("path").attr("d", d => d3.symbol(SHAPE(d.f.kind), d.f.group === "model" ? 340 : 220)());
+  nodeSel.append("text").attr("dy", 22).attr("text-anchor", "middle").text(d => base(d.f.path));
+  nodeSel.on("click", (ev, d) => { if (!ev.defaultPrevented) openFile(d.id); }).on("keydown", (ev, d) => { if (ev.key === "Enter") openFile(d.id); });
+
+  const anchor = { model: [0, 0], domain: [-320, -170], io: [300, -170], connectors: [380, 60], protocol: [260, -300], library: [-330, 170], input: [120, -330], output: [400, 230], build: [-60, 290], docs: [220, 250] };
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(l => l.e.type === "implements" ? 40 : 95).strength(.35))
+    .force("charge", d3.forceManyBody().strength(-260))
+    .force("collide", d3.forceCollide(34))
+    .force("x", d3.forceX(d => anchor[d.f.group][0]).strength(.09))
+    .force("y", d3.forceY(d => anchor[d.f.group][1]).strength(.09));
+  sim.on("tick", () => {
+    linkSel.selectAll("line").attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+    nodeSel.attr("transform", d => `translate(${d.x},${d.y})`);
+  });
+  nodeSel.call(d3.drag()
+    .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(.25).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+    .on("end", (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+  const zoom = d3.zoom().scaleExtent([.3, 3]).on("zoom", ev => root.attr("transform", ev.transform));
+  svg.call(zoom);
+  function fit() {
+    const el = document.getElementById("graph"); const w = el.clientWidth || 800, h = el.clientHeight || 600;
+    svg.call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(Math.min(1, w / 1100)));
+  }
+  function paintGraph() {
+    const C = tokens();
+    nodeSel.select("path").attr("fill", d => d.f.kind === "planned" ? C.card : C[GCOL[d.f.group]])
+      .attr("stroke", d => C[GCOL[d.f.group]]).attr("stroke-width", d => d.f.kind === "planned" ? 2.2 : 1)
+      .attr("stroke-dasharray", d => d.f.kind === "planned" ? "3 3" : null);
+    linkSel.select(".vis").attr("stroke", d => C[ESTYLE[d.e.type].key]).attr("stroke-width", d => ESTYLE[d.e.type].w)
+      .attr("stroke-dasharray", d => ESTYLE[d.e.type].dash).attr("opacity", .75);
+    document.querySelectorAll("[data-dot]").forEach(i => i.style.background = C[GCOL[i.dataset.dot]]);
+    document.getElementById("legend").innerHTML = Object.values(ESTYLE).map(s => `<span><svg width="30" height="8"><line x1="0" y1="4" x2="30" y2="4" stroke="${C[s.key]}" stroke-width="${s.w}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ""}/></svg>${s.label}</span>`).join("");
+  }
+  function applyFilter() {
+    const q = document.getElementById("q").value.trim().toLowerCase();
+    nodeSel.style("display", d => hidden.has(d.f.group) ? "none" : null)
+      .style("opacity", d => !q || d.f.path.toLowerCase().includes(q) ? 1 : .18);
+    linkSel.style("display", d => hidden.has(d.source.f.group) || hidden.has(d.target.f.group) ? "none" : null)
+      .style("opacity", d => !q || d.source.f.path.toLowerCase().includes(q) || d.target.f.path.toLowerCase().includes(q) ? 1 : .12);
+  }
+  document.getElementById("q").addEventListener("input", applyFilter);
+  tog.addEventListener("change", e => { const g = e.target.dataset.g; if (!g) return; if (e.target.checked) hidden.delete(g); else hidden.add(g); applyFilter(); });
+
+  function all() { drawSketches(); paintGraph(); }
+  fit(); all();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawSketches);
+  let timer; const redraw = () => { clearTimeout(timer); timer = setTimeout(all, 140); };
+  window.addEventListener("resize", redraw);
+  try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw); } catch (e) {}
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>

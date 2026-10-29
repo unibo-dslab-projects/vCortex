@@ -1,0 +1,459 @@
+<title>Wardrobe Rule Cases</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* layout: engineer's notebook on cool graph paper; one sketch card per furniture case */
+  :root {
+    --paper: #f3f6f7;
+    --grid: #dde5e9;
+    --card: #ffffff;
+    --rule: #cfd9de;
+    --ink: #1d3a63;
+    --pencil: #66717c;
+    --pen: #c0392b;
+    --marker: #f2cf3c;
+    --ok: #2c7a4b;
+    --bad: #b2412b;
+    --text: #1b232b;
+    --muted: #56626d;
+    --f-hand: "Kalam", "Comic Sans MS", cursive;
+    --f-body: "IBM Plex Sans", system-ui, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10161d; --grid: #1a232c; --card: #161f28; --rule: #26323d;
+      --ink: #9ec3f0; --pencil: #93a0ac; --pen: #ff7b63; --marker: #d6b52e;
+      --ok: #6cc591; --bad: #ff8b72; --text: #e4ebf1; --muted: #9eabb7;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10161d; --grid: #1a232c; --card: #161f28; --rule: #26323d;
+    --ink: #9ec3f0; --pencil: #93a0ac; --pen: #ff7b63; --marker: #d6b52e;
+    --ok: #6cc591; --bad: #ff8b72; --text: #e4ebf1; --muted: #9eabb7;
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--text);
+    font: 15px/1.55 var(--f-body);
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-block: 36px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 28px;
+  }
+  header { display: grid; gap: 10px; max-width: 70ch; }
+  h1 {
+    margin: 0;
+    font: 700 clamp(30px, 5vw, 44px)/1.1 var(--f-hand);
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  header p { margin: 0; color: var(--muted); }
+  .rules {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .rule {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 12px 14px;
+    min-width: 0;
+  }
+  .rule b { font-family: var(--f-hand); font-size: 18px; color: var(--ink); font-weight: 700; }
+  .rule p { margin: 4px 0 0; font-size: 14px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    font: 15px var(--f-hand); color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { display: inline-block; width: 26px; height: 0; }
+  .lg-wall { border-top: 4px solid var(--ink); }
+  .lg-ghost { border-top: 2px dashed var(--ink); opacity: .6; }
+  .lg-furn { height: 12px !important; border: 2px solid var(--pencil); background: repeating-linear-gradient(-45deg, var(--pencil) 0 1px, transparent 1px 5px); }
+  .lg-path { border-top: 2px dashed var(--pen); }
+  .lg-cand { height: 10px !important; background: var(--marker); opacity: .7; border-radius: 3px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 500px), 1fr));
+    gap: 22px;
+  }
+  .case {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-width: 0;
+  }
+  .case.extra { border-style: dashed; }
+  .case-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .case h2 { margin: 0; font: 700 24px/1.15 var(--f-hand); color: var(--ink); }
+  .chip {
+    font: 600 12px/1 var(--f-body);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    white-space: nowrap;
+  }
+  .chip.ok { color: var(--ok); }
+  .chip.bad { color: var(--bad); }
+  canvas { display: block; width: 100%; }
+  .views { display: grid; gap: 6px; }
+  .cap { font: 14px var(--f-hand); color: var(--muted); margin: 0; }
+  dl { margin: 0; display: grid; gap: 8px; }
+  dt { font: 600 11px/1 var(--f-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  dd { margin: 3px 0 0; font-size: 14.5px; }
+  dd.result-ok { color: var(--ok); font-weight: 600; }
+  dd.result-bad { color: var(--bad); font-weight: 600; }
+  code { font: 13px var(--f-mono); }
+  footer { color: var(--muted); font-size: 13px; max-width: 75ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Wall or furniture? Six rooms, seen from above</h1>
+    <p>How <code>split_walls_objects</code> sorts straight lines into walls and objects. Each room is 5 × 4 m and drawn to scale; the numbers are examples, not measurements.</p>
+  </header>
+
+  <section class="rules" aria-label="The two rules">
+    <div class="rule"><b>Rule 1: both sides</b><p>If the robot stood on both sides of a line (within 5 m), the line is inside the room, so it cannot be a wall.</p></div>
+    <div class="rule"><b>Rule 2: the wardrobe rule</b><p>If a parallel line shows up behind a one-sided line, up to 1.5 m back and overlapping it (±1.0 m), the back one is the wall and the front one is furniture.</p></div>
+    <div class="rule"><b>Objects</b><p>Points more than 0.10 m from every wall face are grouped into clusters (≥ 20 points, 0.10 m apart). Each cluster becomes an object.</p></div>
+  </section>
+
+  <div class="legend" aria-label="Legend">
+    <span><i class="lg-wall"></i>wall</span>
+    <span><i class="lg-ghost"></i>real wall, never seen</span>
+    <span><i class="lg-furn"></i>furniture</span>
+    <span><i class="lg-path"></i>robot path, dots = poses</span>
+    <span><i class="lg-cand"></i>candidate line</span>
+  </div>
+
+  <main class="grid" id="cases"></main>
+
+  <footer>Band = points 0.30 to 2.60 m above the floor. Candidate = straight run of grid cells at least 1.0 m long. The 0.31% figure is real (from the <code>room_around</code> cloud); all other numbers are made-up examples.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<script>
+(function () {
+  const CASES = [
+    {
+      id: "empty", name: "No furniture", status: ["ok", "Handled"],
+      sees: "Four wall faces, each a long straight run of cells.",
+      does: "Four candidates. The robot stood on one side of each, and nothing lies behind any of them.",
+      result: ["ok", "4 walls. The room is correct."],
+      top(t) {
+        t.room();
+        ["S", "E", "N", "W"].forEach(s => t.candSide(s));
+        t.path([[1, 1], [4, 1], [4, 3], [1, 3], [1, 1.6]]);
+        t.note(2.5, 2, "robot inside", { color: "pen", align: "center" });
+        t.note(2.5, 3.65, "wall ✓", { color: "ok", align: "center" });
+        t.note(2.5, 0.35, "wall ✓", { color: "ok", align: "center" });
+      }
+    },
+    {
+      id: "desk-wall", name: "Desk against a wall", status: ["ok", "Handled"],
+      sees: "The desk top is flat, so from above it gives about one point per cell. That is under min_column = 2, so it makes no candidate. The wall shows under the desk and above it, so its line stays whole.",
+      does: "The wall line is one-sided, so it is a wall. The desk's points are more than 0.10 m from the wall face and form an object cluster against it.",
+      result: ["ok", "Wall correct, desk becomes an object."],
+      top(t) {
+        t.room({ skip: "N" });
+        t.wall(0, 4, 5, 4);
+        t.furn(1.6, 3.3, 1.8, 0.7, "desk");
+        t.cand(0.1, 4, 4.9, 4, "");
+        t.note(2.5, 4.28, "wall seen under + above the desk ✓", { color: "ok", align: "center", size: 13 });
+        t.cluster(2.5, 3.65, 1.15, 0.5);
+        t.note(2.5, 2.75, "cluster → object", { color: "pencil", align: "center" });
+        t.path([[0.8, 0.8], [4.2, 0.8], [4.2, 2.4], [0.8, 2.4], [0.8, 1.2]]);
+      },
+      side(t) {
+        t.floor(); t.band();
+        t.wall(3.0, 0, 3.0, 2.8);
+        t.robot(0.35);
+        t.desk(2.2, 3.0, 0.75);
+        t.ray(0.78, 0.42, 3.0, 0.48, true);
+        t.ray(0.78, 0.42, 3.0, 1.12, true);
+        t.ray(0.78, 0.42, 2.45, 0.76, false);
+        t.note(2.9, 0.33, "under", { color: "ok", align: "right", size: 12 });
+        t.note(2.9, 1.3, "above", { color: "ok", align: "right", size: 12 });
+      },
+      sideCap: "Side view: the lidar hits the wall between the desk legs and above the top."
+    },
+    {
+      id: "wardrobe-wall", name: "Wardrobe against a wall", status: ["ok", "Handled"],
+      sees: "The wardrobe front A (1.8 m long), and the wall B beside it in two pieces.",
+      does: "A is one-sided. Rule 2 looks behind A and finds B 0.6 m back, overlapping A's span widened by 1.0 m. So B is the wall and A is furniture. B's pieces join behind the wardrobe.",
+      result: ["ok", "One wall from 0 to 4 m (coverage (1.2 + 1.0) / 4.0 = 0.55), and the wardrobe becomes an object against it."],
+      top(t) {
+        t.room({ skip: "E" });
+        t.wall(5, 0, 5, 1.2); t.wall(5, 3.0, 5, 4);
+        t.ghost(5, 1.2, 5, 3.0);
+        t.furn(4.4, 1.2, 0.6, 1.8, "");
+        t.cand(4.4, 1.25, 4.4, 2.95, "A");
+        t.cand(5, 0.1, 5, 1.2, "B"); t.cand(5, 3.0, 5, 3.9, "B");
+        t.arrow(3.0, 2.1, 4.35, 2.1, "");
+        t.note(2.95, 2.4, "A: front → object", { color: "pencil", align: "right", size: 13 });
+        t.note(4.7, 2.1, "joined", { color: "ink", align: "center", size: 12, rotate: -Math.PI / 2, bg: true });
+        t.note(3.6, 3.55, "B behind A, 0.6 m ≤ 1.5 ✓", { color: "ok", align: "center", size: 13 });
+        t.path([[0.8, 0.8], [3.6, 0.8], [3.6, 3.2], [0.8, 3.2], [0.8, 1.3]]);
+      }
+    },
+    {
+      id: "desk-middle", name: "Desk in the middle of the room", status: ["ok", "Handled"],
+      sees: "The desk faces: straight runs, and candidates if 1 m or longer.",
+      does: "Rule 1: the robot stood on both sides of the desk line, within 5 m. A line in the middle of the walk cannot be a wall.",
+      result: ["ok", "The desk becomes an object and the room stays whole."],
+      top(t) {
+        t.room();
+        t.furn(1.6, 1.7, 1.8, 0.6, "desk");
+        t.cand(1.65, 1.7, 3.35, 1.7, "");
+        t.path([[0.7, 0.7], [4.3, 0.7], [4.3, 3.3], [0.7, 3.3], [0.7, 1.0]]);
+        t.note(2.5, 0.35, "poses below ✓", { color: "pen", align: "center", size: 13 });
+        t.note(2.5, 3.62, "poses above ✓", { color: "pen", align: "center", size: 13 });
+        t.note(2.5, 1.32, "both sides → not a wall", { color: "ok", align: "center", size: 13 });
+      }
+    },
+    {
+      id: "wardrobe-full", name: "Wardrobe covering the whole wall", status: ["bad", "Known limit"],
+      sees: "Only the wardrobe front, from corner to corner. The wall never shows beside it, and the lidar barely reaches above it: only 0.31% of points are higher than 1.1 m.",
+      does: "A is one-sided and nothing lies behind it. Rule 2 has nothing to find, so A is taken as the wall.",
+      result: ["bad", "The wall lands 0.6 m inside the room, the room is 0.6 m too narrow, and the wardrobe is lost as an object. No fix from geometry alone: document it as a limit."],
+      top(t) {
+        t.room({ skip: "E" });
+        t.ghost(5, 0, 5, 4);
+        t.furn(4.4, 0, 0.6, 4, "");
+        t.cand(4.4, 0.05, 4.4, 3.95, "A");
+        t.note(3.95, 3.55, "A taken as wall ✗", { color: "bad", align: "right", size: 13 });
+        t.dim(4.4, 0.45, 5.0, 0.45, "0.6 m lost");
+        t.path([[0.8, 0.8], [3.6, 0.8], [3.6, 3.2], [0.8, 3.2], [0.8, 1.3]]);
+      },
+      side(t) {
+        t.floor(); t.band();
+        t.ghost(3.0, 0, 3.0, 2.8);
+        t.furnSide(2.4, 3.0, 2.0);
+        t.robot(0.35);
+        t.ray(0.78, 0.42, 2.4, 0.55, false);
+        t.ray(0.78, 0.42, 2.4, 1.05, false);
+        t.ray(0.78, 0.42, 2.4, 1.55, false);
+        t.note(2.7, 2.3, "wall up here:", { color: "bad", align: "right", size: 12 });
+        t.note(2.7, 2.1, "out of reach", { color: "bad", align: "right", size: 12 });
+      },
+      sideCap: "Side view: every ray stops at the wardrobe; the wall behind is never hit."
+    },
+    {
+      id: "shelf-one-side", name: "Shelf in the middle, robot on one side", status: ["bad", "Gap"], extra: true,
+      sees: "The shelf's near face A. The far wall shows past the shelf's ends, 2.2 m behind A.",
+      does: "A is one-sided because the robot never went behind it. Rule 2 only looks 1.5 m back, so it misses the far wall, and A is taken as a wall.",
+      result: ["bad", "A false wall splits the room in two. Possible fix: if the lidar saw points behind A along most of its span, A is not the end of what the lidar can see. A real wall seen through one door must not trigger it."],
+      top(t) {
+        t.room();
+        t.furn(1.5, 1.8, 2.0, 0.4, "shelf");
+        t.cand(1.55, 1.8, 3.45, 1.8, "A");
+        t.path([[0.7, 0.8], [4.3, 0.8], [4.3, 1.3], [0.7, 1.3]]);
+        t.ray(1.0, 1.3, 0.6, 3.95, true);
+        t.ray(4.0, 1.3, 4.5, 3.95, true);
+        t.note(2.65, 2.5, "A taken as wall ✗", { color: "bad", align: "left", size: 13 });
+        t.dim(2.5, 2.2, 2.5, 4.0, "2.2 m > 1.5");
+      }
+    }
+  ];
+
+  const main = document.getElementById("cases");
+  for (const c of CASES) {
+    const el = document.createElement("article");
+    el.className = "case" + (c.extra ? " extra" : "");
+    el.innerHTML = `
+      <div class="case-head">
+        <h2>${c.name}</h2>
+        <span class="chip ${c.status[0]}">${c.status[1]}</span>
+      </div>
+      <div class="views">
+        <canvas data-view="top" role="img" aria-label="${c.name}, top view"></canvas>
+        ${c.side ? `<canvas data-view="side" role="img" aria-label="${c.name}, side view"></canvas><p class="cap">${c.sideCap}</p>` : ""}
+      </div>
+      <dl>
+        <div><dt>What the lidar sees</dt><dd>${c.sees}</dd></div>
+        <div><dt>What the model does</dt><dd>${c.does}</dd></div>
+        <div><dt>Result</dt><dd class="result-${c.result[0]}">${c.result[1]}</dd></div>
+      </dl>`;
+    el.dataset.id = c.id;
+    main.appendChild(el);
+  }
+
+  function tokens() {
+    const s = getComputedStyle(document.documentElement);
+    const g = n => s.getPropertyValue("--" + n).trim();
+    return { ink: g("ink"), pencil: g("pencil"), pen: g("pen"), marker: g("marker"), ok: g("ok"), bad: g("bad"), muted: g("muted"), card: g("card") };
+  }
+  function alpha(hex, a) {
+    const h = hex.replace("#", "");
+    const n = parseInt(h.length === 3 ? h.split("").map(x => x + x).join("") : h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // world metres -> canvas pixels, y up; one toolkit per canvas
+  function kit(canvas, wM, hM, padX, padY) {
+    const C = tokens();
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth;
+    const s = (cssW - 2 * padX) / wM;
+    const cssH = Math.round(hM * s + 2 * padY);
+    canvas.style.height = cssH + "px";
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const rc = rough.canvas(canvas);
+    let seed = 7;
+    const o = extra => Object.assign({ seed: seed++, roughness: 1.3, bowing: 1.2 }, extra);
+    const X = x => padX + x * s, Y = y => cssH - padY - y * s;
+    const fontPx = Math.max(12, Math.min(16, s / 6));
+
+    const t = {
+      C, s,
+      wall(x1, y1, x2, y2) { rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: C.ink, strokeWidth: 3.5 })); },
+      ghost(x1, y1, x2, y2) { rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: alpha(C.ink, 0.55), strokeWidth: 2, strokeLineDash: [7, 6] })); },
+      room(opt = {}) {
+        const sides = { S: [0, 0, 5, 0], E: [5, 0, 5, 4], N: [5, 4, 0, 4], W: [0, 4, 0, 0] };
+        for (const k in sides) if (k !== opt.skip) t.wall(...sides[k]);
+      },
+      furn(x, y, w, h, label) {
+        rc.rectangle(X(x), Y(y + h), w * s, h * s, o({ stroke: C.pencil, strokeWidth: 1.6, fill: alpha(C.pencil, 0.55), fillStyle: "hachure", hachureGap: 6, hachureAngle: -41 }));
+        if (label) t.note(x + w / 2, y + h / 2, label, { color: "pencil", align: "center", bold: true, bg: true });
+      },
+      cand(x1, y1, x2, y2, label) {
+        rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: alpha(C.marker, 0.6), strokeWidth: Math.max(9, s * 0.14), roughness: 0.8 }));
+        if (label) {
+          const vert = x1 === x2;
+          const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+          t.note(vert ? mx - 0.16 : mx, vert ? my : my + 0.22, label, { color: "ink", align: vert ? "right" : "center", bold: true, size: fontPx + 3 });
+        }
+      },
+      candSide(side) {
+        const m = 0.1;
+        const L = { S: [m, 0, 5 - m, 0], N: [m, 4, 5 - m, 4], W: [0, m, 0, 4 - m], E: [5, m, 5, 4 - m] }[side];
+        t.cand(...L, "");
+      },
+      path(pts) {
+        rc.linearPath(pts.map(p => [X(p[0]), Y(p[1])]), o({ stroke: C.pen, strokeWidth: 1.8, strokeLineDash: [6, 5], roughness: 0.9 }));
+        for (let i = 0; i < pts.length - 1; i++) {
+          const [a, b] = [pts[i], pts[i + 1]];
+          const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          const n = Math.max(1, Math.round(len / 0.7));
+          for (let k = 0; k < n; k++) {
+            const f = k / n;
+            rc.circle(X(a[0] + (b[0] - a[0]) * f), Y(a[1] + (b[1] - a[1]) * f), Math.max(5, s * 0.08), o({ stroke: C.pen, fill: C.pen, fillStyle: "solid", strokeWidth: 1, roughness: 0.6 }));
+          }
+        }
+      },
+      ray(x1, y1, x2, y2, good) {
+        rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: alpha(good ? C.ok : C.pen, 0.85), strokeWidth: 1.3, strokeLineDash: [3, 4], roughness: 0.5 }));
+        rc.circle(X(x2), Y(y2), 6, o({ stroke: good ? C.ok : C.pen, strokeWidth: 1.4, roughness: 0.4 }));
+      },
+      arrow(x1, y1, x2, y2, label) {
+        rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: C.ink, strokeWidth: 1.6 }));
+        const a = Math.atan2(Y(y2) - Y(y1), X(x2) - X(x1)), h = 10;
+        for (const d of [-0.45, 0.45]) {
+          rc.line(X(x2), Y(y2), X(x2) - h * Math.cos(a + d), Y(y2) - h * Math.sin(a + d), o({ stroke: C.ink, strokeWidth: 1.6 }));
+        }
+        if (label) t.note((x1 + x2) / 2, (y1 + y2) / 2 + 0.2, label, { color: "ink", align: "center" });
+      },
+      dim(x1, y1, x2, y2, label) {
+        rc.line(X(x1), Y(y1), X(x2), Y(y2), o({ stroke: C.bad, strokeWidth: 1.4, roughness: 0.6 }));
+        const vert = x1 === x2, k = 0.08;
+        for (const [x, y] of [[x1, y1], [x2, y2]]) {
+          if (vert) rc.line(X(x - k), Y(y), X(x + k), Y(y), o({ stroke: C.bad, strokeWidth: 1.4 }));
+          else rc.line(X(x), Y(y - k), X(x), Y(y + k), o({ stroke: C.bad, strokeWidth: 1.4 }));
+        }
+        if (vert) t.note(x1 - 0.12, (y1 + y2) / 2, label, { color: "bad", align: "right", size: fontPx - 1, bg: true });
+        else t.note((x1 + x2) / 2, y1 + 0.24, label, { color: "bad", align: "center", size: fontPx - 1, bg: true });
+      },
+      cluster(cx, cy, rx, ry) {
+        rc.ellipse(X(cx), Y(cy), 2 * rx * s, 2 * ry * s, o({ stroke: C.pencil, strokeWidth: 1.4, strokeLineDash: [4, 5], roughness: 1.6 }));
+      },
+      note(x, y, txt, opt = {}) {
+        const size = opt.size || fontPx;
+        ctx.save();
+        ctx.font = `${opt.bold ? 700 : 400} ${size}px Kalam, "Comic Sans MS", cursive`;
+        ctx.textAlign = opt.align || "left";
+        ctx.textBaseline = "middle";
+        ctx.translate(X(x), Y(y));
+        if (opt.rotate) ctx.rotate(opt.rotate);
+        if (opt.bg) {
+          const w = ctx.measureText(txt).width + 8;
+          const left = ctx.textAlign === "center" ? -w / 2 : ctx.textAlign === "right" ? -w + 4 : -4;
+          ctx.fillStyle = alpha(C.card, 0.85);
+          ctx.fillRect(left, -size * 0.62, w, size * 1.24);
+        }
+        ctx.fillStyle = C[opt.color] || C.ink;
+        ctx.fillText(txt, 0, 0);
+        ctx.restore();
+      },
+      // side view only
+      floor() { rc.line(X(0), Y(0), X(wM), Y(0), o({ stroke: C.pencil, strokeWidth: 2 })); },
+      band() {
+        rc.rectangle(X(0), Y(2.6), wM * s, 2.3 * s, o({ stroke: "none", fill: alpha(C.marker, 0.14), fillStyle: "solid", roughness: 0 }));
+        t.note(0.05, 2.45, "band 0.30–2.60 m", { color: "muted", size: fontPx - 2 });
+      },
+      robot(x) {
+        rc.rectangle(X(x - 0.25), Y(0.4), 0.55 * s, 0.22 * s, o({ stroke: C.pen, strokeWidth: 1.6, fill: alpha(C.pen, 0.25), fillStyle: "solid" }));
+        rc.line(X(x - 0.2), Y(0.18), X(x - 0.2), Y(0), o({ stroke: C.pen, strokeWidth: 1.6 }));
+        rc.line(X(x + 0.25), Y(0.18), X(x + 0.25), Y(0), o({ stroke: C.pen, strokeWidth: 1.6 }));
+        rc.circle(X(x + 0.43), Y(0.42), 8, o({ stroke: C.pen, fill: C.pen, fillStyle: "solid" }));
+        t.note(x, 0.62, "robot", { color: "pen", align: "center", size: fontPx - 2 });
+      },
+      desk(x1, x2, top) {
+        rc.rectangle(X(x1), Y(top + 0.04), (x2 - x1) * s, 0.06 * s, o({ stroke: C.pencil, fill: alpha(C.pencil, 0.6), fillStyle: "solid", strokeWidth: 1.4 }));
+        rc.line(X(x1 + 0.06), Y(top), X(x1 + 0.06), Y(0), o({ stroke: C.pencil, strokeWidth: 2 }));
+        rc.line(X(x2 - 0.06), Y(top), X(x2 - 0.06), Y(0), o({ stroke: C.pencil, strokeWidth: 2 }));
+        t.note((x1 + x2) / 2, top + 0.22, "desk", { color: "pencil", align: "center", size: fontPx - 1 });
+      },
+      furnSide(x1, x2, h) {
+        rc.rectangle(X(x1), Y(h), (x2 - x1) * s, h * s, o({ stroke: C.pencil, strokeWidth: 1.6, fill: alpha(C.pencil, 0.55), fillStyle: "hachure", hachureGap: 6, hachureAngle: -41 }));
+        t.note((x1 + x2) / 2, h / 2, "wardrobe", { color: "pencil", align: "center", size: fontPx - 2, rotate: -Math.PI / 2, bg: true });
+      }
+    };
+    return t;
+  }
+
+  function drawAll() {
+    if (typeof rough === "undefined") return;
+    for (const c of CASES) {
+      const el = main.querySelector(`[data-id="${c.id}"]`);
+      const top = el.querySelector('[data-view="top"]');
+      c.top(kit(top, 5, 4.4, 34, 26));
+      const side = el.querySelector('[data-view="side"]');
+      if (side) c.side(kit(side, 3.2, 2.8, 20, 12));
+    }
+  }
+
+  let timer;
+  const redraw = () => { clearTimeout(timer); timer = setTimeout(drawAll, 120); };
+  window.addEventListener("resize", redraw);
+  try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw); } catch (e) {}
+  new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  drawAll();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawAll);
+})();
+</script>

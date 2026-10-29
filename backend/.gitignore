@@ -1,4 +1,4 @@
-# CMake build trees
+# cmake build trees
 build/
 build-*/
 cmake-build-*/
@@ -9,7 +9,7 @@ compile_commands.json
 .cache/
 .ccache/
 
-# Editors
+# editors
 .vscode/
 .idea/
 *.swp

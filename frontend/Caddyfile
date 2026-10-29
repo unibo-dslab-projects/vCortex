@@ -1,5 +1,5 @@
-# Serves the built Vue app and forwards /api and /ws (WebSocket included) to the backend,
-# so the browser sees one origin and needs no CORS. Runs as non-root on :8080.
+# serves the built vue app, forwards /api and /ws (websocket too) to the backend: one origin,
+# no cors; non-root on :8080
 {
 	admin off
 	auto_https off
@@ -25,9 +25,8 @@
 	handle {
 		root * /srv
 
-		# Vite puts a content hash in every file name under /assets: cache them forever.
-		# Everything else (index.html, sw.js, manifest) must be checked on every load,
-		# or a new release never reaches the browser.
+		# vite hashes every file name under /assets: cache forever; everything else (index.html,
+		# sw.js, manifest) is rechecked each load, or a new release never reaches the browser
 		@mutable not path /assets/*
 		header @mutable Cache-Control "no-cache"
 		header /assets/* Cache-Control "public, max-age=31536000, immutable"

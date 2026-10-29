@@ -8,17 +8,18 @@
 
 namespace vcortex {
 
-// Only runs parallel to x or y: the map is turned by dominant_yaw first, which reduces the search
-// to one pass per grid row and column. Walls and furniture faces both show up here;
-// split_walls_objects sorts them apart.
+// only runs parallel to x or y: dominant_yaw squares the map first, so one pass per row and
+// column; walls and furniture faces both land here, split_walls_objects sorts them
 
-enum class Axis { X, Y };  // X: the line has constant x (runs along y)
+enum class Axis { X, Y };  // X: constant x, runs along y
 
+// aligned frame, metres
 struct Candidate {
-    Axis axis;
-    double position;
-    double from, to;
-    std::size_t cells;
+    Axis axis = Axis::X;
+    double position = 0.0;        // the constant coordinate: x for Axis::X, y for Axis::Y
+    double from = 0.0, to = 0.0;  // span along the run, from <= to
+    // occupied only, not bridged: cells * cell / (to - from) = share really seen
+    std::size_t cells = 0;
 };
 
 std::vector<Candidate> find_candidates(const Grid& grid, const CandidateParams& p);

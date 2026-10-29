@@ -14,7 +14,7 @@ std::string problem(const char* key, const char* rule, double got) {
 
 }  // namespace
 
-// Checks are written as !(ok) so that NaN, which fails every comparison, is refused too.
+// !(ok) form: nan fails every comparison, so it is refused too
 std::optional<std::string> validate(const ModelSettings& s) {
     if (!(s.wall_height > kWallHeightMin && s.wall_height < kWallHeightMax)) {
         std::ostringstream rule;
@@ -37,7 +37,7 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(c.band_top_margin >= 0)) {
         return problem("candidates.band_top_margin", ">= 0", c.band_top_margin);
     }
-    // An empty band would leave the grid blank: the model would report no walls, not an error.
+    // empty band leaves the grid blank: no walls reported, no error
     if (!(c.band_lo < s.wall_height - c.band_top_margin)) {
         return problem("candidates.band_lo", "below wall_height - candidates.band_top_margin",
                        c.band_lo);
@@ -60,7 +60,7 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("walls.collinear_tolerance", ">= 0", w.collinear_tolerance);
     }
     if (!(w.min_gap >= 0)) return problem("walls.min_gap", ">= 0", w.min_gap);
-    // Otherwise no gap could be a door: shorter ones are closed, longer ones are not doors.
+    // else no gap is a door: shorter ones close, longer ones are not doors
     if (!(w.door_max >= w.min_gap)) {
         return problem("walls.door_max", ">= walls.min_gap", w.door_max);
     }

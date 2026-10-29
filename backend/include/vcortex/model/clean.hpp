@@ -7,13 +7,13 @@
 
 namespace vcortex {
 
-// Run drop_transient first: a person's trail would distort drop_outliers' neighbour statistics.
+// run drop_transient first: a person's trail skews drop_outliers' neighbour stats
 
-// A voxel seen in fewer than min_scans scans is a passer-by or a sensor ghost, not structure.
+// voxel seen in fewer than min_scans scans: passer-by or sensor ghost, not structure
 std::vector<Point> drop_transient(const std::vector<Point>& in, std::uint16_t min_scans);
 
-// pcl::StatisticalOutlierRemoval. PCL's tutorial values (50, 1.0) remove too much on a 5 cm voxel
-// map, which is much sparser than the clouds they were chosen for.
+// pcl::StatisticalOutlierRemoval; pcl tutorial values (50, 1.0) cut too much on sparse 5 cm
+// voxel maps
 std::vector<Point> drop_outliers(const std::vector<Point>& in, int mean_k, double stddev_mul);
 
 }  // namespace vcortex

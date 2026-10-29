@@ -6,7 +6,7 @@
 
 #include <crow.h>
 
-// TODO: --config and --map, the full route table, the map store and the model worker.
+// TODO: --config and --map, full route table, map store and model worker
 int main(int argc, char** argv) {
     std::uint16_t port = 9002;
     for (int i = 1; i < argc; ++i) {
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     crow::SimpleApp app;
     CROW_ROUTE(app, "/api/status")([] { return crow::json::wvalue{{"mode", "idle"}}; });
 
-    // Crow stops cleanly on SIGINT and SIGTERM, so `docker stop` needs no extra handling.
+    // crow stops cleanly on SIGINT and SIGTERM, so `docker stop` needs nothing extra
     app.port(port).multithreaded().run();
     return EXIT_SUCCESS;
 }

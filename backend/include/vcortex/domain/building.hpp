@@ -11,18 +11,18 @@
 
 namespace vcortex {
 
-// Mirrors schema/twin.schema.json. Names follow IFC, the open BIM standard, so a later IFC
-// export is a renaming, not a remodelling.
+// mirrors schema/twin.schema.json; ifc (open bim standard) names, so an ifc export is a
+// rename, not a remodel
 
-// IfcWall. start/end are the centreline, as in IFC and on an architect's drawing; the model sees
-// only the interior face and shifts it outwards by half the thickness.
+// IfcWall; start/end are the centreline, as in ifc; the model sees only the interior face
+// and shifts it out by half the thickness
 struct Wall {
     std::string id;
     Vec2 start, end;
     double thickness = 0.0;
     std::size_t points = 0;
-    // Share of the length where points were seen; the rest was filled in (behind furniture, or
-    // across a gap). A measured share can be checked, a "confidence" score could not.
+    // share of length where points were seen, rest filled in (behind furniture, gaps);
+    // measurable, unlike a "confidence" score
     double coverage = 0.0;
 };
 
@@ -35,7 +35,7 @@ struct Room {
     bool closed = false;  // false: the free space leaked out through a missing wall
 };
 
-// IfcBuildingElementProxy: IFC's type for an element whose kind is not known.
+// IfcBuildingElementProxy: ifc's type for an element of unknown kind
 struct Object {
     std::string id;
     std::string kind = "unknown";  // TODO: classify objects; nothing sets another kind yet
@@ -43,8 +43,7 @@ struct Object {
     Vec2 center, size;
     double yaw = 0.0;
     double bottom_z = 0.0;
-    // The lidar rarely sees the top of tall furniture, so the real top may be higher. Reported as
-    // seen rather than guessed.
+    // lidar rarely sees tall furniture tops, so the real top may be higher; reported as seen
     double top_z_seen = 0.0;
     std::size_t points = 0;
 };

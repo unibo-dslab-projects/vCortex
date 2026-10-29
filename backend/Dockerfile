@@ -9,7 +9,7 @@ ARG CROW_SHA256=6be759b3a648b41f0adc3a8408a53fd0243775217b4e32e8101d69e4aadf48cc
 # ------------------------------------------------------------------------------------------
 FROM debian:${DEBIAN_VERSION}-slim AS toolchain
 
-# Keep downloaded .debs in a cache mount instead of the image layer.
+# keep downloaded .debs in a cache mount, not the image layer
 RUN rm -f /etc/apt/apt.conf.d/docker-clean
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -20,8 +20,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       nlohmann-json3-dev libasio-dev
 
 # ------------------------------------------------------------------------------------------
-# PCL from source: Debian's libpcl-dev ships only shared libraries that pull in VTK and Qt
-# (hundreds of MB). Building the needed modules statically keeps the runtime image tiny.
+# pcl from source: debian's libpcl-dev is shared-only and pulls in vtk and qt (hundreds of mb);
+# static, needed modules only, keeps the runtime image tiny
 FROM toolchain AS pcl
 ARG PCL_VERSION PCL_SHA256
 ADD --checksum=sha256:${PCL_SHA256} \
@@ -53,7 +53,7 @@ RUN mkdir /opt/crow && tar -xzf /tmp/crow.tar.gz -C /opt/crow --strip-components
 
 # ------------------------------------------------------------------------------------------
 FROM toolchain AS build
-# Static archives that only the final link needs (Boost.Iostreams references them).
+# static archives only the final link needs (boost.iostreams references them)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update \
@@ -62,15 +62,14 @@ COPY --from=pcl /opt/pcl /opt/pcl
 COPY --from=crow /opt/crow /opt/crow
 WORKDIR /src
 
-# Least to most often changed, so an edit in src/ reuses every layer above it.
+# least to most often changed, so an edit in src/ reuses every layer above
 COPY CMakeLists.txt ./
 COPY config config
 COPY include include
 COPY src src
 
-# ccache keeps object files between builds: only changed translation units recompile.
-# -static-pie: one self-contained binary that still gets address randomisation (ASLR).
-# The .a suffix and Boost_USE_STATIC_LIBS make every library lookup pick the static archive.
+# ccache keeps objects between builds; -static-pie: one self-contained binary that keeps aslr
+# .a suffix and Boost_USE_STATIC_LIBS make every lookup pick the static archive
 RUN --mount=type=cache,target=/root/.cache/ccache \
     cmake -S . -B /build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \

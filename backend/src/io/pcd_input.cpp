@@ -73,6 +73,8 @@ Snapshot read_pcd(const std::filesystem::path& file) {
     const FieldReader hits(cloud, "hits"), intensity(cloud, "intensity");
 
     Snapshot snap;
+    // a pcd stores no frame name; map_builder saves point-lio's map, which lives in camera_init
+    snap.frame_id = "camera_init";
     snap.has_hits = hits.present();
     snap.has_intensity = intensity.present();
     const std::size_t n = static_cast<std::size_t>(cloud.width) * cloud.height;

@@ -61,6 +61,7 @@ struct Level {
 struct Building {
     std::uint32_t run_id = 0;
     std::uint32_t seq = 0;
+    std::string frame_id;  // copied from Snapshot: coordinates mean nothing without their frame
     std::vector<Level> levels;
 };
 

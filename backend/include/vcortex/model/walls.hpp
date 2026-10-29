@@ -17,8 +17,10 @@ struct WallsAndObjects {
     std::vector<Object> objects;
 };
 
+// aligned frame in and out; walls get their ids here, since objects point at them
 WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const Grid& grid,
                                     const std::vector<Point>& aligned, const Plane& floor,
+                                    double band_lo, double band_hi,
                                     const Trajectory& aligned_traj, const WallParams& p);
 
 }  // namespace vcortex

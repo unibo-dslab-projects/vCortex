@@ -40,17 +40,22 @@ struct View {
     }
 };
 
-std::vector<Run> find_runs(const View& v, int max_gap_cells) {
+// short runs are cross-sections of perpendicular walls; kept, they would glue every line they
+// touch into one candidate
+std::vector<Run> find_runs(const View& v, int max_gap_cells, int min_piece_cells) {
     std::vector<Run> runs;
     for (int line = 0; line < v.lines(); ++line) {
         Run run;
         bool open = false;
+        auto keep = [&] {
+            if (run.last - run.start + 1 >= min_piece_cells) runs.push_back(run);
+        };
         for (int k = 0; k < v.along(); ++k) {
             if (!v.occupied(line, k)) {
                 continue;
             }
             if (open && k - run.last - 1 > max_gap_cells) {
-                runs.push_back(run);
+                keep();
                 open = false;
             }
             if (!open) {
@@ -61,7 +66,7 @@ std::vector<Run> find_runs(const View& v, int max_gap_cells) {
             ++run.occupied;
         }
         if (open) {
-            runs.push_back(run);
+            keep();
         }
     }
     return runs;
@@ -74,9 +79,8 @@ int find_root(std::vector<int>& parent, int i) {
     return i;
 }
 
-// neighbouring lines only: a wall spread over 2-3 rows becomes one candidate, a wardrobe front
-// one empty row away stays apart. spans may touch across a bridgeable gap, so a wall still
-// slightly tilted after alignment, stepping from one row to the next, stays whole
+// neighbouring lines only, so a front one empty row away stays apart; spans may touch across
+// a bridgeable gap, so a wall still slightly tilted, stepping between rows, stays whole
 std::vector<Candidate> merge(const View& v, std::vector<Run> runs, int merge_lines,
                              int max_gap_cells, int min_cells) {
     std::sort(runs.begin(), runs.end(), [](const Run& a, const Run& b) {
@@ -150,8 +154,8 @@ std::vector<Candidate> find_candidates(const Grid& grid, const CandidateParams& 
     std::vector<Candidate> out;
     for (const Axis axis : {Axis::X, Axis::Y}) {
         const View v{grid, axis, p.min_column};
-        std::vector<Candidate> part =
-            merge(v, find_runs(v, max_gap_cells), merge_lines, max_gap_cells, min_cells);
+        std::vector<Candidate> part = merge(v, find_runs(v, max_gap_cells, (min_cells + 1) / 2),
+                                           merge_lines, max_gap_cells, min_cells);
         std::sort(part.begin(), part.end(), [](const Candidate& a, const Candidate& b) {
             return std::tie(a.position, a.from) < std::tie(b.position, b.from);
         });

@@ -82,6 +82,7 @@ target_link_libraries(vcortex_core
 # --- vcortex_io: frameworks and drivers (crow, pcd files, threads) ---
 
 add_library(vcortex_io STATIC
+  src/io/config.cpp
   src/io/pcd_input.cpp
   src/io/map_store.cpp
   src/io/model_worker.cpp

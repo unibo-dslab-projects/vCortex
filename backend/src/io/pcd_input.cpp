@@ -17,9 +17,6 @@ namespace vcortex {
 
 namespace {
 
-// Trajectory promises one pose per 0.2 m of travel (snapshot.hpp)
-constexpr double kPoseSpacing = 0.2;
-
 // by name and stored type: map_builder writes hits as an integer, point-lio's files carry
 // fields we skip (normals, curvature)
 class FieldReader {
@@ -127,12 +124,9 @@ Trajectory read_tum(const std::filesystem::path& file) {
             throw std::runtime_error("load_offline: " + file.string() + " line " +
                                      std::to_string(line_no) + " is not a tum pose");
         }
-        if (!traj.empty() && std::hypot(p.x - traj.back().x, p.y - traj.back().y) < kPoseSpacing) {
-            continue;
-        }
         p.time_ns = stamp_ns(stamp);
         p.yaw = std::atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz));
-        traj.push_back(p);
+        append_pose(traj, p);
     }
     return traj;
 }

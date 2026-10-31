@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -30,7 +31,20 @@ struct Pose {
     double yaw = 0.0;  // radians about z, counter-clockwise from x (ros rep 103)
 };
 
-// one pose per 0.2 m of travel, oldest first
+// one pose per kPoseSpacing of travel, oldest first
 using Trajectory = std::vector<Pose>;
+
+// the model needs where the robot walked, not how often it stopped; a standing robot would
+// otherwise pile up thousands of poses in one spot
+inline constexpr double kPoseSpacing = 0.2;  // metres
+
+// false when p is closer than kPoseSpacing to the last kept pose
+inline bool append_pose(Trajectory& traj, const Pose& p) {
+    if (!traj.empty() && std::hypot(p.x - traj.back().x, p.y - traj.back().y) < kPoseSpacing) {
+        return false;
+    }
+    traj.push_back(p);
+    return true;
+}
 
 }  // namespace vcortex

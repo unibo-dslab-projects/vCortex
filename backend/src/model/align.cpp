@@ -41,8 +41,6 @@ double score(const std::vector<Vec2>& pts, double radius, int tenths,
 
 }  // namespace
 
-// cell centres sit on the grid lattice, which pulls near-axis answers to 0: error up to
-// atan(cell / wall length), 0.3 degrees on 8 m, less than one cell of drift
 double dominant_yaw(const std::vector<Vec2>& band_cells) {
     if (band_cells.size() < 2) {
         return 0.0;

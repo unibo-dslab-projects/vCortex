@@ -10,14 +10,12 @@
 namespace vcortex {
 
 // map at one moment, or one map.pcd; run_id and seq go into the Building to name its source
-// has_intensity: 0 is a real intensity, so a missing field must not look like a measured 0
 struct Snapshot {
     std::uint32_t run_id = 0;
     std::uint32_t seq = 0;
     // named by the source (ros header frame_id): another robot's map has another origin
     std::string frame_id;
     std::vector<Point> points;    // source map frame, z up, metres
-    bool has_intensity = false;
 };
 
 // z kept though one floor needs only x, y: it tells the level and draws the walk in 3d

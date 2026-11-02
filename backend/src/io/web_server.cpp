@@ -37,15 +37,12 @@ crow::response error_response(int code, const std::string& message) {
 Json settings_json(const ModelSettings& s) {
     return {{"wall_height", s.wall_height},
             {"wall_height_source",
-             s.wall_height_source == HeightSource::User ? "user" : "default"},
-            {"min_scans", s.min_scans}};
+             s.wall_height_source == HeightSource::User ? "user" : "default"}};
 }
 
 Json report_json(const ModelReport& r) {
     return {{"points_in", r.points_in},
-            {"after_transient", r.after_transient},
             {"after_outliers", r.after_outliers},
-            {"transient_skipped", r.transient_skipped},
             {"tilt_deg", r.tilt_deg},
             {"yaw_deg", r.yaw_deg},
             {"poses", r.poses},
@@ -345,7 +342,7 @@ void WebServer::ingest_frame(Connection& conn, const std::string& bytes) {
     const FrameHeader& h = frame.header;
     switch (h.kind) {
         case FrameKind::Map:
-            store_.put_map(h.run_id, h.seq, frame.points, true);
+            store_.put_map(h.run_id, h.seq, frame.points);
             raw_send_map(encode_raw(FrameKind::Map, h.run_id, h.seq, frame.points));
             break;
         case FrameKind::Delta:
@@ -354,9 +351,6 @@ void WebServer::ingest_frame(Connection& conn, const std::string& bytes) {
             } else {
                 conn.send_text(R"({"type":"resync","reason":"seq gap"})");
             }
-            break;
-        case FrameKind::Hits:
-            store_.put_hits(h.run_id, frame.points);
             break;
         case FrameKind::Poses:
             store_.put_poses(h.run_id, frame.poses);

@@ -1,6 +1,5 @@
 #include "vcortex/model/model.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -37,15 +36,10 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const auto t0 = std::chrono::steady_clock::now();
     ModelResult res;
     ModelReport& rep = res.report;
-    res.has_intensity = snap.has_intensity;
     rep.points_in = snap.points.size();
 
     // A: cleaning
-    rep.transient_skipped = std::none_of(snap.points.begin(), snap.points.end(),
-                                         [](const Point& p) { return p.hits > 0; });
-    std::vector<Point> pts = drop_transient(snap.points, settings.min_scans);
-    rep.after_transient = pts.size();
-    pts = drop_outliers(pts, settings.outlier_mean_k, settings.outlier_stddev_mul);
+    std::vector<Point> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
     // B: floor; heights are taken above the plane, so the cloud is never levelled

@@ -52,7 +52,6 @@ IngestFrame decode_frame(const std::string& bytes) {
             p.y = read_at<float>(bytes, at + 4);
             p.z = read_at<float>(bytes, at + 8);
             p.intensity = read_at<float>(bytes, at + 12);
-            p.hits = read_at<std::uint16_t>(bytes, at + 16);
             // a voxel key from nan is undefined behaviour
             if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
                 throw std::invalid_argument("frame holds a point that is not finite");

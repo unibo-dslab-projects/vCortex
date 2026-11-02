@@ -1,7 +1,6 @@
 {
   "model_period_s": 3.0,
   "wall_height": 2.70,
-  "min_scans": 5,
   "outliers": { "mean_k": 20, "stddev_mul": 2.0 },
   "candidates": {
     "band_lo": 0.30,

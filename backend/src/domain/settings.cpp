@@ -21,11 +21,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
         rule << "in (" << kWallHeightMin << ", " << kWallHeightMax << ")";
         return problem("wall_height", rule.str().c_str(), s.wall_height);
     }
-    if (s.min_scans < kMinScansMin || s.min_scans > kMinScansMax) {
-        std::ostringstream rule;
-        rule << "in " << kMinScansMin << ".." << kMinScansMax;
-        return problem("min_scans", rule.str().c_str(), s.min_scans);
-    }
     if (s.outlier_mean_k < 1) return problem("outliers.mean_k", ">= 1", s.outlier_mean_k);
     if (!(s.outlier_stddev_mul > 0)) {
         return problem("outliers.stddev_mul", "> 0", s.outlier_stddev_mul);

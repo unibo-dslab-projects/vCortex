@@ -44,7 +44,6 @@ struct RoomParams {
 struct ModelSettings {
     double wall_height = 2.70;  // metres, replaced by the user's value
     HeightSource wall_height_source = HeightSource::Default;
-    std::uint16_t min_scans = 5;
     int outlier_mean_k = 20;
     double outlier_stddev_mul = 2.0;
     CandidateParams candidates;
@@ -56,11 +55,6 @@ struct ModelSettings {
 // storey; both ends excluded
 inline constexpr double kWallHeightMin = 1.5;
 inline constexpr double kWallHeightMax = 6.0;
-
-// map_builder caps hits at 64 (hits_report_cap), so higher drops every point; 0 keeps all
-// and hides that drop_transient was asked for
-inline constexpr std::uint16_t kMinScansMin = 1;
-inline constexpr std::uint16_t kMinScansMax = 64;
 
 // guards config/model.json and PUT /api/settings, so bad values fail at entry, not mid-run
 // returns the first problem by json key (e.g. "candidates.cell"), or nothing

@@ -23,8 +23,7 @@ constexpr double kOfflineVoxel = 0.0001;
 void load_map(MapStore& store, const std::filesystem::path& file) {
     const OfflineInput in = load_offline(file);
     store.reset(in.snapshot.frame_id, kOfflineVoxel);
-    store.put_map(in.snapshot.run_id, in.snapshot.seq, in.snapshot.points,
-                  in.snapshot.has_intensity);
+    store.put_map(in.snapshot.run_id, in.snapshot.seq, in.snapshot.points);
     store.put_poses(in.snapshot.run_id, in.trajectory);
 }
 

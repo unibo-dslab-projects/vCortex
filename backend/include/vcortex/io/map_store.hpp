@@ -35,7 +35,7 @@ public:
     // a new run_id is a new map: old points and poses go; the same run_id is a resync, so
     // every record replaces its voxel
     void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points,
-                 bool has_hits, bool has_intensity);
+                 bool has_intensity);
 
     // false when the delta does not follow the last seq of this run: nothing is applied and
     // the source must send a fresh map
@@ -76,7 +76,7 @@ private:
     double voxel_size_ = 0.05;
     std::optional<std::uint32_t> run_id_;
     std::uint32_t seq_ = 0;
-    bool has_hits_ = false, has_intensity_ = false;
+    bool has_intensity_ = false;
     // points in a vector, not as map values: take() then copies one contiguous block
     std::vector<Point> points_;
     std::unordered_map<Key, std::size_t, KeyHash> index_;

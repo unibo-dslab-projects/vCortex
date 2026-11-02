@@ -345,7 +345,7 @@ void WebServer::ingest_frame(Connection& conn, const std::string& bytes) {
     const FrameHeader& h = frame.header;
     switch (h.kind) {
         case FrameKind::Map:
-            store_.put_map(h.run_id, h.seq, frame.points, true, true);
+            store_.put_map(h.run_id, h.seq, frame.points, true);
             raw_send_map(encode_raw(FrameKind::Map, h.run_id, h.seq, frame.points));
             break;
         case FrameKind::Delta:

@@ -72,7 +72,6 @@ Snapshot read_pcd(const std::filesystem::path& file) {
     Snapshot snap;
     // a pcd stores no frame name; map_builder saves point-lio's map, which lives in camera_init
     snap.frame_id = "camera_init";
-    snap.has_hits = hits.present();
     snap.has_intensity = intensity.present();
     const std::size_t n = static_cast<std::size_t>(cloud.width) * cloud.height;
     snap.points.reserve(n);
@@ -84,7 +83,7 @@ Snapshot read_pcd(const std::filesystem::path& file) {
         // organised clouds mark missing returns with nan
         if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
         if (snap.has_intensity) p.intensity = static_cast<float>(intensity.at(i));
-        if (snap.has_hits) {
+        if (hits.present()) {
             p.hits = static_cast<std::uint16_t>(
                 std::min<double>(hits.at(i), std::numeric_limits<std::uint16_t>::max()));
         }

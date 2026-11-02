@@ -35,7 +35,7 @@ void MapStore::reset(std::string frame_id, double voxel_size) {
     voxel_size_ = voxel_size;
     run_id_.reset();
     seq_ = 0;
-    has_hits_ = has_intensity_ = false;
+    has_intensity_ = false;
     points_.clear();
     index_.clear();
     trajectory_.clear();
@@ -43,7 +43,7 @@ void MapStore::reset(std::string frame_id, double voxel_size) {
 }
 
 void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points,
-                       bool has_hits, bool has_intensity) {
+                       bool has_intensity) {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (run_id_ != run_id) {
         points_.clear();
@@ -55,7 +55,6 @@ void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vecto
     index_.reserve(points.size());
     for (const Point& p : points) upsert(p);
     seq_ = seq;
-    has_hits_ = has_hits;
     has_intensity_ = has_intensity;
     dirty_ = true;
 }
@@ -107,7 +106,6 @@ MapCopy MapStore::copy_locked() const {
     copy.snapshot.seq = seq_;
     copy.snapshot.frame_id = frame_id_;
     copy.snapshot.points = points_;
-    copy.snapshot.has_hits = has_hits_;
     copy.snapshot.has_intensity = has_intensity_;
     copy.trajectory = trajectory_;
     return copy;

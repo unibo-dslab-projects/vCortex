@@ -15,7 +15,7 @@ std::vector<Point> drop_transient(const std::vector<Point>& in, std::uint16_t mi
     // most voxels are structure, so output is near input size
     out.reserve(in.size());
     std::copy_if(in.begin(), in.end(), std::back_inserter(out),
-                 [min_scans](const Point& p) { return p.hits >= min_scans; });
+                 [min_scans](const Point& p) { return p.hits == 0 || p.hits >= min_scans; });
     return out;
 }
 

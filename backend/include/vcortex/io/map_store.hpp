@@ -50,6 +50,9 @@ public:
     // the map if it changed since the last take, else nothing
     std::optional<MapCopy> take();
 
+    // the map as it is, leaving it marked changed or not; for a viewer that just joined
+    std::optional<MapCopy> peek() const;
+
     // run the model again on the same map, e.g. after new settings
     void touch();
 
@@ -66,6 +69,7 @@ private:
 
     Key key_of(const Point& p) const;
     void upsert(const Point& p);
+    MapCopy copy_locked() const;
 
     mutable std::mutex mutex_;
     std::string frame_id_;

@@ -6,10 +6,10 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "vcortex/io/config.hpp"
 #include "vcortex/io/map_store.hpp"
-#include "vcortex/io/model_worker.hpp"
 #include "vcortex/io/pcd_input.hpp"
 #include "vcortex/io/web_server.hpp"
 
@@ -35,10 +35,10 @@ int serve(std::uint16_t port, const std::optional<std::filesystem::path>& config
     MapStore store;
     if (map_file) load_map(store, *map_file);
 
-    ModelWorker worker(store, config.model, config.model_period_s, nullptr);
-    WebServer server(store, worker, map_file ? "offline" : "idle",
-                     map_file ? map_file->filename().string() : "");
-    worker.start();
+    std::optional<std::string> offline_source;
+    if (map_file) offline_source = map_file->filename().string();
+    const char* token = std::getenv("VCORTEX_INGEST_TOKEN");
+    WebServer server(store, config, std::move(offline_source), token ? token : "");
     server.run(port);
     return EXIT_SUCCESS;
 }

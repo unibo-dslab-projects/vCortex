@@ -2,6 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <vector>
+
+#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/snapshot.hpp"
 
 namespace vcortex {
 
@@ -46,5 +51,15 @@ constexpr std::size_t record_size(FrameKind kind) {
     }
     return 0;
 }
+
+// points for map, delta, hits; poses for poses
+struct IngestFrame {
+    FrameHeader header;
+    std::vector<Point> points;
+    std::vector<Pose> poses;
+};
+
+// throws std::invalid_argument on a short frame, an unknown kind or a wrong size
+IngestFrame decode_frame(const std::string& bytes);
 
 }  // namespace vcortex

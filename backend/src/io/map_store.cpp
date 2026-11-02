@@ -92,6 +92,16 @@ std::optional<MapCopy> MapStore::take() {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (!dirty_ || !run_id_) return std::nullopt;
     dirty_ = false;
+    return copy_locked();
+}
+
+std::optional<MapCopy> MapStore::peek() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    if (!run_id_) return std::nullopt;
+    return copy_locked();
+}
+
+MapCopy MapStore::copy_locked() const {
     MapCopy copy;
     copy.snapshot.run_id = *run_id_;
     copy.snapshot.seq = seq_;

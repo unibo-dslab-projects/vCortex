@@ -21,8 +21,8 @@ void put_float(std::string& out, float f) {
 
 }  // namespace
 
-// x y z hits, not the whole Point: intensity is the first reading per voxel only, too noisy to
-// show, and leaving it out keeps 14 bytes per point instead of 18
+// x y z only: intensity is the first reading per voxel, too noisy to show, and leaving it
+// out keeps 12 bytes per point instead of 16
 std::string to_ply(const ModelResult& result) {
     const std::vector<Point>& pts = result.cleaned;
     std::string out =
@@ -33,14 +33,12 @@ std::string to_ply(const ModelResult& result) {
         "property float x\n"
         "property float y\n"
         "property float z\n"
-        "property ushort hits\n"
         "end_header\n";
-    out.reserve(out.size() + pts.size() * 14);
+    out.reserve(out.size() + pts.size() * 12);
     for (const Point& p : pts) {
         put_float(out, p.x);
         put_float(out, p.y);
         put_float(out, p.z);
-        put_le(out, p.hits, 2);
     }
     return out;
 }

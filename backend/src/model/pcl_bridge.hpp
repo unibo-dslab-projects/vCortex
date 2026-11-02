@@ -12,8 +12,8 @@
 
 namespace vcortex {
 
-// one way: pcl returns indices and callers keep the original Points, so hits and intensity
-// survive without a custom pcl point type
+// one way: pcl returns indices and callers keep the original Points, so intensity survives
+// without a custom pcl point type
 inline pcl::PointCloud<pcl::PointXYZ>::Ptr to_pcl(const std::vector<Point>& in) {
     auto cloud = std::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
     cloud->reserve(in.size());

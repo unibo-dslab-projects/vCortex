@@ -22,13 +22,11 @@
     },
     "report": {
       "type": "object",
-      "required": ["points_in", "after_transient", "after_outliers", "transient_skipped", "floor_tilt_deg", "yaw_deg", "duration_ms"],
+      "required": ["points_in", "after_outliers", "floor_tilt_deg", "yaw_deg", "duration_ms"],
       "additionalProperties": false,
       "properties": {
         "points_in": { "type": "integer", "minimum": 0 },
-        "after_transient": { "type": "integer", "minimum": 0 },
         "after_outliers": { "type": "integer", "minimum": 0 },
-        "transient_skipped": { "type": "boolean" },
         "floor_tilt_deg": { "type": "number" },
         "yaw_deg": { "type": "number" },
         "duration_ms": { "type": "number", "minimum": 0 }

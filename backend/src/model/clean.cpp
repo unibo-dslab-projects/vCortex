@@ -1,23 +1,12 @@
 #include "vcortex/model/clean.hpp"
 
-#include <algorithm>
 #include <cstddef>
-#include <iterator>
 
 #include <pcl/filters/statistical_outlier_removal.h>
 
 #include "pcl_bridge.hpp"
 
 namespace vcortex {
-
-std::vector<Point> drop_transient(const std::vector<Point>& in, std::uint16_t min_scans) {
-    std::vector<Point> out;
-    // most voxels are structure, so output is near input size
-    out.reserve(in.size());
-    std::copy_if(in.begin(), in.end(), std::back_inserter(out),
-                 [min_scans](const Point& p) { return p.hits >= min_scans; });
-    return out;
-}
 
 std::vector<Point> drop_outliers(const std::vector<Point>& in, int mean_k, double stddev_mul) {
     // pcl searches mean_k + 1 neighbours (incl. the point) and fails with fewer points;

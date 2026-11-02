@@ -34,21 +34,21 @@ public:
 
     // a new run_id is a new map: old points and poses go; the same run_id is a resync, so
     // every record replaces its voxel
-    void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points,
-                 bool has_hits, bool has_intensity);
+    void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points);
 
     // false when the delta does not follow the last seq of this run: nothing is applied and
     // the source must send a fresh map
     bool put_delta(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points);
 
-    // replaces hits of voxels already known; unknown voxels and other runs are ignored
-    void put_hits(std::uint32_t run_id, const std::vector<Point>& points);
 
     // poses of another run belong to a map this store does not hold, so they are dropped
     void put_poses(std::uint32_t run_id, const std::vector<Pose>& poses);
 
     // the map if it changed since the last take, else nothing
     std::optional<MapCopy> take();
+
+    // the map as it is, leaving it marked changed or not; for a viewer that just joined
+    std::optional<MapCopy> peek() const;
 
     // run the model again on the same map, e.g. after new settings
     void touch();
@@ -66,13 +66,13 @@ private:
 
     Key key_of(const Point& p) const;
     void upsert(const Point& p);
+    MapCopy copy_locked() const;
 
     mutable std::mutex mutex_;
     std::string frame_id_;
     double voxel_size_ = 0.05;
     std::optional<std::uint32_t> run_id_;
     std::uint32_t seq_ = 0;
-    bool has_hits_ = false, has_intensity_ = false;
     // points in a vector, not as map values: take() then copies one contiguous block
     std::vector<Point> points_;
     std::unordered_map<Key, std::size_t, KeyHash> index_;

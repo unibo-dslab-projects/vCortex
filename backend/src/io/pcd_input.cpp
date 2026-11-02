@@ -1,11 +1,9 @@
 #include "vcortex/io/pcd_input.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -17,8 +15,7 @@ namespace vcortex {
 
 namespace {
 
-// by name and stored type: map_builder writes hits as an integer, point-lio's files carry
-// fields we skip (normals, curvature)
+// by name and stored type: point-lio's files carry fields we skip (normals, curvature)
 class FieldReader {
 public:
     FieldReader(const pcl::PCLPointCloud2& cloud, const std::string& name) : cloud_(cloud) {
@@ -67,13 +64,11 @@ Snapshot read_pcd(const std::filesystem::path& file) {
     if (!x.present() || !y.present() || !z.present()) {
         throw std::runtime_error("load_offline: " + file.string() + " lacks x, y or z");
     }
-    const FieldReader hits(cloud, "hits"), intensity(cloud, "intensity");
+    const FieldReader intensity(cloud, "intensity");
 
     Snapshot snap;
     // a pcd stores no frame name; map_builder saves point-lio's map, which lives in camera_init
     snap.frame_id = "camera_init";
-    snap.has_hits = hits.present();
-    snap.has_intensity = intensity.present();
     const std::size_t n = static_cast<std::size_t>(cloud.width) * cloud.height;
     snap.points.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
@@ -83,11 +78,7 @@ Snapshot read_pcd(const std::filesystem::path& file) {
         p.z = static_cast<float>(z.at(i));
         // organised clouds mark missing returns with nan
         if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
-        if (snap.has_intensity) p.intensity = static_cast<float>(intensity.at(i));
-        if (snap.has_hits) {
-            p.hits = static_cast<std::uint16_t>(
-                std::min<double>(hits.at(i), std::numeric_limits<std::uint16_t>::max()));
-        }
+        if (intensity.present()) p.intensity = static_cast<float>(intensity.at(i));
         snap.points.push_back(p);
     }
     return snap;

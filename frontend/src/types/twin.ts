@@ -43,9 +43,7 @@ export interface Twin {
   }
   report: {
     points_in: number
-    after_transient: number
     after_outliers: number
-    transient_skipped: boolean
     floor_tilt_deg: number
     yaw_deg: number
     duration_ms: number

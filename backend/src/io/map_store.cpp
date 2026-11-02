@@ -35,15 +35,13 @@ void MapStore::reset(std::string frame_id, double voxel_size) {
     voxel_size_ = voxel_size;
     run_id_.reset();
     seq_ = 0;
-    has_hits_ = has_intensity_ = false;
     points_.clear();
     index_.clear();
     trajectory_.clear();
     dirty_ = false;
 }
 
-void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points,
-                       bool has_hits, bool has_intensity) {
+void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points) {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (run_id_ != run_id) {
         points_.clear();
@@ -55,8 +53,6 @@ void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vecto
     index_.reserve(points.size());
     for (const Point& p : points) upsert(p);
     seq_ = seq;
-    has_hits_ = has_hits;
-    has_intensity_ = has_intensity;
     dirty_ = true;
 }
 
@@ -67,17 +63,6 @@ bool MapStore::put_delta(std::uint32_t run_id, std::uint32_t seq, const std::vec
     seq_ = seq;
     dirty_ = true;
     return true;
-}
-
-void MapStore::put_hits(std::uint32_t run_id, const std::vector<Point>& points) {
-    const std::lock_guard<std::mutex> lock(mutex_);
-    if (run_id_ != run_id) return;
-    for (const Point& p : points) {
-        const auto it = index_.find(key_of(p));
-        if (it == index_.end()) continue;
-        points_[it->second].hits = p.hits;
-        dirty_ = true;
-    }
 }
 
 void MapStore::put_poses(std::uint32_t run_id, const std::vector<Pose>& poses) {
@@ -92,13 +77,21 @@ std::optional<MapCopy> MapStore::take() {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (!dirty_ || !run_id_) return std::nullopt;
     dirty_ = false;
+    return copy_locked();
+}
+
+std::optional<MapCopy> MapStore::peek() const {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    if (!run_id_) return std::nullopt;
+    return copy_locked();
+}
+
+MapCopy MapStore::copy_locked() const {
     MapCopy copy;
     copy.snapshot.run_id = *run_id_;
     copy.snapshot.seq = seq_;
     copy.snapshot.frame_id = frame_id_;
     copy.snapshot.points = points_;
-    copy.snapshot.has_hits = has_hits_;
-    copy.snapshot.has_intensity = has_intensity_;
     copy.trajectory = trajectory_;
     return copy;
 }

@@ -86,7 +86,6 @@ private:
 
 void read_settings(Fields& f, ModelSettings& s) {
     f.number("wall_height", s.wall_height);
-    f.integer("min_scans", s.min_scans);
     f.object("outliers", [&](Fields& o) {
         o.integer("mean_k", s.outlier_mean_k);
         o.number("stddev_mul", s.outlier_stddev_mul);

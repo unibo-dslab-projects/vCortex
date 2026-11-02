@@ -36,20 +36,10 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const auto t0 = std::chrono::steady_clock::now();
     ModelResult res;
     ModelReport& rep = res.report;
-    res.has_hits = snap.has_hits;
-    res.has_intensity = snap.has_intensity;
     rep.points_in = snap.points.size();
 
-    // A: cleaning; old map.pcd files carry no hits, and 0 would drop every point
-    std::vector<Point> pts;
-    if (snap.has_hits) {
-        pts = drop_transient(snap.points, settings.min_scans);
-    } else {
-        pts = snap.points;
-        rep.transient_skipped = true;
-    }
-    rep.after_transient = pts.size();
-    pts = drop_outliers(pts, settings.outlier_mean_k, settings.outlier_stddev_mul);
+    // A: cleaning
+    std::vector<Point> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
     // B: floor; heights are taken above the plane, so the cloud is never levelled

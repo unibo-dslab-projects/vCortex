@@ -1,0 +1,18 @@
+.docdescription {vCortex: from a point-cloud map to a building digital twin}
+.doclang {English}
+.theme {paperwhite} layout:{minimal}
+
+.html {<style>.read {.pathtoroot/style/tokens.css}</style>}
+.html {<style>.read {.pathtoroot/style/quarkdown.css}</style>}
+.html {<script>.read {.pathtoroot/script/quarkdown-dom.js}</script>}
+
+.include {.pathtoroot/components/index.qd}
+
+.pagemargin {topleft}
+    [.icon {bounding-box} vCortex](./main.qd)
+
+.pagemargin {topright}
+    .actions
+
+.footer
+    vCortex · GPL-3.0

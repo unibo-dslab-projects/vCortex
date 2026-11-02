@@ -1,0 +1,37 @@
+.function {tag}
+    label variant?:
+    .container classname:{vc-tag vc-tag--.variant::otherwise {neutral}}
+        .label
+
+.html
+    <style>
+    /* doubled class beats the base `.container` rule without naming quarkdown's DOM */
+    .vc-tag.vc-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--vc-radius);
+      background-color: var(--vc-primary-wash);
+      color: var(--vc-primary);
+      font-family: var(--qd-code-font);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* the label lands in a <p>, which the page colours as body text */
+    .vc-tag p {
+      margin: 0;
+      color: inherit;
+    }
+
+    .vc-tag--good.vc-tag--good {
+      background-color: var(--vc-good-bg);
+      color: var(--vc-good);
+    }
+
+    .vc-tag--warn.vc-tag--warn {
+      background-color: var(--vc-warn-bg);
+      color: var(--vc-warn);
+    }
+    </style>

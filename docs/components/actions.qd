@@ -1,0 +1,101 @@
+.function {actions}
+    .html
+        <div class="vc-actions">
+          <a class="vc-github" href="https://github.com/unibo-dslab-projects/vCortex"
+             title="Source repository"><i class="bi bi-code-slash" aria-hidden="true"></i> GitHub</a>
+          <button class="vc-icon" id="vc-theme" title="Toggle dark mode" aria-label="Toggle dark mode"><i class="bi bi-moon"></i></button>
+          <button class="vc-icon" id="vc-menu" title="Toggle the navigation" aria-label="Toggle the navigation"
+                  aria-expanded="false"><i class="bi bi-list"></i></button>
+        </div>
+        <style>
+        .vc-actions {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .vc-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          border: none;
+          border-radius: 50%;
+          background: transparent;
+          color: var(--vc-on-surface-variant);
+          font-size: 16px;
+          cursor: pointer;
+        }
+
+        .vc-icon:hover {
+          background-color: var(--vc-surface-container);
+          color: var(--vc-primary);
+        }
+
+        .vc-icon[aria-expanded="true"] {
+          background-color: var(--vc-primary-wash);
+          color: var(--vc-primary);
+        }
+
+        .vc-github {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 8px;
+          color: var(--vc-on-surface-variant);
+          font-size: 13px;
+          font-weight: 500;
+          text-decoration: none;
+        }
+
+        .vc-github:hover {
+          color: var(--vc-primary);
+        }
+
+        /* the sidebar is always on screen on desktop, so there is nothing to toggle */
+        @media screen and (min-width: 1001px) {
+          #vc-menu {
+            display: none;
+          }
+        }
+        </style>
+        <script>
+        (function () {
+          var root = document.documentElement;
+          var KEY = "vc-theme";
+          function paint(mode) {
+            root.setAttribute("data-theme", mode);
+            var icon = document.querySelector("#vc-theme i");
+            if (icon) icon.className = mode === "dark" ? "bi bi-sun" : "bi bi-moon";
+          }
+          var saved;
+          try { saved = localStorage.getItem(KEY); } catch (e) {}
+          paint(saved === "dark" ? "dark" : "light");
+          document.addEventListener("click", function (e) {
+            if (!e.target.closest("#vc-theme")) return;
+            var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            paint(next);
+            try { localStorage.setItem(KEY, next); } catch (err) {}
+          });
+        })();
+
+        (function () {
+          var root = document.documentElement;
+          function drawer(isOpen) {
+            if (isOpen) root.setAttribute("data-drawer", "");
+            else root.removeAttribute("data-drawer");
+            var button = document.getElementById("vc-menu");
+            if (button) button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+          }
+          document.addEventListener("click", function (e) {
+            var isOpen = root.hasAttribute("data-drawer");
+            if (e.target.closest("#vc-menu")) drawer(!isOpen);
+            else if (isOpen && !VC.sidebar().contains(e.target)) drawer(false);
+          });
+          document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") drawer(false);
+          });
+        })();
+        </script>

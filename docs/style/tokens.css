@@ -1,0 +1,55 @@
+/* design tokens, free of any quarkdown selector.
+ * light is the default; dark applies only when the header toggle sets data-theme. */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --vc-surface: #ffffff;
+  --vc-surface-low: #f8f9fb;
+  --vc-surface-container: #f1f2f6;
+  --vc-surface-variant: #e5e7ee;
+  --vc-on-surface: #16181d;
+  --vc-on-surface-variant: #4a4f5c;
+  --vc-outline: #7a7f8c;
+  --vc-outline-variant: #e3e5ea;
+  --vc-primary: #4f46e5;
+  --vc-on-primary: #ffffff;
+  --vc-primary-wash: #eeedfd;
+  --vc-code-surface: #1e2030;
+  --vc-code-bar: #272a3d;
+  --vc-on-code: #e4e6f0;
+  --vc-good: #16794c;
+  --vc-good-bg: #e7f5ee;
+  --vc-warn: #b4232c;
+  --vc-warn-bg: #fdecec;
+  --vc-note-bg: #f2f1fe;
+
+  --vc-radius: 4px;
+  --vc-radius-lg: 8px;
+  --vc-gutter: 24px;
+  --vc-topbar: 56px;
+  --vc-rail: 260px;
+}
+
+:root[data-theme="dark"] {
+  --vc-surface: #111318;
+  --vc-surface-low: #161920;
+  --vc-surface-container: #1d2028;
+  --vc-surface-variant: #2a2e38;
+  --vc-on-surface: #e4e6ec;
+  --vc-on-surface-variant: #b4b8c4;
+  --vc-outline: #8a8f9c;
+  --vc-outline-variant: #2a2e38;
+  --vc-primary: #a5b4fc;
+  --vc-on-primary: #1a1850;
+  --vc-primary-wash: #23244a;
+  --vc-code-surface: #0b0c12;
+  --vc-code-bar: #171926;
+  --vc-good: #6ddc9f;
+  --vc-good-bg: #12301f;
+  --vc-warn: #ffa3a3;
+  --vc-warn-bg: #351a1c;
+  --vc-note-bg: #1c1d3a;
+
+  color-scheme: dark;
+}

@@ -1,0 +1,53 @@
+.function {codefile}
+    name content:
+    .container classname:{vc-codefile}
+        .container classname:{vc-codefile-bar}
+            .name
+
+        .content
+
+.html
+    <style>
+    /* doubled class beats the base `.container` rule without naming quarkdown's DOM */
+    .vc-codefile.vc-codefile {
+      display: block;
+      margin: 24px 0;
+      border-radius: var(--vc-radius-lg);
+      background-color: var(--vc-code-surface);
+      overflow: hidden;
+    }
+
+    .vc-codefile-bar.vc-codefile-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background-color: var(--vc-code-bar);
+      color: var(--vc-on-code);
+      font-family: var(--qd-code-font);
+      font-size: 12px;
+    }
+
+    /* three window dots, drawn by one element's shadows */
+    .vc-codefile-bar::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #6b6f85;
+      box-shadow: 13px 0 #6b6f85, 26px 0 #6b6f85;
+      margin-right: 26px;
+    }
+
+    /* the name lands in a <p>, which the page colours as body text */
+    .vc-codefile-bar p {
+      margin: 0;
+      color: inherit;
+    }
+
+    .vc-codefile pre {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+    }
+    </style>

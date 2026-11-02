@@ -1,0 +1,495 @@
+/* maps the tokens onto quarkdown's `docs` doctype: the only stylesheet that may
+ * name quarkdown's DOM. slot map, read next to _setup.qd:
+ *   header > aside:first-child    .pagemargin {topleft}   brand
+ *   header > main                 (native)                search
+ *   header > aside:last-child     .pagemargin {topright}  .actions
+ *   content-wrapper > aside:first .navigation             sidebar, from _nav.qd
+ *   content-wrapper > aside:last  .tableofcontents        hidden: the design has none
+ *
+ * quarkdown walls the docs layout behind `body.quarkdown.quarkdown-docs > ...`,
+ * so a rule that must win repeats that prefix; a shorter selector loses silently. */
+
+:root {
+  --qd-background-color: var(--vc-surface);
+  --qd-main-color: var(--vc-on-surface);
+  --qd-main-font: "Inter", system-ui, sans-serif;
+  --qd-heading-font: "Inter", system-ui, sans-serif;
+  --qd-box-heading-font: "Inter", system-ui, sans-serif;
+  --qd-code-font: "JetBrains Mono", ui-monospace, monospace;
+  --qd-main-font-size: 15px;
+  --qd-heading-color: var(--vc-on-surface);
+  --qd-link-color: var(--vc-primary);
+  --qd-docs-header-height: var(--vc-topbar);
+  --qd-docs-header-vertical-padding: 0px;
+  --qd-docs-header-background-color: var(--vc-surface);
+  --qd-docs-separator-border-color: var(--vc-outline-variant);
+  --qd-docs-search-border-color: var(--vc-outline-variant);
+  --qd-docs-search-focused-border: 1px solid var(--vc-primary);
+  --qd-code-border-radius: var(--vc-radius-lg);
+  --qd-code-block-font-size: 13px;
+  --qd-code-line-height: 21px;
+  --qd-note-background-color: var(--vc-note-bg);
+  --qd-tip-background-color: var(--vc-good-bg);
+  --qd-warning-background-color: var(--vc-warn-bg);
+  --qd-error-background-color: var(--vc-warn-bg);
+  --qd-callout-background-color: var(--vc-surface-container);
+  --qd-important-background-color: var(--vc-note-bg);
+  --qd-box-header-background-color: transparent;
+  --qd-box-border-radius: var(--vc-radius-lg);
+  --qd-box-section-padding: 0 20px;
+  --qd-box-content-vertical-padding: 12px;
+}
+
+body.quarkdown {
+  -webkit-font-smoothing: antialiased;
+  line-height: 24px;
+}
+
+/* the `minimal` layout sets this on body, so a :root override never reaches it */
+body.quarkdown.quarkdown-docs {
+  --qd-nested-navigation-line-color: transparent;
+}
+
+/* the floating tick-mark minimap repeats the table of contents; match its specificity wall */
+.quarkdown nav.sidebar.sidebar.sidebar.sidebar {
+  display: none;
+}
+
+/* ---------- top bar ---------- */
+
+body.quarkdown.quarkdown-docs > header {
+  height: var(--vc-topbar);
+  padding: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--vc-outline-variant);
+}
+
+body.quarkdown.quarkdown-docs.quarkdown-docs > header > aside {
+  --aside-width: auto;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* the brand cell is as wide as the sidebar, so the search lines up with the page */
+body.quarkdown.quarkdown-docs.quarkdown-docs > header > aside:first-child {
+  flex: 0 0 var(--vc-rail);
+  box-sizing: border-box;
+  padding-left: 16px;
+}
+
+body.quarkdown.quarkdown-docs > header > aside:first-child a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vc-on-surface);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+body.quarkdown.quarkdown-docs > header > aside:first-child a .bi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--vc-radius-lg);
+  background-color: var(--vc-primary);
+  color: var(--vc-on-primary);
+  font-size: 15px;
+}
+
+/* the base theme pins this slot to the content width with !important, which pushed the icons off a phone */
+body.quarkdown.quarkdown-docs.quarkdown-docs > header > main {
+  flex: 0 1 380px;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none;
+  margin: 0 0 0 24px;
+  padding: 0;
+}
+
+body.quarkdown.quarkdown-docs.quarkdown-docs > header > aside:last-child {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-right: 12px;
+}
+
+body.quarkdown.quarkdown-docs .search-wrapper,
+body.quarkdown.quarkdown-docs .search-field,
+body.quarkdown.quarkdown-docs .search-field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.quarkdown.quarkdown-docs .search-field {
+  padding: 5px 12px;
+  border: 1px solid var(--vc-outline-variant);
+  border-radius: var(--vc-radius-lg);
+  background-color: var(--vc-surface-low);
+  font-size: 13px;
+}
+
+body.quarkdown.quarkdown-docs .search-field:focus-within {
+  border-color: var(--vc-primary);
+  box-shadow: 0 0 0 2px var(--vc-primary-wash);
+}
+
+/* ---------- sidebar ---------- */
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside {
+  --aside-outer-margin: 0px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child {
+  --aside-width: var(--vc-rail);
+  width: var(--vc-rail);
+  /* a short page would end the sidebar's tint halfway down the screen */
+  min-height: calc(100vh - var(--vc-topbar));
+  margin: 0;
+  padding: 20px 12px 32px;
+  border-right: 1px solid var(--vc-outline-variant);
+  background-color: var(--vc-surface-low);
+  scrollbar-width: thin;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:last-child {
+  display: none;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child nav ul {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child :is(h1, h2, h3, h4) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0 10px;
+  color: var(--vc-outline);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.08em;
+  /* the base theme forces `text-transform: none !important` on every heading */
+  text-transform: uppercase !important;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child nav a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 1px 0;
+  padding: 6px 10px;
+  border-radius: var(--vc-radius);
+  color: var(--vc-on-surface-variant);
+  font-size: 13px;
+  line-height: 18px;
+  text-decoration: none;
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child nav a:hover {
+  background-color: var(--vc-surface-container);
+  color: var(--vc-on-surface);
+}
+
+body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child nav a[aria-current] {
+  background-color: var(--vc-primary-wash);
+  color: var(--vc-primary);
+  font-weight: 600;
+}
+
+/* ---------- content ---------- */
+
+body.quarkdown.quarkdown-docs > .content-wrapper > main {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 32px 48px 0;
+  box-sizing: border-box;
+}
+
+/* the layout sizes headings as `.quarkdown hN` and rules h1 under `.quarkdown-docs`, so these name both */
+.quarkdown.quarkdown-docs main h1 {
+  margin: 0 0 12px;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.quarkdown main h2 {
+  margin: 40px 0 16px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+.quarkdown main h3 {
+  margin: 28px 0 12px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+main p,
+main li {
+  color: var(--vc-on-surface-variant);
+}
+
+main a {
+  color: var(--vc-primary);
+  text-decoration: none;
+}
+
+main a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- code ---------- */
+
+.codespan-content code {
+  padding: 2px 6px;
+  border-radius: var(--vc-radius);
+  background-color: var(--vc-primary-wash);
+  color: var(--vc-primary);
+  font-size: 13px;
+}
+
+main pre {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+main pre:not(.mermaid) {
+  padding: 20px;
+  border-radius: var(--vc-radius-lg);
+  background-color: var(--vc-code-surface);
+}
+
+main pre.mermaid {
+  padding: 0;
+  background: transparent;
+}
+
+main pre:not(.mermaid) code,
+main pre:not(.mermaid) code.hljs {
+  padding: 0;
+  background: transparent;
+  color: var(--vc-on-code);
+}
+
+/* highlight.js ships a light theme; these repaint its tokens for the dark code slab */
+main pre .hljs-comment,
+main pre .hljs-quote,
+main pre .hljs-meta {
+  color: #7f849c;
+}
+
+main pre .hljs-keyword,
+main pre .hljs-selector-tag,
+main pre .hljs-literal,
+main pre .hljs-name {
+  color: #c4a7ff;
+}
+
+main pre .hljs-string,
+main pre .hljs-regexp,
+main pre .hljs-attribute {
+  color: #a6e3a1;
+}
+
+main pre .hljs-number,
+main pre .hljs-built_in,
+main pre .hljs-type,
+main pre .hljs-symbol {
+  color: #fab387;
+}
+
+main pre .hljs-attr,
+main pre .hljs-variable,
+main pre .hljs-template-variable {
+  color: #89b4fa;
+}
+
+main pre .hljs-title,
+main pre .hljs-function,
+main pre .hljs-section {
+  color: #f5c2e7;
+}
+
+main pre .hljs-punctuation,
+main pre .hljs-operator {
+  color: #cdd6f4;
+}
+
+main pre .hljs-ln-numbers {
+  color: #585b70;
+  opacity: 1;
+}
+
+/* ---------- tables ---------- */
+
+main table:not(.hljs-ln) {
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* the layout draws a full grid with `border: 1px solid`; the design keeps row lines only */
+.quarkdown main table:not(pre table) :is(th, td) {
+  border: none;
+  border-bottom: 1px solid var(--vc-outline-variant);
+}
+
+main table:not(.hljs-ln) th {
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--vc-on-surface);
+  font-weight: 600;
+  text-align: left;
+}
+
+main table:not(.hljs-ln) td {
+  padding: 12px;
+  border-bottom: 1px solid var(--vc-outline-variant);
+  color: var(--vc-on-surface-variant);
+  vertical-align: top;
+}
+
+/* ---------- callouts ---------- */
+
+.quarkdown main .box {
+  margin: 20px 0;
+  border: 1px solid var(--vc-outline-variant);
+  border-left: 3px solid var(--vc-primary);
+  border-radius: var(--vc-radius-lg);
+}
+
+/* minimal.css styles every `header` under the docs body, so callout titles got the top bar's divider */
+.quarkdown main .box > header {
+  padding-top: 12px;
+  border-bottom: none;
+}
+
+.quarkdown main .box > header h4 {
+  color: var(--vc-on-surface);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.quarkdown main .box > .box-content {
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.quarkdown main .box.tip {
+  border-left-color: var(--vc-good);
+}
+
+.quarkdown main .box:is(.warning, .error) {
+  border-left-color: var(--vc-warn);
+}
+
+/* ---------- previous / next page ---------- */
+
+body.quarkdown.quarkdown-docs #sibling-pages-button-area {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--vc-outline-variant);
+}
+
+body.quarkdown.quarkdown-docs #sibling-pages-button-area > a {
+  padding: 0;
+  border: none;
+  opacity: 1;
+  background: transparent;
+  color: var(--vc-on-surface-variant);
+  font-size: 13px;
+}
+
+body.quarkdown.quarkdown-docs #sibling-pages-button-area > a#next-page-anchor {
+  color: var(--vc-primary);
+}
+
+body.quarkdown.quarkdown-docs #sibling-pages-button-area > a:hover {
+  background: transparent;
+  color: var(--vc-primary);
+}
+
+/* ---------- footer ---------- */
+
+body.quarkdown.quarkdown-docs > .content-wrapper > main > footer {
+  margin-top: 48px;
+  padding: 24px 0;
+  border-top: 1px solid var(--vc-outline-variant);
+  color: var(--vc-outline);
+  font-size: 13px;
+}
+
+/* ---------- narrow ---------- */
+
+@media screen and (max-width: 1000px) {
+  body.quarkdown.quarkdown-docs.quarkdown-docs > header > aside:first-child {
+    flex: 0 0 auto;
+    padding-right: 16px;
+  }
+
+  body.quarkdown.quarkdown-docs.quarkdown-docs > header > main {
+    margin-left: 0;
+  }
+
+  body.quarkdown.quarkdown-docs > .content-wrapper > main {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 24px 16px 0;
+  }
+
+  /* the base theme stacks the sidebar above the page; here it opens as a drawer */
+  body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child {
+    display: none;
+  }
+
+  :root[data-drawer] body.quarkdown.quarkdown-docs > .content-wrapper > aside:first-child {
+    display: block;
+    position: fixed;
+    top: var(--vc-topbar);
+    bottom: 0;
+    left: 0;
+    z-index: 11;
+    width: min(280px, 85vw);
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+}
+
+@media screen and (max-width: 560px) {
+  body.quarkdown.quarkdown-docs .search-field kbd,
+  body.quarkdown.quarkdown-docs .hljs-copy-button,
+  .vc-github {
+    display: none;
+  }
+
+  main :is(p, li, h1, h2, h3) {
+    overflow-wrap: anywhere;
+  }
+}

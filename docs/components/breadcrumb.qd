@@ -1,0 +1,38 @@
+.html
+    <style>
+    .vc-crumbs {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
+      color: var(--vc-outline);
+      font-size: 13px;
+    }
+
+    .vc-crumbs span + span::before {
+      content: "\203A";
+      margin-right: 6px;
+    }
+
+    .vc-crumbs span:last-child {
+      color: var(--vc-primary);
+    }
+    </style>
+    <script>
+    VC.ready(function () {
+      var content = VC.content();
+      var title = content && content.querySelector("h1");
+      // the home page is the root crumb itself
+      if (!title || title.textContent.trim() === "vCortex") return;
+      var crumbs = document.createElement("div");
+      crumbs.className = "vc-crumbs";
+      ["vCortex", VC.pageSection(), title.textContent.trim()].forEach(function (text) {
+        if (!text) return;
+        var crumb = document.createElement("span");
+        crumb.textContent = text;
+        crumbs.appendChild(crumb);
+      });
+      title.parentNode.insertBefore(crumbs, title);
+    });
+    </script>

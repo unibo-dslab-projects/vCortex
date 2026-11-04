@@ -26,5 +26,6 @@
     "cluster_min_points": 20,
     "against_wall_distance": 0.15
   },
-  "rooms": { "min_area": 1.0, "wall_touch_distance": 0.15 }
+  "rooms": { "min_area": 1.0, "wall_touch_distance": 0.15 },
+  "room_space": { "floor_band": 0.08, "low_lo": 0.10, "low_hi": 0.30, "min_points": 2, "coin_radius": 0.15 }
 }

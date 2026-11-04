@@ -120,6 +120,14 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("min_area", s.rooms.min_area);
         o.number("wall_touch_distance", s.rooms.wall_touch_distance);
     });
+    f.object("room_space", [&](Fields& o) {
+        RoomSpaceParams& r = s.room_space;
+        o.number("floor_band", r.floor_band);
+        o.number("low_lo", r.low_lo);
+        o.number("low_hi", r.low_hi);
+        o.integer("min_points", r.min_points);
+        o.number("coin_radius", r.coin_radius);
+    });
 }
 
 Json parse(const std::string& text) {

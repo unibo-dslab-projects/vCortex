@@ -59,6 +59,7 @@ add_library(vcortex_core STATIC
   src/model/candidates.cpp
   src/model/walls.cpp
   src/model/rooms.cpp
+  src/model/room_space.cpp
   src/model/model.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp

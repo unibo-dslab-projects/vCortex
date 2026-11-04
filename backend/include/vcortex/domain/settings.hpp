@@ -41,6 +41,14 @@ struct RoomParams {
     double wall_touch_distance = 0.15;   // wall faces this close to the outline belong to the room
 };
 
+struct RoomSpaceParams {
+    double floor_band = 0.08;      // metres around the floor plane; the floor layer is this thick
+    double low_lo = 0.10;          // wall and glass bases, seen under desks by a low lidar
+    double low_hi = 0.30;
+    std::uint16_t min_points = 2;  // one voxel alone is noise
+    double coin_radius = 0.15;     // gaps narrower than twice this keep the coin in
+};
+
 struct ModelSettings {
     double wall_height = 2.70;  // metres, replaced by the user's value
     HeightSource wall_height_source = HeightSource::Default;
@@ -49,6 +57,7 @@ struct ModelSettings {
     CandidateParams candidates;
     WallParams walls;
     RoomParams rooms;
+    RoomSpaceParams room_space;
 };
 
 // below 1.5 m the band is too thin to tell walls from furniture; above 6 m it is not one

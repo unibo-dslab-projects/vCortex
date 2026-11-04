@@ -44,6 +44,8 @@ Json report_json(const ModelReport& r) {
     return {{"points_in", r.points_in},
             {"after_outliers", r.after_outliers},
             {"tilt_deg", r.tilt_deg},
+            {"room_space_area_m2", r.room_space_area},
+            {"room_space_leaked", r.room_space_leaked},
             {"yaw_deg", r.yaw_deg},
             {"poses", r.poses},
             {"candidates", r.candidates},

@@ -10,6 +10,7 @@
 #include "vcortex/model/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
+#include "vcortex/model/room_space.hpp"
 #include "vcortex/model/rooms.hpp"
 #include "vcortex/model/walls.hpp"
 
@@ -76,6 +77,10 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     aligned_floor.a = to_aligned.c * floor.a - to_aligned.s * floor.b;
     aligned_floor.b = to_aligned.s * floor.a + to_aligned.c * floor.b;
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
+    const RoomSpace space =
+        compute_room_space(aligned, aligned_floor, grid, aligned_traj, settings.room_space);
+    rep.room_space_area = space.area;
+    rep.room_space_leaked = space.leaked;
 
     // D, E, F
     const std::vector<Candidate> cands = find_candidates(grid, cp);

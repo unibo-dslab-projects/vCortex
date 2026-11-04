@@ -79,6 +79,18 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(r.wall_touch_distance >= 0)) {
         return problem("rooms.wall_touch_distance", ">= 0", r.wall_touch_distance);
     }
+
+    const RoomSpaceParams& rs = s.room_space;
+    if (!(rs.floor_band > 0)) return problem("room_space.floor_band", "> 0", rs.floor_band);
+    if (!(rs.low_lo >= rs.floor_band)) {
+        return problem("room_space.low_lo", ">= room_space.floor_band", rs.low_lo);
+    }
+    if (!(rs.low_hi > rs.low_lo)) {
+        return problem("room_space.low_hi", "> room_space.low_lo", rs.low_hi);
+    }
+    if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
+    if (!(rs.coin_radius > 0)) return problem("room_space.coin_radius", "> 0", rs.coin_radius);
+
     return std::nullopt;
 }
 

@@ -19,6 +19,9 @@ struct ModelReport {
     // poses used; 0: no inside/outside, so the outermost overlapping parallel candidate is wall
     std::size_t poses = 0;
     std::size_t candidates = 0, walls = 0, rooms = 0, objects = 0;
+    // floor a coin of room_space.coin_radius reaches from the poses; a jump between runs means a hole
+    double room_space_area = 0.0;
+    bool room_space_leaked = false;
     double duration_ms = 0.0;
 };
 

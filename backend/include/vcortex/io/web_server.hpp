@@ -23,7 +23,8 @@ namespace vcortex {
 // one port for every route: robot, browser and docker need only 9002
 class WebServer {
 public:
-    // offline_source: name of the saved map; set, /ingest refuses every source
+    // offline_source: name of the saved map; set, /ingest refuses every source.
+    // live, a source with a valid hello replaces the one before it
     // an empty ingest_token skips the check
     WebServer(MapStore& store, const Config& config, std::optional<std::string> offline_source,
               std::string ingest_token);
@@ -74,8 +75,7 @@ private:
     std::mutex clients_mutex_;
     std::map<Connection*, RawClient> raw_;
     std::map<std::string, std::set<Connection*>> twin_;  // connector id -> subscribers
-    Connection* ingest_ = nullptr;
-    bool ingest_ready_ = false;  // hello accepted
+    Connection* ingest_ = nullptr;  // the connection whose hello was accepted last
     std::string source_;
 
     // last member: its thread calls publish, which uses everything above

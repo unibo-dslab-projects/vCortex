@@ -129,7 +129,7 @@ void WebServer::run(std::uint16_t port) {
         Json connected, source, raw, twin;
         {
             const std::lock_guard<std::mutex> lock(clients_mutex_);
-            connected = ingest_ready_;
+            connected = ingest_ != nullptr;
             source = source_;
             raw = raw_.size();
             std::size_t subscribers = 0;
@@ -198,6 +198,8 @@ void WebServer::run(std::uint16_t port) {
 
 void WebServer::publish(const std::shared_ptr<const ModelOutput>& output) {
     const std::lock_guard<std::mutex> lock(clients_mutex_);
+    // a new source cleared the worker after this run ended: the output shows the old map
+    if (output != worker_.latest()) return;
     for (const Connector& c : connectors()) {
         const auto bytes = output->by_format.find(c.id);
         const auto subscribers = twin_.find(c.id);
@@ -275,34 +277,23 @@ void WebServer::twin_close(Connection& conn) {
 }
 
 void WebServer::ingest_open(Connection& conn) {
-    const std::lock_guard<std::mutex> lock(clients_mutex_);
-    if (offline_source_ || ingest_ != nullptr) {
-        conn.close(offline_source_ ? "offline mode" : "another source is connected",
-                   kCloseTryLater);
-        return;
-    }
-    ingest_ = &conn;
-    ingest_ready_ = false;
+    if (offline_source_) conn.close("offline mode", kCloseTryLater);
 }
 
 void WebServer::ingest_close(Connection& conn) {
     const std::lock_guard<std::mutex> lock(clients_mutex_);
-    if (&conn != ingest_) return;  // a refused connection closing
-    ingest_ = nullptr;
-    ingest_ready_ = false;
+    if (&conn == ingest_) ingest_ = nullptr;
 }
 
+// a connection becomes the source only with a valid hello
 void WebServer::ingest_message(Connection& conn, const std::string& data, bool is_binary) {
     const std::lock_guard<std::mutex> lock(clients_mutex_);
-    if (&conn != ingest_) return;
-    if (!ingest_ready_) {
-        if (is_binary) {
-            conn.close("hello first", crow::websocket::PolicyViolated);
-        } else {
-            ingest_hello(conn, data);
-        }
+    if (&conn == ingest_) {
+        if (is_binary) ingest_frame(conn, data);
     } else if (is_binary) {
-        ingest_frame(conn, data);
+        conn.close("hello first", crow::websocket::PolicyViolated);
+    } else {
+        ingest_hello(conn, data);
     }
 }
 
@@ -327,7 +318,15 @@ void WebServer::ingest_hello(Connection& conn, const std::string& text) {
         conn.close(e.what(), crow::websocket::PolicyViolated);
         return;
     }
-    ingest_ready_ = true;
+    // the newer source wins: a robot that lost wi-fi never closes its socket, and refusing
+    // the next one would lock every source out until a restart
+    if (ingest_ != nullptr) ingest_->close("replaced by a newer source", kCloseTryLater);
+    ingest_ = &conn;
+    worker_.clear();
+    // an empty message means "no twin yet": viewers drop the old source's twin
+    for (const auto& [format, viewers] : twin_) {
+        for (Connection* viewer : viewers) viewer->send_text("");
+    }
     conn.send_text(R"({"type":"welcome"})");
 }
 

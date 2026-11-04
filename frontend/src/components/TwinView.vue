@@ -47,7 +47,14 @@ watch(
     framed = false
     // a floor plan reads best from above
     mode.value = id === 'dxf' ? 'top' : 'iso'
-    close = openTwinSocket(id, (data) => (payload.value = data))
+    close = openTwinSocket(id, (data) => {
+      payload.value = data
+      // the next twin may be another map: let it frame the camera again
+      if (!data) {
+        bounds = null
+        framed = false
+      }
+    })
   },
   { immediate: true },
 )

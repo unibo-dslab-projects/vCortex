@@ -2,10 +2,11 @@ const RETRY_MS = 1000
 
 export type TwinPayload = string | ArrayBuffer
 
-// the backend sends the whole output after each model run, so the last message is the state
+// the backend sends the whole output after each model run, so the last message is the state.
+// null: no twin, after an empty message (new source) or a lost link (the backend may have restarted)
 export function openTwinSocket(
   formatId: string,
-  onPayload: (payload: TwinPayload) => void,
+  onPayload: (payload: TwinPayload | null) => void,
 ): () => void {
   let socket: WebSocket | null = null
   let retry: ReturnType<typeof setTimeout> | undefined
@@ -17,9 +18,11 @@ export function openTwinSocket(
     url.searchParams.set('format', formatId)
     socket = new WebSocket(url)
     socket.binaryType = 'arraybuffer'
-    socket.onmessage = (event) => onPayload(event.data as TwinPayload)
+    socket.onmessage = (event) => onPayload(event.data === '' ? null : (event.data as TwinPayload))
     socket.onclose = () => {
-      if (!closed) retry = setTimeout(connect, RETRY_MS)
+      if (closed) return
+      onPayload(null)
+      retry = setTimeout(connect, RETRY_MS)
     }
   }
 

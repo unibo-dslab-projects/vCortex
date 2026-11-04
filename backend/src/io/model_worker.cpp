@@ -54,6 +54,12 @@ std::shared_ptr<const ModelOutput> ModelWorker::latest() const {
     return latest_;
 }
 
+void ModelWorker::clear() {
+    const std::lock_guard<std::mutex> lock(mutex_);
+    latest_.reset();
+    ++generation_;
+}
+
 // checks once before the first wait, so offline mode has a model at start, not after a period
 void ModelWorker::loop() {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -70,6 +76,11 @@ void ModelWorker::loop() {
 }
 
 void ModelWorker::run_once(const ModelSettings& settings) {
+    std::uint64_t generation;
+    {
+        const std::lock_guard<std::mutex> lock(mutex_);
+        generation = generation_;
+    }
     std::optional<MapCopy> copy = store_.take();
     if (!copy) return;
     // an exception leaving the thread would end the whole server; a failed run only loses
@@ -90,6 +101,7 @@ void ModelWorker::run_once(const ModelSettings& settings) {
         std::shared_ptr<const ModelOutput> done = std::move(out);
         {
             const std::lock_guard<std::mutex> lock(mutex_);
+            if (generation != generation_) return;
             latest_ = done;
         }
         if (on_output_) on_output_(done);

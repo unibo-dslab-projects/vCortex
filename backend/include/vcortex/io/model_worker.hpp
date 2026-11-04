@@ -46,6 +46,9 @@ public:
     // shared, not copied: a download and a broadcast read the same bytes
     std::shared_ptr<const ModelOutput> latest() const;
 
+    // a new source: forget the old output, and drop the run that may still be on the old map
+    void clear();
+
 private:
     void loop();
     void run_once(const ModelSettings& settings);
@@ -58,6 +61,7 @@ private:
     std::condition_variable wake_cv_;
     ModelSettings settings_;
     std::shared_ptr<const ModelOutput> latest_;
+    std::uint64_t generation_ = 0;  // bumped by clear(): a run started before it is dropped
     bool wake_ = false, stop_ = false;
     std::thread thread_;
 };

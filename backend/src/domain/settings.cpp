@@ -91,6 +91,20 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
     if (!(rs.coin_radius > 0)) return problem("room_space.coin_radius", "> 0", rs.coin_radius);
 
+    const OutlineParams& o = s.outline;
+    // a strip narrower than a cell holds no whole cell
+    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
+    // one missing cell must not end the walk
+    if (!(o.max_gap >= c.cell)) return problem("outline.max_gap", ">= candidates.cell", o.max_gap);
+    // else every walk ends at the reach, never at a gap
+    if (!(o.max_reach > o.max_gap)) {
+        return problem("outline.max_reach", "> outline.max_gap", o.max_reach);
+    }
+    // the window then covers the whole last occupied cell, so it is never empty
+    if (!(o.face_depth >= c.cell)) {
+        return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
+    }
+
     return std::nullopt;
 }
 

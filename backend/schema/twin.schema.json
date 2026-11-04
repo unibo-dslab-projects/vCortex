@@ -30,6 +30,7 @@
         "floor_tilt_deg": { "type": "number" },
         "room_space_area_m2": { "type": "number", "minimum": 0 },
         "room_space_leaked": { "type": "boolean" },
+        "wall_faces_found": { "type": "integer", "minimum": 0 },
         "yaw_deg": { "type": "number" },
         "duration_ms": { "type": "number", "minimum": 0 }
       }

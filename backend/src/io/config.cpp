@@ -128,6 +128,13 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.integer("min_points", r.min_points);
         o.number("coin_radius", r.coin_radius);
     });
+    f.object("outline", [&](Fields& o) {
+        OutlineParams& l = s.outline;
+        o.number("strip", l.strip);
+        o.number("max_reach", l.max_reach);
+        o.number("max_gap", l.max_gap);
+        o.number("face_depth", l.face_depth);
+    });
 }
 
 Json parse(const std::string& text) {

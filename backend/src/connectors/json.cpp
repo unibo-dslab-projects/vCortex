@@ -130,6 +130,7 @@ std::string to_json(const ModelResult& result) {
                         {"floor_tilt_deg", rep.tilt_deg},
                         {"room_space_area_m2", rep.room_space_area},
                         {"room_space_leaked", rep.room_space_leaked},
+                        {"wall_faces_found", rep.wall_faces_found},
                         {"yaw_deg", rep.yaw_deg},
                         {"duration_ms", rep.duration_ms}}},
                       {"levels", std::move(levels)}};

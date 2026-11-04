@@ -12,6 +12,7 @@
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/room_space.hpp"
 #include "vcortex/model/rooms.hpp"
+#include "vcortex/model/wall_face_samples.hpp"
 #include "vcortex/model/walls.hpp"
 
 namespace vcortex {
@@ -19,6 +20,8 @@ namespace vcortex {
 namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
+
+constexpr Direction kOut[4] = {{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
 
 // turn about z by the angle whose cos and sin are given; z stays, so heights need no fix
 struct Turn {
@@ -81,6 +84,15 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
         compute_room_space(aligned, aligned_floor, grid, aligned_traj, settings.room_space);
     rep.room_space_area = space.area;
     rep.room_space_leaked = space.leaked;
+    std::vector<WallFaceSample> samples[4];
+    for (int k = 0; k < 4; ++k) {
+        samples[k] = sample_wall_faces(space, grid, aligned, aligned_floor,
+                                       settings.room_space.low_lo, band_hi, kOut[k],
+                                       settings.outline);
+        for (const WallFaceSample& sample : samples[k]) {
+            rep.wall_faces_found += sample.face ? 1 : 0;
+        }
+    }
 
     // D, E, F
     const std::vector<Candidate> cands = find_candidates(grid, cp);

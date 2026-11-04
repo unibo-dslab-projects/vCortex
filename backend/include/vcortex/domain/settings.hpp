@@ -49,6 +49,13 @@ struct RoomSpaceParams {
     double coin_radius = 0.15;     // gaps narrower than twice this keep the coin in
 };
 
+struct OutlineParams {
+    double strip = 0.25;       // strip width along the wall; one face per strip
+    double max_reach = 1.5;    // walk past the room space at most this far
+    double max_gap = 0.30;     // this much empty floor ends the walk: what lies past is outside
+    double face_depth = 0.10;  // points this deep in the last occupied cell give the face
+};
+
 struct ModelSettings {
     double wall_height = 2.70;  // metres, replaced by the user's value
     HeightSource wall_height_source = HeightSource::Default;
@@ -58,6 +65,7 @@ struct ModelSettings {
     WallParams walls;
     RoomParams rooms;
     RoomSpaceParams room_space;
+    OutlineParams outline;
 };
 
 // below 1.5 m the band is too thin to tell walls from furniture; above 6 m it is not one

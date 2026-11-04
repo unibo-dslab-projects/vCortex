@@ -22,6 +22,7 @@ struct ModelReport {
     // floor a coin of room_space.coin_radius reaches from the poses; a jump between runs means a hole
     double room_space_area = 0.0;
     bool room_space_leaked = false;
+    std::size_t wall_faces_found = 0;  // all 4 directions; low means the shell is barely seen
     double duration_ms = 0.0;
 };
 

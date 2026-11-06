@@ -6,19 +6,14 @@
 #include <cstdint>
 #include <utility>
 
+#include "vcortex/model/median.hpp"
+
 namespace vcortex {
 
 namespace {
 
 int cells_in(double length, double cell) {
     return std::max(1, static_cast<int>(std::lround(length / cell)));
-}
-
-// upper middle for an even count: off by one point at most, well under the lidar noise
-double median(std::vector<double> v) {
-    const auto mid = v.begin() + static_cast<std::ptrdiff_t>(v.size() / 2);
-    std::nth_element(v.begin(), mid, v.end());
-    return *mid;
 }
 
 }  // namespace

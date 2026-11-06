@@ -54,6 +54,12 @@ struct OutlineParams {
     double max_reach = 1.5;    // walk past the room space at most this far
     double max_gap = 0.30;     // this much empty floor ends the walk: what lies past is outside
     double face_depth = 0.10;  // points this deep in the last occupied cell give the face
+    double run_jump = 0.15;    // a face this far from its run starts a new run
+    int min_strips_per_run = 2;          // shorter runs are a leg or a bag, not a wall
+    double merge_distance = 0.10;        // neighbour runs this close are one line
+    double dent_depth = 0.50;   // runs at most this far in, and at most dent_length long,
+    double dent_length = 2.0;   //   are furniture against the wall
+    double corner_reach = 1.5;  // corners hold furniture as deep as max_reach
 };
 
 struct ModelSettings {

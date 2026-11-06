@@ -10,6 +10,7 @@
 #include "vcortex/model/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
+#include "vcortex/model/outline.hpp"
 #include "vcortex/model/room_space.hpp"
 #include "vcortex/model/rooms.hpp"
 #include "vcortex/model/wall_face_samples.hpp"
@@ -42,11 +43,11 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     ModelReport& rep = res.report;
     rep.points_in = snap.points.size();
 
-    // A: cleaning
+    // cleaning
     std::vector<Point> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
-    // B: floor; heights are taken above the plane, so the cloud is never levelled
+    // floor; heights are taken above the plane, so the cloud is never levelled
     const Plane floor = find_floor(pts);
     rep.floor = floor;
     rep.tilt_deg = std::atan(std::hypot(floor.a, floor.b)) * kRadToDeg;
@@ -54,7 +55,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const double band_lo = cp.band_lo;
     const double band_hi = settings.wall_height - cp.band_top_margin;
 
-    // C: alignment
+    // alignment
     const Grid raw = build_grid(pts, floor, band_lo, band_hi, cp.cell);
     const std::vector<Vec2> cells = band_cells(raw, cp.min_column);
     const double yaw = dominant_yaw(cells);
@@ -94,7 +95,18 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
         }
     }
 
-    // D, E, F
+    // a leaked room space ran into another room, so its outermost cells are not our walls
+    std::vector<OutlineSide> outline;
+    if (!space.leaked) {
+        for (int k = 0; k < 4; ++k) {
+            for (const OutlineSide& side : find_outline_sides(samples[k], kOut[k], settings.outline)) {
+                outline.push_back(side);
+            }
+        }
+        join_outline_corners(outline, settings.outline.corner_reach);
+    }
+    rep.outline_sides = outline.size();
+
     const std::vector<Candidate> cands = find_candidates(grid, cp);
     WallsAndObjects wo = split_walls_objects(cands, grid, aligned, aligned_floor, band_lo, band_hi,
                                              aligned_traj, settings.walls);

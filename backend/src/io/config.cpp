@@ -134,6 +134,12 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("max_reach", l.max_reach);
         o.number("max_gap", l.max_gap);
         o.number("face_depth", l.face_depth);
+        o.number("run_jump", l.run_jump);
+        o.integer("min_strips_per_run", l.min_strips_per_run);
+        o.number("merge_distance", l.merge_distance);
+        o.number("dent_depth", l.dent_depth);
+        o.number("dent_length", l.dent_length);
+        o.number("corner_reach", l.corner_reach);
     });
 }
 

@@ -47,6 +47,7 @@ Json report_json(const ModelReport& r) {
             {"room_space_area_m2", r.room_space_area},
             {"room_space_leaked", r.room_space_leaked},
             {"wall_faces_found", r.wall_faces_found},
+            {"outline_sides", r.outline_sides},
             {"yaw_deg", r.yaw_deg},
             {"poses", r.poses},
             {"candidates", r.candidates},

@@ -3,7 +3,9 @@
 #include <cstddef>
 #include <vector>
 
+#include "vcortex/domain/point.hpp"
 #include "vcortex/domain/settings.hpp"
+#include "vcortex/model/floor.hpp"
 #include "vcortex/model/wall_face_samples.hpp"
 
 namespace vcortex {
@@ -15,6 +17,8 @@ struct OutlineSide {
     double face = 0.0;              // constant coordinate of the face
     double from = 0.0, to = 0.0;    // span along the wall
     std::size_t voting_strips = 0;  // strips whose face decided the position
+    // cells of one cell width along the side with a point near the face, set by measure_outline_coverage
+    std::size_t seen_cell_count = 0;
 };
 
 // samples of one direction in order of from (sample_wall_faces); sides come back in order of from
@@ -24,5 +28,13 @@ std::vector<OutlineSide> find_outline_sides(const std::vector<WallFaceSample>& s
 // ends move to the face of a perpendicular side within corner_reach; corners hold the furniture
 // that stopped the strip walk, so their strips have no face
 void join_outline_corners(std::vector<OutlineSide>& sides, double corner_reach);
+
+// counts the cells along each side where a point of the band lies near its face; the other
+// cells are drawn, not seen. Run after join_outline_corners, so corner stretches count as unseen.
+void measure_outline_coverage(std::vector<OutlineSide>& sides,
+                              const std::vector<Point>& aligned_points,
+                              const Plane& aligned_floor, double band_bottom_metres,
+                              double band_top_metres, double cell_size_metres,
+                              double coverage_tolerance_metres);
 
 }  // namespace vcortex

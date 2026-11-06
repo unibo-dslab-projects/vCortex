@@ -147,4 +147,36 @@ void join_outline_corners(std::vector<OutlineSide>& sides, double corner_reach) 
     }
 }
 
+void measure_outline_coverage(std::vector<OutlineSide>& sides,
+                              const std::vector<Point>& aligned_points,
+                              const Plane& aligned_floor, double band_bottom_metres,
+                              double band_top_metres, double cell_size_metres,
+                              double coverage_tolerance_metres) {
+    for (OutlineSide& side : sides) {
+        const bool is_x_axis = side.direction.axis == Axis::X;
+        const double side_length_metres = std::max(0.0, side.to - side.from);
+        const auto step_count = static_cast<std::size_t>(
+            std::ceil(side_length_metres / cell_size_metres - kEpsilon));
+        std::vector<bool> step_has_point(step_count, false);
+
+        for (const Point& point : aligned_points) {
+            const double height_metres = height_above(aligned_floor, point);
+            if (height_metres < band_bottom_metres || height_metres >= band_top_metres) continue;
+
+            const double normal_coordinate = is_x_axis ? point.x : point.y;
+            const double along_coordinate = is_x_axis ? point.y : point.x;
+            if (std::abs(normal_coordinate - side.face) > coverage_tolerance_metres + kEpsilon) {
+                continue;
+            }
+            if (along_coordinate < side.from || along_coordinate >= side.to) continue;
+
+            const auto step_index =
+                static_cast<std::size_t>((along_coordinate - side.from) / cell_size_metres);
+            if (step_index < step_count) step_has_point[step_index] = true;
+        }
+        side.seen_cell_count = static_cast<std::size_t>(
+            std::count(step_has_point.begin(), step_has_point.end(), true));
+    }
+}
+
 }  // namespace vcortex

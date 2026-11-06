@@ -140,6 +140,7 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("dent_depth", l.dent_depth);
         o.number("dent_length", l.dent_length);
         o.number("corner_reach", l.corner_reach);
+        o.number("coverage_tolerance", l.coverage_tolerance);
     });
 }
 

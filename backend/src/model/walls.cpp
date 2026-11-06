@@ -227,6 +227,38 @@ void close_corners(std::vector<Piece>& walls, const WallParams& p) {
     }
 }
 
+// true when a point lies beyond a side of this axis whose span holds its position along the wall,
+// past the face by more than margin; a negative margin also counts points in front of the face
+bool is_beyond_outline_side(Axis axis, double normal_coordinate, double along_coordinate,
+                            const std::vector<OutlineSide>& outline, double margin) {
+    for (const OutlineSide& side : outline) {
+        if (side.direction.axis != axis || along_coordinate < side.from ||
+            along_coordinate > side.to) {
+            continue;
+        }
+        const double depth_beyond_face = (normal_coordinate - side.face) * side.direction.outward;
+        if (depth_beyond_face > -margin) return true;
+    }
+    return false;
+}
+
+// a candidate facing the room, within max_depth in front of a side: that side is the wall behind
+bool is_in_front_of_outline(const Face& candidate_face, const std::vector<OutlineSide>& outline,
+                            const WallParams& p) {
+    for (const OutlineSide& side : outline) {
+        if (side.direction.axis != candidate_face.c.axis) continue;
+        if (!overlaps(candidate_face.c.from - p.overlap_widen, candidate_face.c.to + p.overlap_widen,
+                      side.from, side.to)) {
+            continue;
+        }
+        if (candidate_face.interior != -side.direction.outward) continue;
+        const double depth_in_front =
+            (side.face - candidate_face.c.position) * side.direction.outward;
+        if (depth_in_front > kEps && depth_in_front <= p.max_depth + kEps) return true;
+    }
+    return false;
+}
+
 // gap between a box side range [b0, b1] and the wall body around its centreline
 double box_to_wall(double b0, double b1, const Piece& w) {
     const double w0 = w.centre - w.thickness / 2.0, w1 = w.centre + w.thickness / 2.0;
@@ -243,13 +275,19 @@ double point_to_wall(double x, double y, const Piece& w) {
 
 }  // namespace
 
-WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const Grid& grid,
+WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
+                                    const std::vector<OutlineSide>& outline, const Grid& grid,
                                     const std::vector<Point>& aligned, const Plane& floor,
                                     double band_lo, double band_hi,
                                     const Trajectory& aligned_traj, const WallParams& p) {
     std::vector<Face> faces;
     faces.reserve(cands.size());
     for (const Candidate& c : cands) {
+        // on the shell or past it: the outline already is that wall
+        const double middle_along = (c.from + c.to) / 2.0;
+        if (is_beyond_outline_side(c.axis, c.position, middle_along, outline, p.object_clearance)) {
+            continue;
+        }
         Face f;
         f.c = c;
         count_poses(f, aligned_traj, p);
@@ -284,7 +322,9 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const G
         }
     }
     for (Face& f : faces) {
-        if (!f.paired && !f.inside) f.object_front = has_wall_behind(f, faces, p);
+        if (f.paired || f.inside) continue;
+        f.object_front =
+            is_in_front_of_outline(f, outline, p) || has_wall_behind(f, faces, p);
     }
     for (const Face& f : faces) {
         if (f.paired || f.inside || f.object_front) continue;
@@ -298,6 +338,20 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const G
         w.interior = f.interior;
         w.cells = f.c.cells;
         pieces.push_back(w);
+    }
+
+    // each outline side is a wall; its seen cells say how much of it the robot saw
+    for (const OutlineSide& side : outline) {
+        Piece shell_wall;
+        shell_wall.axis = side.direction.axis;
+        shell_wall.thickness = p.thickness;
+        // the face seen is the room side; the centreline lies half a thickness outward
+        shell_wall.centre = side.face + side.direction.outward * p.thickness / 2.0;
+        shell_wall.from = side.from;
+        shell_wall.to = side.to;
+        shell_wall.interior = -side.direction.outward;
+        shell_wall.cells = side.seen_cell_count;
+        pieces.push_back(shell_wall);
     }
 
     std::vector<Piece> walls = join_collinear(std::move(pieces), faces, p);
@@ -337,7 +391,9 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const G
         }
         if (nearest < walls.size()) {
             ++out.walls[nearest].points;
-        } else {
+        } else if (!is_beyond_outline_side(Axis::X, pt.x, pt.y, outline, -p.object_clearance) &&
+                   !is_beyond_outline_side(Axis::Y, pt.y, pt.x, outline, -p.object_clearance)) {
+            // points past the room shell lie outside the room, so they are not furniture
             rest.push_back(pt);
         }
     }

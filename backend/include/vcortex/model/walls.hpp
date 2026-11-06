@@ -7,6 +7,7 @@
 #include "vcortex/model/candidates.hpp"
 #include "vcortex/model/floor.hpp"
 #include "vcortex/model/grid.hpp"
+#include "vcortex/model/outline.hpp"
 
 namespace vcortex {
 
@@ -18,7 +19,10 @@ struct WallsAndObjects {
 };
 
 // aligned frame in and out; walls get their ids here, since objects point at them
-WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands, const Grid& grid,
+// the outline is the room shell: its sides are walls, candidates on or past it are dropped, and a
+// candidate in front of it is an object front; an empty outline leaves the wardrobe rule alone
+WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
+                                    const std::vector<OutlineSide>& outline, const Grid& grid,
                                     const std::vector<Point>& aligned, const Plane& floor,
                                     double band_lo, double band_hi,
                                     const Trajectory& aligned_traj, const WallParams& p);

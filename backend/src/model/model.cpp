@@ -104,12 +104,14 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
             }
         }
         join_outline_corners(outline, settings.outline.corner_reach);
+        measure_outline_coverage(outline, aligned, aligned_floor, settings.room_space.low_lo,
+                                 band_hi, cp.cell, settings.outline.coverage_tolerance);
     }
     rep.outline_sides = outline.size();
 
     const std::vector<Candidate> cands = find_candidates(grid, cp);
-    WallsAndObjects wo = split_walls_objects(cands, grid, aligned, aligned_floor, band_lo, band_hi,
-                                             aligned_traj, settings.walls);
+    WallsAndObjects wo = split_walls_objects(cands, outline, grid, aligned, aligned_floor, band_lo,
+                                             band_hi, aligned_traj, settings.walls);
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 

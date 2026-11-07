@@ -1,5 +1,6 @@
 // /ws/raw frame: kind u8, 3 zero bytes, run_id u32, seq u32, count u32 (little endian),
-// then count records of x y z float32 in the map frame, z up
+// then count records in the map frame, z up. map: x y z float32, the n-th record is voxel n.
+// delta: x y z float32 then the voxel's index u32: replace that point, or extend the list
 const HEADER_BYTES = 16
 const KIND_MAP = 1
 const KIND_DELTA = 2
@@ -7,7 +8,8 @@ const RETRY_MS = 1000
 
 export interface RawHandlers {
   full(points: Float32Array, runId: number, seq: number): void
-  delta(points: Float32Array, seq: number): void
+  // two views of the same bytes, 4 values per record: x y z from records, index from indices[3]
+  delta(records: Float32Array, indices: Uint32Array, seq: number): void
   connection(open: boolean): void
 }
 
@@ -29,9 +31,13 @@ export function openRawSocket(handlers: RawHandlers): () => void {
       const runId = view.getUint32(4, true)
       const seq = view.getUint32(8, true)
       const count = view.getUint32(12, true)
-      const points = new Float32Array(event.data, HEADER_BYTES, count * 3)
-      if (kind === KIND_MAP) handlers.full(points, runId, seq)
-      else if (kind === KIND_DELTA) handlers.delta(points, seq)
+      if (kind === KIND_MAP) {
+        handlers.full(new Float32Array(event.data, HEADER_BYTES, count * 3), runId, seq)
+      } else if (kind === KIND_DELTA) {
+        const records = new Float32Array(event.data, HEADER_BYTES, count * 4)
+        const indices = new Uint32Array(event.data, HEADER_BYTES, count * 4)
+        handlers.delta(records, indices, seq)
+      }
     }
     socket.onclose = () => {
       handlers.connection(false)

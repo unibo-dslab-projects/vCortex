@@ -34,8 +34,8 @@ onMounted(() => {
       // a reconnect resends the same map: keep the camera where the user left it
       if (firstMap) view(mode.value)
     },
-    delta(points, s) {
-      cloud.append(points)
+    delta(records, indices, s) {
+      cloud.upsert(records, indices)
       count.value = cloud.count
       seq.value = s
     },

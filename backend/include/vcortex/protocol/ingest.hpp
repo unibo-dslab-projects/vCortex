@@ -13,12 +13,12 @@ namespace vcortex {
 // source -> backend: 16-byte header, then `count` records sized by kind
 // little-endian: robot (arm64) and laptop (x86-64) both are, so no byte swaps
 
-inline constexpr int kIngestProtocol = 1;
+inline constexpr int kIngestProtocol = 2;
 inline constexpr std::size_t kFrameHeaderSize = 16;
 
 enum class FrameKind : std::uint8_t {
     Map = 1,    // every voxel; seq = last delta included
-    Delta = 2,  // new voxels; seq = this delta
+    Delta = 2,  // new and updated voxels; replace by key; seq = this delta
     Poses = 3,  // robot poses; seq unused (0)
 };
 
@@ -30,8 +30,9 @@ struct FrameHeader {
     std::uint32_t count;
 };
 
-// map, delta: x y z intensity float32; intensity stays float, source values have fractions
-inline constexpr std::size_t kVoxelRecordSize = 16;
+// map, delta: x y z intensity float32 (the voxel's mean; intensity has fractions), then
+// num_scan_seen uint32
+inline constexpr std::size_t kVoxelRecordSize = 20;
 
 // poses: time_ns int64 (unix ns; a double loses ~0.2 us), then x y z yaw float32
 // 24 bytes keep time_ns 8-byte aligned after the 16-byte header

@@ -76,8 +76,7 @@ void send_output(crow::websocket::connection& conn, const Connector& connector,
 std::string full_map_frame(const MapStore& store) {
     const std::optional<MapCopy> copy = store.peek();
     if (!copy) return {};
-    return encode_raw(FrameKind::Map, copy->snapshot.run_id, copy->snapshot.seq,
-                      copy->snapshot.points);
+    return encode_raw_map(copy->snapshot.run_id, copy->snapshot.seq, copy->snapshot.points);
 }
 
 // catch-ups average at most kRawBudget per second, however large the map
@@ -346,11 +345,13 @@ void WebServer::ingest_frame(Connection& conn, const std::string& bytes) {
     switch (h.kind) {
         case FrameKind::Map:
             store_.put_map(h.run_id, h.seq, frame.points);
-            raw_send_map(encode_raw(FrameKind::Map, h.run_id, h.seq, frame.points));
+            // the store's order, not the frame's: a resync keeps old voxels where they were,
+            // and viewers address points by that index
+            raw_send_map(full_map_frame(store_));
             break;
         case FrameKind::Delta:
-            if (store_.put_delta(h.run_id, h.seq, frame.points)) {
-                raw_send_delta(encode_raw(FrameKind::Delta, h.run_id, h.seq, frame.points));
+            if (const auto indices = store_.put_delta(h.run_id, h.seq, frame.points)) {
+                raw_send_delta(encode_raw_delta(h.run_id, h.seq, frame.points, *indices));
             } else {
                 conn.send_text(R"({"type":"resync","reason":"seq gap"})");
             }

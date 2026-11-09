@@ -20,6 +20,12 @@ struct CandidateParams {
     double merge_distance = 0.10;   // parallel runs closer than this become one
 };
 
+struct ObjectParams {
+    double cluster_tolerance = 0.10;
+    int cluster_min_points = 20;
+    double against_wall_distance = 0.15;
+};
+
 struct WallParams {
     double span_margin = 0.5;        // poses within the span +- this count for the interior side
     double both_sides_range = 5.0;   // poses farther than this are ignored
@@ -31,11 +37,6 @@ struct WallParams {
     double corner_gap = 0.5;         // wall ends this close to a perpendicular wall are joined
     double thickness = 0.10;         // used when only one face was seen
     double object_clearance = 0.10;  // band points closer than this to a wall face are wall
-    double cluster_tolerance = 0.10;
-    int cluster_min_points = 20;
-    double against_wall_distance = 0.15;
-    // an inside wall must be seen up to this share of the shell's mean seen top, or it is
-    // furniture; 0 keeps them all. a low lidar sees less high on near walls, so 1 is too strict
     double min_top_ratio = 0.0;
 };
 
@@ -74,6 +75,7 @@ struct ModelSettings {
     int outlier_mean_k = 20;
     double outlier_stddev_mul = 2.0;
     CandidateParams candidates;
+    ObjectParams objects;
     WallParams walls;
     RoomParams rooms;
     RoomSpaceParams room_space;

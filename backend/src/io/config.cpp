@@ -100,6 +100,12 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("min_length", c.min_length);
         o.number("merge_distance", c.merge_distance);
     });
+    f.object("objects", [&](Fields& o) {
+        ObjectParams& ob = s.objects;
+        o.number("cluster_tolerance", ob.cluster_tolerance);
+        o.integer("cluster_min_points", ob.cluster_min_points);
+        o.number("against_wall_distance", ob.against_wall_distance);
+    });
     f.object("walls", [&](Fields& o) {
         WallParams& w = s.walls;
         o.number("span_margin", w.span_margin);
@@ -112,9 +118,6 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("corner_gap", w.corner_gap);
         o.number("thickness", w.thickness);
         o.number("object_clearance", w.object_clearance);
-        o.number("cluster_tolerance", w.cluster_tolerance);
-        o.integer("cluster_min_points", w.cluster_min_points);
-        o.number("against_wall_distance", w.against_wall_distance);
         o.number("min_top_ratio", w.min_top_ratio);
     });
     f.object("rooms", [&](Fields& o) {

@@ -38,7 +38,42 @@ async function save() {
   }
 }
 
+// 0 keeps every inside wall; each step makes the backend run the model again
+const topRatio = ref(0)
+const savingRatio = ref(false)
+let ratioDebounce: ReturnType<typeof setTimeout> | undefined
+
+watch(
+  () => settings.value?.walls.min_top_ratio,
+  (value) => {
+    if (value !== undefined && !savingRatio.value) topRatio.value = value
+  },
+  { immediate: true },
+)
+
+const onRatioInput = () => {
+  clearTimeout(ratioDebounce)
+  ratioDebounce = setTimeout(saveRatio, 300)
+}
+
+async function saveRatio() {
+  const value = topRatio.value
+  if (value === settings.value?.walls.min_top_ratio) return
+  savingRatio.value = true
+  try {
+    settings.value = await putSettings({ walls: { min_top_ratio: value } })
+    error.value = null
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    savingRatio.value = false
+  }
+}
+
 const model = computed(() => props.status?.model ?? null)
+const minTopMetres = computed(() =>
+  model.value ? topRatio.value * model.value.shell_top_seen_m : 0,
+)
 const kept = computed(() =>
   model.value ? Math.round((model.value.after_outliers / model.value.points_in) * 1000) / 10 : 0,
 )
@@ -63,6 +98,26 @@ const kept = computed(() =>
     </span>
 
     <div class="spacer" />
+
+    <label class="item ratio" title="inside walls seen lower than this share of the room walls become objects">
+      Inside wall height
+      <input
+        v-model.number="topRatio"
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        :disabled="!settings"
+        @input="onRatioInput"
+      />
+      <span class="hint">
+        {{ topRatio === 0 ? 'off' : `${Math.round(topRatio * 100)}%` }}
+        <template v-if="model && topRatio > 0 && model.shell_top_seen_m > 0">
+          · ≥ {{ minTopMetres.toFixed(2) }} m of {{ model.shell_top_seen_m.toFixed(2) }} m
+        </template>
+        <template v-if="savingRatio"> · saving…</template>
+      </span>
+    </label>
 
     <label class="item height">
       Wall height
@@ -125,6 +180,13 @@ input {
   background: var(--bg);
   color: var(--accent);
   text-align: right;
+}
+
+input[type='range'] {
+  width: 110px;
+  padding: 0;
+  border: none;
+  accent-color: var(--accent);
 }
 
 input:focus {

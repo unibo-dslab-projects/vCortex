@@ -115,6 +115,7 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("cluster_tolerance", w.cluster_tolerance);
         o.integer("cluster_min_points", w.cluster_min_points);
         o.number("against_wall_distance", w.against_wall_distance);
+        o.number("min_top_ratio", w.min_top_ratio);
     });
     f.object("rooms", [&](Fields& o) {
         o.number("min_area", s.rooms.min_area);

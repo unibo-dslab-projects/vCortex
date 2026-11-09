@@ -315,6 +315,50 @@ void keep_walls_hanging_from_shell(std::vector<Piece>& walls, const WallParams& 
     walls = std::move(kept);
 }
 
+// 95th percentile of band heights near the wall body, so one stray high point does not set it
+double seen_top(const Piece& wall, const std::vector<Point>& aligned, const Plane& floor,
+                double band_lo, double band_hi, const WallParams& p) {
+    std::vector<double> heights;
+    for (const Point& point : aligned) {
+        const double height = height_above(floor, point);
+        if (height < band_lo || height >= band_hi) continue;
+        if (point_to_wall(point.x, point.y, wall) <= p.object_clearance + kEps) {
+            heights.push_back(height);
+        }
+    }
+    if (heights.empty()) return 0.0;
+    const auto top_index =
+        static_cast<std::ptrdiff_t>(0.95 * static_cast<double>(heights.size() - 1));
+    std::nth_element(heights.begin(), heights.begin() + top_index, heights.end());
+    return heights[static_cast<std::size_t>(top_index)];
+}
+
+// a desk walked around passes every rule by shape; only its height gives it away. the lidar
+// never sees the true top, so inside walls are compared with what it saw of the shell
+double drop_low_walls(std::vector<Piece>& walls, const std::vector<Point>& aligned,
+                      const Plane& floor, double band_lo, double band_hi, const WallParams& p) {
+    std::vector<double> tops(walls.size());
+    double shell_top_sum = 0.0;
+    int shell_walls_seen = 0;
+    for (std::size_t i = 0; i < walls.size(); ++i) {
+        tops[i] = seen_top(walls[i], aligned, floor, band_lo, band_hi, p);
+        if (walls[i].is_shell && tops[i] > 0.0) {
+            shell_top_sum += tops[i];
+            ++shell_walls_seen;
+        }
+    }
+    if (shell_walls_seen == 0) return 0.0;
+    const double shell_top_seen = shell_top_sum / shell_walls_seen;
+    std::vector<Piece> kept;
+    for (std::size_t i = 0; i < walls.size(); ++i) {
+        if (walls[i].is_shell || tops[i] >= p.min_top_ratio * shell_top_seen) {
+            kept.push_back(walls[i]);
+        }
+    }
+    walls = std::move(kept);
+    return shell_top_seen;
+}
+
 }  // namespace
 
 WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
@@ -399,12 +443,16 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
 
     std::vector<Piece> walls = join_collinear(std::move(pieces), faces, p);
     close_corners(walls, p);
-    if (!outline.empty()) keep_walls_hanging_from_shell(walls, p);
+    WallsAndObjects out;
+    if (!outline.empty()) {
+        // height first: a wall that hung only from a dropped desk then floats too
+        out.shell_top_seen = drop_low_walls(walls, aligned, floor, band_lo, band_hi, p);
+        keep_walls_hanging_from_shell(walls, p);
+    }
     std::sort(walls.begin(), walls.end(), [](const Piece& a, const Piece& b) {
         return std::tie(a.axis, a.centre, a.from) < std::tie(b.axis, b.centre, b.from);
     });
 
-    WallsAndObjects out;
     for (std::size_t i = 0; i < walls.size(); ++i) {
         const Piece& w = walls[i];
         Wall wall;

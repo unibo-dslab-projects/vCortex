@@ -34,6 +34,9 @@ struct WallParams {
     double cluster_tolerance = 0.10;
     int cluster_min_points = 20;
     double against_wall_distance = 0.15;
+    // an inside wall must be seen up to this share of the shell's mean seen top, or it is
+    // furniture; 0 keeps them all. a low lidar sees less high on near walls, so 1 is too strict
+    double min_top_ratio = 0.0;
 };
 
 struct RoomParams {

@@ -70,6 +70,9 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (w.cluster_min_points < 1) {
         return problem("walls.cluster_min_points", ">= 1", w.cluster_min_points);
     }
+    if (!(w.min_top_ratio >= 0 && w.min_top_ratio <= 1)) {
+        return problem("walls.min_top_ratio", "in [0, 1]", w.min_top_ratio);
+    }
     if (!(w.against_wall_distance >= 0)) {
         return problem("walls.against_wall_distance", ">= 0", w.against_wall_distance);
     }

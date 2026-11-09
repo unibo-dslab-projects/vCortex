@@ -16,6 +16,7 @@ namespace vcortex {
 struct WallsAndObjects {
     std::vector<Wall> walls;
     std::vector<Object> objects;
+    double shell_top_seen = 0.0;  // mean seen top of the shell walls, metres above the floor
 };
 
 // aligned frame in and out; walls get their ids here, since objects point at them

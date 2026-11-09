@@ -25,6 +25,7 @@ struct ModelReport {
     std::size_t wall_faces_found = 0;  // all 4 directions; low means the shell is barely seen
     // 0: room space leaked or not seen; fewer than 4: a direction found no wall face
     std::size_t outline_sides = 0;
+    double shell_top_seen = 0.0;  // what walls.min_top_ratio is a share of; 0: no shell
     double duration_ms = 0.0;
 };
 

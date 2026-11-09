@@ -112,6 +112,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const std::vector<Candidate> cands = find_candidates(grid, cp);
     WallsAndObjects wo = split_walls_objects(cands, outline, grid, aligned, aligned_floor, band_lo,
                                              band_hi, aligned_traj, settings.walls);
+    rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 

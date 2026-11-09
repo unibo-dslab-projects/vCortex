@@ -37,7 +37,8 @@ crow::response error_response(int code, const std::string& message) {
 Json settings_json(const ModelSettings& s) {
     return {{"wall_height", s.wall_height},
             {"wall_height_source",
-             s.wall_height_source == HeightSource::User ? "user" : "default"}};
+             s.wall_height_source == HeightSource::User ? "user" : "default"},
+            {"walls", {{"min_top_ratio", s.walls.min_top_ratio}}}};
 }
 
 Json report_json(const ModelReport& r) {
@@ -48,6 +49,7 @@ Json report_json(const ModelReport& r) {
             {"room_space_leaked", r.room_space_leaked},
             {"wall_faces_found", r.wall_faces_found},
             {"outline_sides", r.outline_sides},
+            {"shell_top_seen_m", r.shell_top_seen},
             {"yaw_deg", r.yaw_deg},
             {"poses", r.poses},
             {"candidates", r.candidates},

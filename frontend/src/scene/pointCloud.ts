@@ -12,7 +12,7 @@ const LOW = new Color('#0b3a46')
 const MID = new Color('#22d3ee')
 const HIGH = new Color('#e0fbff')
 
-// map frame points (x y z, z up) coloured by height. deltas append in place: rebuilding an
+// map frame points (x y z, z up) coloured by height. deltas write in place: rebuilding an
 // 800k-point geometry per delta stalls the page
 export class PointCloud {
   readonly object: Points<BufferGeometry, PointsMaterial>
@@ -47,29 +47,52 @@ export class PointCloud {
     this.append(points)
   }
 
-  append(points: Float32Array) {
+  private append(points: Float32Array) {
     const added = points.length / 3
     this.reserve(this.count + added)
-    this.positions.set(points, this.count * 3)
     const color = new Color()
     for (let i = 0; i < added; i++) {
-      const x = points[i * 3]!
-      const y = points[i * 3 + 1]!
-      const z = points[i * 3 + 2]!
-      this.min.set(Math.min(this.min.x, x), Math.min(this.min.y, y), Math.min(this.min.z, z))
-      this.max.set(Math.max(this.max.x, x), Math.max(this.max.y, y), Math.max(this.max.z, z))
-      this.heightColor(z, color).toArray(this.colors, (this.count + i) * 3)
+      this.place(this.count + i, points[i * 3]!, points[i * 3 + 1]!, points[i * 3 + 2]!, color)
     }
     this.count += added
-    const geometry = this.object.geometry
-    geometry.setDrawRange(0, this.count)
-    geometry.attributes.position!.needsUpdate = true
-    geometry.attributes.color!.needsUpdate = true
+    this.changed()
+  }
+
+  // delta records, 4 values each: x y z from records, the voxel's index from indices[3].
+  // the backend updates voxels it already sent, so an index below count replaces that point
+  upsert(records: Float32Array, indices: Uint32Array) {
+    const n = records.length / 4
+    let end = this.count
+    for (let i = 0; i < n; i++) end = Math.max(end, indices[i * 4 + 3]! + 1)
+    this.reserve(end)
+    const color = new Color()
+    for (let i = 0; i < n; i++) {
+      const at = indices[i * 4 + 3]!
+      this.place(at, records[i * 4]!, records[i * 4 + 1]!, records[i * 4 + 2]!, color)
+    }
+    this.count = end
+    this.changed()
   }
 
   dispose() {
     this.object.geometry.dispose()
     this.object.material.dispose()
+  }
+
+  private place(at: number, x: number, y: number, z: number, color: Color) {
+    this.positions[at * 3] = x
+    this.positions[at * 3 + 1] = y
+    this.positions[at * 3 + 2] = z
+    this.min.set(Math.min(this.min.x, x), Math.min(this.min.y, y), Math.min(this.min.z, z))
+    this.max.set(Math.max(this.max.x, x), Math.max(this.max.y, y), Math.max(this.max.z, z))
+    this.heightColor(z, color).toArray(this.colors, at * 3)
+  }
+
+  private changed() {
+    const geometry = this.object.geometry
+    geometry.setDrawRange(0, this.count)
+    geometry.attributes.position!.needsUpdate = true
+    geometry.attributes.color!.needsUpdate = true
   }
 
   // 2nd and 98th percentile: a few stray returns must not wash out the whole gradient

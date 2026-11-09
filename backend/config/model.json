@@ -24,7 +24,15 @@
     "object_clearance": 0.10,
     "cluster_tolerance": 0.10,
     "cluster_min_points": 20,
-    "against_wall_distance": 0.15
+    "against_wall_distance": 0.15,
+    "min_top_ratio": 0.0
   },
-  "rooms": { "min_area": 1.0, "wall_touch_distance": 0.15 }
+  "rooms": { "min_area": 1.0, "wall_touch_distance": 0.15 },
+  "room_space": { "floor_band": 0.08, "low_lo": 0.10, "low_hi": 0.30, "min_points": 2, "coin_radius": 0.15 },
+  "outline": {
+    "strip": 0.25, "max_reach": 1.5, "max_gap": 0.30, "face_depth": 0.10,
+    "run_jump": 0.15, "min_strips_per_run": 2, "merge_distance": 0.10,
+    "dent_depth": 0.50, "dent_length": 2.0, "corner_max_extension": 8.0, "corner_overshoot": 0.5,
+    "coverage_tolerance": 0.10
+  }
 }

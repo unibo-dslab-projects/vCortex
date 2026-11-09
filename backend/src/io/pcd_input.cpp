@@ -65,6 +65,7 @@ Snapshot read_pcd(const std::filesystem::path& file) {
         throw std::runtime_error("load_offline: " + file.string() + " lacks x, y or z");
     }
     const FieldReader intensity(cloud, "intensity");
+    const FieldReader num_scan_seen(cloud, "num_scan_seen");
 
     Snapshot snap;
     // a pcd stores no frame name; map_builder saves point-lio's map, which lives in camera_init
@@ -79,6 +80,7 @@ Snapshot read_pcd(const std::filesystem::path& file) {
         // organised clouds mark missing returns with nan
         if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
         if (intensity.present()) p.intensity = static_cast<float>(intensity.at(i));
+        if (num_scan_seen.present()) p.num_scan_seen = static_cast<std::uint32_t>(num_scan_seen.at(i));
         snap.points.push_back(p);
     }
     return snap;

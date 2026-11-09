@@ -20,13 +20,14 @@ MapStore::Key MapStore::key_of(const Point& p) const {
             static_cast<std::int32_t>(std::floor(p.z / voxel_size_))};
 }
 
-void MapStore::upsert(const Point& p) {
+std::size_t MapStore::upsert(const Point& p) {
     const auto [it, added] = index_.try_emplace(key_of(p), points_.size());
     if (added) {
         points_.push_back(p);
     } else {
         points_[it->second] = p;
     }
+    return it->second;
 }
 
 void MapStore::reset(std::string frame_id, double voxel_size) {
@@ -56,13 +57,17 @@ void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vecto
     dirty_ = true;
 }
 
-bool MapStore::put_delta(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points) {
+std::optional<std::vector<std::uint32_t>> MapStore::put_delta(std::uint32_t run_id,
+                                                              std::uint32_t seq,
+                                                              const std::vector<Point>& points) {
     const std::lock_guard<std::mutex> lock(mutex_);
-    if (run_id_ != run_id || seq != seq_ + 1) return false;
-    for (const Point& p : points) upsert(p);
+    if (run_id_ != run_id || seq != seq_ + 1) return std::nullopt;
+    std::vector<std::uint32_t> indices;
+    indices.reserve(points.size());
+    for (const Point& p : points) indices.push_back(static_cast<std::uint32_t>(upsert(p)));
     seq_ = seq;
     dirty_ = true;
-    return true;
+    return indices;
 }
 
 void MapStore::put_poses(std::uint32_t run_id, const std::vector<Pose>& poses) {

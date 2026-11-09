@@ -115,10 +115,34 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("cluster_tolerance", w.cluster_tolerance);
         o.integer("cluster_min_points", w.cluster_min_points);
         o.number("against_wall_distance", w.against_wall_distance);
+        o.number("min_top_ratio", w.min_top_ratio);
     });
     f.object("rooms", [&](Fields& o) {
         o.number("min_area", s.rooms.min_area);
         o.number("wall_touch_distance", s.rooms.wall_touch_distance);
+    });
+    f.object("room_space", [&](Fields& o) {
+        RoomSpaceParams& r = s.room_space;
+        o.number("floor_band", r.floor_band);
+        o.number("low_lo", r.low_lo);
+        o.number("low_hi", r.low_hi);
+        o.integer("min_points", r.min_points);
+        o.number("coin_radius", r.coin_radius);
+    });
+    f.object("outline", [&](Fields& o) {
+        OutlineParams& l = s.outline;
+        o.number("strip", l.strip);
+        o.number("max_reach", l.max_reach);
+        o.number("max_gap", l.max_gap);
+        o.number("face_depth", l.face_depth);
+        o.number("run_jump", l.run_jump);
+        o.integer("min_strips_per_run", l.min_strips_per_run);
+        o.number("merge_distance", l.merge_distance);
+        o.number("dent_depth", l.dent_depth);
+        o.number("dent_length", l.dent_length);
+        o.number("corner_max_extension", l.corner_max_extension);
+        o.number("corner_overshoot", l.corner_overshoot);
+        o.number("coverage_tolerance", l.coverage_tolerance);
     });
 }
 

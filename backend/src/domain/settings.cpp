@@ -70,6 +70,9 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (w.cluster_min_points < 1) {
         return problem("walls.cluster_min_points", ">= 1", w.cluster_min_points);
     }
+    if (!(w.min_top_ratio >= 0 && w.min_top_ratio <= 1)) {
+        return problem("walls.min_top_ratio", "in [0, 1]", w.min_top_ratio);
+    }
     if (!(w.against_wall_distance >= 0)) {
         return problem("walls.against_wall_distance", ">= 0", w.against_wall_distance);
     }
@@ -79,6 +82,54 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(r.wall_touch_distance >= 0)) {
         return problem("rooms.wall_touch_distance", ">= 0", r.wall_touch_distance);
     }
+
+    const RoomSpaceParams& rs = s.room_space;
+    if (!(rs.floor_band > 0)) return problem("room_space.floor_band", "> 0", rs.floor_band);
+    if (!(rs.low_lo >= rs.floor_band)) {
+        return problem("room_space.low_lo", ">= room_space.floor_band", rs.low_lo);
+    }
+    if (!(rs.low_hi > rs.low_lo)) {
+        return problem("room_space.low_hi", "> room_space.low_lo", rs.low_hi);
+    }
+    if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
+    if (!(rs.coin_radius > 0)) return problem("room_space.coin_radius", "> 0", rs.coin_radius);
+
+    const OutlineParams& o = s.outline;
+    // a strip narrower than a cell holds no whole cell
+    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
+    // one missing cell must not end the walk
+    if (!(o.max_gap >= c.cell)) return problem("outline.max_gap", ">= candidates.cell", o.max_gap);
+    // else every walk ends at the reach, never at a gap
+    if (!(o.max_reach > o.max_gap)) {
+        return problem("outline.max_reach", "> outline.max_gap", o.max_reach);
+    }
+    // the window then covers the whole last occupied cell, so it is never empty
+    if (!(o.face_depth >= c.cell)) {
+        return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
+    }
+    if (!(o.run_jump > 0)) return problem("outline.run_jump", "> 0", o.run_jump);
+    if (o.min_strips_per_run < 1) {
+        return problem("outline.min_strips_per_run", ">= 1", o.min_strips_per_run);
+    }
+    // else merging undoes every split made by run_jump
+    if (!(o.merge_distance >= 0 && o.merge_distance < o.run_jump)) {
+        return problem("outline.merge_distance", ">= 0 and < outline.run_jump", o.merge_distance);
+    }
+    // a dent must be deeper than a merge, or it would already be one line
+    if (!(o.dent_depth > o.merge_distance)) {
+        return problem("outline.dent_depth", "> outline.merge_distance", o.dent_depth);
+    }
+    if (!(o.dent_length > 0)) return problem("outline.dent_length", "> 0", o.dent_length);
+    if (!(o.corner_max_extension >= 0)) {
+        return problem("outline.corner_max_extension", ">= 0", o.corner_max_extension);
+    }
+    if (!(o.corner_overshoot >= 0)) {
+        return problem("outline.corner_overshoot", ">= 0", o.corner_overshoot);
+    }
+    if (!(o.coverage_tolerance >= 0)) {
+        return problem("outline.coverage_tolerance", ">= 0", o.coverage_tolerance);
+    }
+
     return std::nullopt;
 }
 

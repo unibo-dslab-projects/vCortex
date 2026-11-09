@@ -36,9 +36,12 @@ public:
     // every record replaces its voxel
     void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points);
 
-    // false when the delta does not follow the last seq of this run: nothing is applied and
-    // the source must send a fresh map
-    bool put_delta(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points);
+    // where each record landed in the map's point list (a new voxel goes at the end), so a
+    // viewer holding the same list can replace points in place; nothing when the delta does
+    // not follow the last seq of this run: nothing is applied and the source must send a
+    // fresh map
+    std::optional<std::vector<std::uint32_t>> put_delta(std::uint32_t run_id, std::uint32_t seq,
+                                                        const std::vector<Point>& points);
 
 
     // poses of another run belong to a map this store does not hold, so they are dropped
@@ -65,7 +68,8 @@ private:
     };
 
     Key key_of(const Point& p) const;
-    void upsert(const Point& p);
+    // returns the voxel's index in points_
+    std::size_t upsert(const Point& p);
     MapCopy copy_locked() const;
 
     mutable std::mutex mutex_;

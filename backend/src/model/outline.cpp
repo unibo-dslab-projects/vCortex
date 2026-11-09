@@ -121,27 +121,35 @@ std::vector<OutlineSide> find_outline_sides(const std::vector<WallFaceSample>& s
     return sides;
 }
 
-void join_outline_corners(std::vector<OutlineSide>& sides, double corner_reach) {
+void join_outline_corners(std::vector<OutlineSide>& sides, const OutlineParams& parameters) {
     // read from a copy, so the order of the sides does not change the result
     const std::vector<OutlineSide> sides_before = sides;
+    // signed gap along the way an end points: positive = stretch, negative = trim back
+    const auto fits = [&](double gap) {
+        return gap >= -parameters.corner_overshoot - kEpsilon &&
+               gap <= parameters.corner_max_extension + kEpsilon;
+    };
     for (OutlineSide& side : sides) {
-        // init list c++ -> tuple
-        for (double* end : {&side.from, &side.to}) {
+        // -1: the from end points to smaller coordinates, +1: the to end to larger ones
+        for (const int end_heading : {-1, 1}) {
+            double& end = end_heading < 0 ? side.from : side.to;
             double nearest_distance = std::numeric_limits<double>::max();
-            double nearest_face = *end;
+            double nearest_face = end;
             for (const OutlineSide& other : sides_before) {
-                // we are looking for a corner, so the sides must be perpendicular
                 if (other.direction.axis == side.direction.axis) continue;
-                if (side.face < other.from - corner_reach || side.face > other.to + corner_reach) {
-                    continue;
-                }
-                const double distance = std::abs(other.face - *end);
-                if (distance <= corner_reach + kEpsilon && distance < nearest_distance) {
-                    nearest_distance = distance;
+                // a room corner: this end heads the way the other side faces out, and the other
+                // side's end that heads the way this side faces out reaches towards this face
+                if (other.direction.outward != end_heading) continue;
+                const double other_end = side.direction.outward < 0 ? other.from : other.to;
+                if (!fits((side.face - other_end) * side.direction.outward)) continue;
+                const double gap = (other.face - end) * end_heading;
+                if (!fits(gap)) continue;
+                if (std::abs(gap) < nearest_distance) {
+                    nearest_distance = std::abs(gap);
                     nearest_face = other.face;
                 }
             }
-            *end = nearest_face;
+            end = nearest_face;
         }
         if (side.from > side.to) std::swap(side.from, side.to);
     }

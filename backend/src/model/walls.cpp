@@ -43,6 +43,7 @@ struct Piece {
     double from = 0.0, to = 0.0;
     int interior = 0;
     std::size_t cells = 0;
+    bool is_shell = false;  // came from an outline side
 };
 
 void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
@@ -189,6 +190,7 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
             if (gap <= p.min_gap + kEps || gap_hidden(cur, cur.to, n.from, faces, p)) {
                 cur.to = std::max(cur.to, n.to);
                 cur.cells += n.cells;
+                cur.is_shell = cur.is_shell || n.is_shell;
                 const double nw = static_cast<double>(n.cells);
                 centre_sum += n.centre * nw;
                 thick_sum += n.thickness * nw;
@@ -273,6 +275,46 @@ double point_to_wall(double x, double y, const Piece& w) {
     return std::hypot(dn, du);
 }
 
+// a door may leave door_max open where a wall meets the shell or goes on in line; against
+// another inside wall the end must touch (corner_gap), or rows of desks chain to each other
+bool ends_meet(const Piece& wall, const Piece& other, const WallParams& p) {
+    const bool is_in_line = other.axis == wall.axis &&
+                            std::abs(other.centre - wall.centre) <= p.collinear_tolerance + kEps;
+    const double allowed_gap = is_in_line || other.is_shell ? p.door_max : p.corner_gap;
+    for (const double end : {wall.from, wall.to}) {
+        const double x = wall.axis == Axis::X ? wall.centre : end;
+        const double y = wall.axis == Axis::X ? end : wall.centre;
+        if (point_to_wall(x, y, other) <= allowed_gap + kEps) return true;
+    }
+    return false;
+}
+
+// with a room shell, a wall inside it hangs from the shell, directly or through other walls;
+// desks walked around show faces on both sides but float free, so their points go to objects
+void keep_walls_hanging_from_shell(std::vector<Piece>& walls, const WallParams& p) {
+    std::vector<bool> is_hanging(walls.size());
+    for (std::size_t i = 0; i < walls.size(); ++i) is_hanging[i] = walls[i].is_shell;
+    bool found_one = true;
+    while (found_one) {
+        found_one = false;
+        for (std::size_t i = 0; i < walls.size(); ++i) {
+            if (is_hanging[i]) continue;
+            for (std::size_t j = 0; j < walls.size() && !is_hanging[i]; ++j) {
+                if (is_hanging[j] &&
+                    (ends_meet(walls[i], walls[j], p) || ends_meet(walls[j], walls[i], p))) {
+                    is_hanging[i] = true;
+                    found_one = true;
+                }
+            }
+        }
+    }
+    std::vector<Piece> kept;
+    for (std::size_t i = 0; i < walls.size(); ++i) {
+        if (is_hanging[i]) kept.push_back(walls[i]);
+    }
+    walls = std::move(kept);
+}
+
 }  // namespace
 
 WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
@@ -351,11 +393,13 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
         shell_wall.to = side.to;
         shell_wall.interior = -side.direction.outward;
         shell_wall.cells = side.seen_cell_count;
+        shell_wall.is_shell = true;
         pieces.push_back(shell_wall);
     }
 
     std::vector<Piece> walls = join_collinear(std::move(pieces), faces, p);
     close_corners(walls, p);
+    if (!outline.empty()) keep_walls_hanging_from_shell(walls, p);
     std::sort(walls.begin(), walls.end(), [](const Piece& a, const Piece& b) {
         return std::tie(a.axis, a.centre, a.from) < std::tie(b.axis, b.centre, b.from);
     });

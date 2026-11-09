@@ -59,7 +59,9 @@ struct OutlineParams {
     double merge_distance = 0.10;        // neighbour runs this close are one line
     double dent_depth = 0.50;   // runs at most this far in, and at most dent_length long,
     double dent_length = 2.0;   //   are furniture against the wall
-    double corner_reach = 1.5;  // corners hold furniture as deep as max_reach
+    // desks along the walls hide metres of wall: a 1.5 m reach left a furnished office open
+    double corner_max_extension = 8.0;
+    double corner_overshoot = 0.5;  // a side may poke this far past the corner; trimmed back
     double coverage_tolerance = 0.10;  // points this close to a face line count as seeing it
 };
 

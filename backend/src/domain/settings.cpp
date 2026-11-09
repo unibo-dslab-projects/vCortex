@@ -117,7 +117,12 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("outline.dent_depth", "> outline.merge_distance", o.dent_depth);
     }
     if (!(o.dent_length > 0)) return problem("outline.dent_length", "> 0", o.dent_length);
-    if (!(o.corner_reach >= 0)) return problem("outline.corner_reach", ">= 0", o.corner_reach);
+    if (!(o.corner_max_extension >= 0)) {
+        return problem("outline.corner_max_extension", ">= 0", o.corner_max_extension);
+    }
+    if (!(o.corner_overshoot >= 0)) {
+        return problem("outline.corner_overshoot", ">= 0", o.corner_overshoot);
+    }
     if (!(o.coverage_tolerance >= 0)) {
         return problem("outline.coverage_tolerance", ">= 0", o.coverage_tolerance);
     }

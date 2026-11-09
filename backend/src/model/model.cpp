@@ -103,7 +103,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
                 outline.push_back(side);
             }
         }
-        join_outline_corners(outline, settings.outline.corner_reach);
+        join_outline_corners(outline, settings.outline);
         measure_outline_coverage(outline, aligned, aligned_floor, settings.room_space.low_lo,
                                  band_hi, cp.cell, settings.outline.coverage_tolerance);
     }

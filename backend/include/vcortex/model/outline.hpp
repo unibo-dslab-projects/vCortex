@@ -25,9 +25,9 @@ struct OutlineSide {
 std::vector<OutlineSide> find_outline_sides(const std::vector<WallFaceSample>& samples,
                                             Direction direction, const OutlineParams& parameters);
 
-// ends move to the face of a perpendicular side within corner_reach; corners hold the furniture
-// that stopped the strip walk, so their strips have no face
-void join_outline_corners(std::vector<OutlineSide>& sides, double corner_reach);
+// two perpendicular sides that turn towards each other are stretched until they cross: furniture
+// hides most of a wall, so seen pieces stop metres short of the corner
+void join_outline_corners(std::vector<OutlineSide>& sides, const OutlineParams& parameters);
 
 // counts the cells along each side where a point of the band lies near its face; the other
 // cells are drawn, not seen. Run after join_outline_corners, so corner stretches count as unseen.

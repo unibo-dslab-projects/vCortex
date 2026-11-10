@@ -64,17 +64,19 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(w.object_clearance >= 0)) {
         return problem("walls.object_clearance", ">= 0", w.object_clearance);
     }
-    if (!(w.cluster_tolerance > 0)) {
-        return problem("walls.cluster_tolerance", "> 0", w.cluster_tolerance);
-    }
-    if (w.cluster_min_points < 1) {
-        return problem("walls.cluster_min_points", ">= 1", w.cluster_min_points);
-    }
     if (!(w.min_top_ratio >= 0 && w.min_top_ratio <= 1)) {
         return problem("walls.min_top_ratio", "in [0, 1]", w.min_top_ratio);
     }
-    if (!(w.against_wall_distance >= 0)) {
-        return problem("walls.against_wall_distance", ">= 0", w.against_wall_distance);
+
+    const ObjectParams& ob = s.objects;
+    if (!(ob.cluster_tolerance > 0)) {
+        return problem("objects.cluster_tolerance", "> 0", ob.cluster_tolerance);
+    }
+    if (ob.cluster_min_points < 1) {
+        return problem("objects.cluster_min_points", ">= 1", ob.cluster_min_points);
+    }
+    if (!(ob.against_wall_distance >= 0)) {
+        return problem("objects.against_wall_distance", ">= 0", ob.against_wall_distance);
     }
 
     const RoomParams& r = s.rooms;

@@ -63,6 +63,7 @@ add_library(vcortex_core STATIC
   src/model/wall_face_samples.cpp
   src/model/outline.cpp
   src/model/model.cpp
+  src/model/objects.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp

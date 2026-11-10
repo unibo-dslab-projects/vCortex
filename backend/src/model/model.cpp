@@ -15,6 +15,7 @@
 #include "vcortex/model/rooms.hpp"
 #include "vcortex/model/wall_face_samples.hpp"
 #include "vcortex/model/walls.hpp"
+#include "vcortex/model/objects.hpp"
 
 namespace vcortex {
 
@@ -108,16 +109,17 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
                                  band_hi, cp.cell, settings.outline.coverage_tolerance);
     }
     rep.outline_sides = outline.size();
-
     const std::vector<Candidate> cands = find_candidates(grid, cp);
-    WallsAndObjects wo = split_walls_objects(cands, outline, grid, aligned, aligned_floor, band_lo,
-                                             band_hi, aligned_traj, settings.walls);
+    WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
+        band_hi, aligned_traj, settings.walls);
+    std::vector<Object> objects =
+        find_objects(wo.furniture_points, wo.walls, settings.objects);
     rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 
     // room per object while both are still axis-aligned boxes
-    for (Object& o : wo.objects) {
+    for (Object& o : objects) {
         for (const Room& r : rooms) {
             if (r.closed && inside(o.center, r.outline)) {
                 o.room_id = r.id;
@@ -126,7 +128,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
         }
     }
 
-    // G: back to the map frame, so the building overlays the raw cloud as is
+    // back to the map frame, so the building overlays the raw cloud as is
     for (Wall& w : wo.walls) {
         w.start = to_map(w.start);
         w.end = to_map(w.end);
@@ -134,7 +136,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     for (Room& r : rooms) {
         for (Vec2& v : r.outline) v = to_map(v);
     }
-    for (Object& o : wo.objects) {
+    for (Object& o : objects) {
         o.center = to_map(o.center);
         o.yaw += yaw;
     }
@@ -157,7 +159,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     level.wall_height_source = settings.wall_height_source;
     level.walls = std::move(wo.walls);
     level.rooms = std::move(rooms);
-    level.objects = std::move(wo.objects);
+    level.objects = std::move(objects);
 
     rep.poses = traj.size();
     rep.candidates = cands.size();

@@ -4,14 +4,11 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
-#include <memory>
 #include <string>
 #include <tuple>
 
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
-
-#include "pcl_bridge.hpp"
 
 namespace vcortex {
 
@@ -261,12 +258,6 @@ bool is_in_front_of_outline(const Face& candidate_face, const std::vector<Outlin
     return false;
 }
 
-// gap between a box side range [b0, b1] and the wall body around its centreline
-double box_to_wall(double b0, double b1, const Piece& w) {
-    const double w0 = w.centre - w.thickness / 2.0, w1 = w.centre + w.thickness / 2.0;
-    return std::max({0.0, w0 - b1, b0 - w1});
-}
-
 double point_to_wall(double x, double y, const Piece& w) {
     const double dn =
         std::max(0.0, std::abs(normal_of(w.axis, x, y) - w.centre) - w.thickness / 2.0);
@@ -361,7 +352,7 @@ double drop_low_walls(std::vector<Piece>& walls, const std::vector<Point>& align
 
 }  // namespace
 
-WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
+WallsAndFurnitures find_walls(const std::vector<Candidate>& cands,
                                     const std::vector<OutlineSide>& outline, const Grid& grid,
                                     const std::vector<Point>& aligned, const Plane& floor,
                                     double band_lo, double band_hi,
@@ -443,7 +434,7 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
 
     std::vector<Piece> walls = join_collinear(std::move(pieces), faces, p);
     close_corners(walls, p);
-    WallsAndObjects out;
+    WallsAndFurnitures out;
     if (!outline.empty()) {
         // height first: a wall that hung only from a dropped desk then floats too
         out.shell_top_seen = drop_low_walls(walls, aligned, floor, band_lo, band_hi, p);
@@ -489,56 +480,7 @@ WallsAndObjects split_walls_objects(const std::vector<Candidate>& cands,
             rest.push_back(pt);
         }
     }
-    if (rest.empty()) return out;
-
-    const auto cloud = to_pcl(rest);
-    const auto tree = std::make_shared<pcl::search::KdTree<pcl::PointXYZ>>();
-    tree->setInputCloud(cloud);
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(p.cluster_tolerance);
-    ec.setMinClusterSize(p.cluster_min_points);
-    ec.setMaxClusterSize(std::numeric_limits<int>::max());
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(cloud);
-    std::vector<pcl::PointIndices> clusters;
-    ec.extract(clusters);
-
-    for (const pcl::PointIndices& cl : clusters) {
-        const std::vector<Point> pts = pick(rest, cl.indices);
-        float x0 = pts[0].x, x1 = x0, y0 = pts[0].y, y1 = y0, z0 = pts[0].z, z1 = z0;
-        for (const Point& q : pts) {
-            x0 = std::min(x0, q.x);
-            x1 = std::max(x1, q.x);
-            y0 = std::min(y0, q.y);
-            y1 = std::max(y1, q.y);
-            z0 = std::min(z0, q.z);
-            z1 = std::max(z1, q.z);
-        }
-        Object obj;
-        obj.center = {(x0 + x1) / 2.0, (y0 + y1) / 2.0};
-        obj.size = {static_cast<double>(x1 - x0), static_cast<double>(y1 - y0)};
-        obj.bottom_z = z0;
-        obj.top_z_seen = z1;
-        obj.points = pts.size();
-        double best = p.against_wall_distance + kEps;
-        for (std::size_t i = 0; i < walls.size(); ++i) {
-            const Piece& w = walls[i];
-            const bool along = w.axis == Axis::X ? overlaps(y0, y1, w.from, w.to)
-                                                 : overlaps(x0, x1, w.from, w.to);
-            const double d = w.axis == Axis::X ? box_to_wall(x0, x1, w) : box_to_wall(y0, y1, w);
-            if (along && d <= best) {
-                best = d;
-                obj.against_wall_id = out.walls[i].id;
-            }
-        }
-        out.objects.push_back(obj);
-    }
-    std::sort(out.objects.begin(), out.objects.end(), [](const Object& a, const Object& b) {
-        return std::tie(a.center.x, a.center.y) < std::tie(b.center.x, b.center.y);
-    });
-    for (std::size_t i = 0; i < out.objects.size(); ++i) {
-        out.objects[i].id = "object-" + std::to_string(i + 1);
-    }
+    out.furniture_points = std::move(rest);
     return out;
 }
 

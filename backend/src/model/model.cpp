@@ -110,21 +110,21 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.outline_sides = outline.size();
 
     const std::vector<Candidate> cands = find_candidates(grid, cp);
-    WallsAndObjects wo = split_walls_objects(cands, outline, grid, aligned, aligned_floor, band_lo,
+    WallsAndFurnitures wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
                                              band_hi, aligned_traj, settings.walls);
     rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 
     // room per object while both are still axis-aligned boxes
-    for (Object& o : wo.objects) {
-        for (const Room& r : rooms) {
-            if (r.closed && inside(o.center, r.outline)) {
-                o.room_id = r.id;
-                break;
-            }
-        }
-    }
+    // for (Object& o : wo.furniture_points) {
+    //     for (const Room& r : rooms) {
+    //         if (r.closed && inside(o.center, r.outline)) {
+    //             o.room_id = r.id;
+    //             break;
+    //         }
+    //     }
+    // }
 
     // G: back to the map frame, so the building overlays the raw cloud as is
     for (Wall& w : wo.walls) {
@@ -134,10 +134,10 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     for (Room& r : rooms) {
         for (Vec2& v : r.outline) v = to_map(v);
     }
-    for (Object& o : wo.objects) {
-        o.center = to_map(o.center);
-        o.yaw += yaw;
-    }
+    // for (Object& o : wo.furniture_points) {
+    //     o.center = to_map(o.center);
+    //     o.yaw += yaw;
+    // }
 
     Level level;
     level.id = "level-1";
@@ -157,7 +157,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     level.wall_height_source = settings.wall_height_source;
     level.walls = std::move(wo.walls);
     level.rooms = std::move(rooms);
-    level.objects = std::move(wo.objects);
+    // level.objects = std::move(wo.furniture_points);
 
     rep.poses = traj.size();
     rep.candidates = cands.size();

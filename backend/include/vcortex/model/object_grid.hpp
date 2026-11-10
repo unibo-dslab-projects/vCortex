@@ -24,4 +24,9 @@ struct ObjectGrid {
 ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const Plane& floor,
                              double cell, int padding_cells, int cell_min_points);
 
+std::vector<std::uint8_t> dilate(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                                 int radius_cells);
+std::vector<std::uint8_t> erode(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                                int radius_cells);
+
 }  // namespace vcortex

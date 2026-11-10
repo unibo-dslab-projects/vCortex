@@ -1,5 +1,4 @@
 #include "vcortex/model/object_grid.hpp"
-#include "vcortex/geometry/points.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,7 +6,33 @@
 #include <cstdint>
 #include <vector>
 
+#include "vcortex/geometry/points.hpp"
+
 namespace vcortex {
+
+namespace {
+
+// cells past the border are skipped: dilate never grows from them, and erode counts them as
+// full, so an object at the edge is never eaten
+bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                              int row, int column, int radius_cells, std::uint8_t value) {
+    for (int row_offset = -radius_cells; row_offset <= radius_cells; ++row_offset) {
+        for (int column_offset = -radius_cells; column_offset <= radius_cells; ++column_offset) {
+            const int neighbour_row = row + row_offset;
+            const int neighbour_column = column + column_offset;
+            if (neighbour_row < 0 || neighbour_row >= grid.height || neighbour_column < 0 ||
+                neighbour_column >= grid.width) {
+                continue;
+            }
+            const auto index =
+                static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column);
+            if (mask[index] == value) return true;
+        }
+    }
+    return false;
+}
+
+}  // namespace
 
 ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const Plane& floor,
                              double cell, int padding_cells, int cell_min_points) {
@@ -52,6 +77,30 @@ ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const P
             grid.point_count[index] >= static_cast<std::uint32_t>(cell_min_points) ? 1 : 0;
     }
     return grid;
+}
+
+std::vector<std::uint8_t> dilate(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                                 int radius_cells) {
+    std::vector<std::uint8_t> result(mask.size(), 0);
+    for (int row = 0; row < grid.height; ++row) {
+        for (int column = 0; column < grid.width; ++column) {
+            const bool is_full = has_neighbour_with_value(grid, mask, row, column, radius_cells, 1);
+            result[static_cast<std::size_t>(row * grid.width + column)] = is_full;
+        }
+    }
+    return result;
+}
+
+std::vector<std::uint8_t> erode(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                                int radius_cells) {
+    std::vector<std::uint8_t> result(mask.size(), 0);
+    for (int row = 0; row < grid.height; ++row) {
+        for (int column = 0; column < grid.width; ++column) {
+            const bool is_full = !has_neighbour_with_value(grid, mask, row, column, radius_cells, 0);
+            result[static_cast<std::size_t>(row * grid.width + column)] = is_full;
+        }
+    }
+    return result;
 }
 
 }  // namespace vcortex

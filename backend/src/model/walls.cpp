@@ -7,9 +7,6 @@
 #include <string>
 #include <tuple>
 
-#include <pcl/search/kdtree.h>
-#include <pcl/segmentation/extract_clusters.h>
-
 namespace vcortex {
 
 namespace {
@@ -352,7 +349,7 @@ double drop_low_walls(std::vector<Piece>& walls, const std::vector<Point>& align
 
 }  // namespace
 
-WallsAndFurnitures find_walls(const std::vector<Candidate>& cands,
+WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
                                     const std::vector<OutlineSide>& outline, const Grid& grid,
                                     const std::vector<Point>& aligned, const Plane& floor,
                                     double band_lo, double band_hi,
@@ -434,7 +431,7 @@ WallsAndFurnitures find_walls(const std::vector<Candidate>& cands,
 
     std::vector<Piece> walls = join_collinear(std::move(pieces), faces, p);
     close_corners(walls, p);
-    WallsAndFurnitures out;
+    WallsAndFurniture out;
     if (!outline.empty()) {
         // height first: a wall that hung only from a dropped desk then floats too
         out.shell_top_seen = drop_low_walls(walls, aligned, floor, band_lo, band_hi, p);

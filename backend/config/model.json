@@ -12,6 +12,10 @@
     "merge_distance": 0.10
   },
   "objects": {
+    "cell": 0.05,
+    "cell_min_points": 1,
+    "close_radius": 0.10,
+    "split_radius": 0.10,
     "cluster_tolerance": 0.10,
     "cluster_min_points": 20,
     "against_wall_distance": 0.15

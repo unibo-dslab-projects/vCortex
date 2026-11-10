@@ -113,7 +113,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
         band_hi, aligned_traj, settings.walls);
     std::vector<Object> objects =
-        find_objects(wo.furniture_points, wo.walls, settings.objects);
+        find_objects(wo.furniture_points, aligned_floor, wo.walls, settings.objects);
     rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);

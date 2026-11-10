@@ -51,6 +51,7 @@ target_compile_options(vcortex_warnings INTERFACE
 # --- vcortex_core: domain, model, connectors, protocol; c++ and pcl only, no crow, no files ---
 
 add_library(vcortex_core STATIC
+  src/geometry/points.cpp
   src/domain/settings.cpp
   src/model/clean.cpp
   src/model/floor.cpp
@@ -64,6 +65,7 @@ add_library(vcortex_core STATIC
   src/model/outline.cpp
   src/model/model.cpp
   src/model/objects.cpp
+  src/model/object_grid.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp

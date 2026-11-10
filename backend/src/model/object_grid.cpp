@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <queue>
 #include <vector>
 
 #include "vcortex/geometry/points.hpp"
@@ -79,7 +80,7 @@ ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const P
     return grid;
 }
 
-std::vector<std::uint8_t> dilate(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> bloat_grid(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                  int radius_cells) {
     std::vector<std::uint8_t> result(mask.size(), 0);
     for (int row = 0; row < grid.height; ++row) {
@@ -91,13 +92,50 @@ std::vector<std::uint8_t> dilate(const ObjectGrid& grid, const std::vector<std::
     return result;
 }
 
-std::vector<std::uint8_t> erode(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> remove_small_gaps(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                 int radius_cells) {
     std::vector<std::uint8_t> result(mask.size(), 0);
     for (int row = 0; row < grid.height; ++row) {
         for (int column = 0; column < grid.width; ++column) {
             const bool is_full = !has_neighbour_with_value(grid, mask, row, column, radius_cells, 0);
             result[static_cast<std::size_t>(row * grid.width + column)] = is_full;
+        }
+    }
+    return result;
+}
+
+std::vector<std::uint8_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+                                int radius_cells) {
+    std::vector<std::uint8_t> result(mask.size(), 0);
+
+    std::uint8_t object_id = 0;
+    for (int row = 0; row < grid.height; ++row) {
+        for (int column = 0; column < grid.width; ++column) {
+            const std::size_t index = static_cast<std::size_t>(row * grid.width + column);
+            if (mask[index] && !result[index]) {
+                result[index] = ++object_id;
+                // bfs
+                std::queue<std::pair<int, int>> to_visit;
+                to_visit.push({row, column});
+                while (!to_visit.empty()) {
+                    const auto [cell_row, cell_column] = to_visit.front();
+                    to_visit.pop();
+                    const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+                    for (const auto& step : steps) {
+                        const int neighbour_row = cell_row + step[0];
+                        const int neighbour_column = cell_column + step[1];
+                        if (neighbour_row < 0 || neighbour_row >= grid.height ||
+                            neighbour_column < 0 || neighbour_column >= grid.width) {
+                            continue;
+                        }
+                        const auto neighbour_index =
+                            static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column);
+                        if (!mask[neighbour_index] || result[neighbour_index]) continue;
+                        result[neighbour_index] = object_id;
+                        to_visit.push({neighbour_row, neighbour_column});
+                    }
+                }
+            }
         }
     }
     return result;

@@ -22,11 +22,11 @@ struct ObjectGrid {
 
 /// Build the map of furniture points onto a grid, for object detection.
 ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const Plane& floor,
-                             double cell, int padding_cells, int cell_min_points);
+    double cell, int padding_cells, int cell_min_points);
 
-std::vector<std::uint8_t> dilate(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> bloat_grid(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                  int radius_cells);
-std::vector<std::uint8_t> erode(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> remove_small_gaps(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                 int radius_cells);
 
 }  // namespace vcortex

@@ -21,7 +21,12 @@ struct CandidateParams {
 };
 
 struct ObjectParams {
-    double cluster_tolerance = 0.10;
+    double cell = 0.05;          // the map_builder voxel, so one voxel column per cell
+    int cell_min_points = 1;     // points in a cell to call it occupied
+    double close_radius = 0.10;  // gaps up to twice this fill in
+    double split_radius = 0.10;  // parts thinner than twice this stop gluing objects together
+    double height_step = 0.0;    // 0 = off; else a top jump this big between cells splits a piece
+    int min_piece_cells = 8;     // a smaller region of the height split joins a neighbour
     int cluster_min_points = 20;
     double against_wall_distance = 0.15;
 };

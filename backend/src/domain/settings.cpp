@@ -69,8 +69,15 @@ std::optional<std::string> validate(const ModelSettings& s) {
     }
 
     const ObjectParams& ob = s.objects;
-    if (!(ob.cluster_tolerance > 0)) {
-        return problem("objects.cluster_tolerance", "> 0", ob.cluster_tolerance);
+    if (!(ob.cell > 0)) return problem("objects.cell", "> 0", ob.cell);
+    if (ob.cell_min_points < 1) {
+        return problem("objects.cell_min_points", ">= 1", ob.cell_min_points);
+    }
+    if (!(ob.close_radius >= 0)) return problem("objects.close_radius", ">= 0", ob.close_radius);
+    if (!(ob.split_radius >= 0)) return problem("objects.split_radius", ">= 0", ob.split_radius);
+    if (!(ob.height_step >= 0)) return problem("objects.height_step", ">= 0", ob.height_step);
+    if (ob.min_piece_cells < 1) {
+        return problem("objects.min_piece_cells", ">= 1", ob.min_piece_cells);
     }
     if (ob.cluster_min_points < 1) {
         return problem("objects.cluster_min_points", ">= 1", ob.cluster_min_points);

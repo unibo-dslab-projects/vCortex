@@ -102,7 +102,12 @@ void read_settings(Fields& f, ModelSettings& s) {
     });
     f.object("objects", [&](Fields& o) {
         ObjectParams& ob = s.objects;
-        o.number("cluster_tolerance", ob.cluster_tolerance);
+        o.number("cell", ob.cell);
+        o.integer("cell_min_points", ob.cell_min_points);
+        o.number("close_radius", ob.close_radius);
+        o.number("split_radius", ob.split_radius);
+        o.number("height_step", ob.height_step);
+        o.integer("min_piece_cells", ob.min_piece_cells);
         o.integer("cluster_min_points", ob.cluster_min_points);
         o.number("against_wall_distance", ob.against_wall_distance);
     });

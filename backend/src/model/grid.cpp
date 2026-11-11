@@ -1,4 +1,5 @@
 #include "vcortex/model/grid.hpp"
+#include "vcortex/geometry/points.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -31,16 +32,11 @@ Grid build_grid(const std::vector<Point>& aligned, const Plane& floor, double ba
     grid.cell = cell;
 
     std::vector<Vec2> band;
-    double min_x = std::numeric_limits<double>::max(), min_y = min_x;
-    double max_x = std::numeric_limits<double>::lowest(), max_y = max_x;
+    const Bounds bounds = point_bounds(aligned);
     for (const Point& p : aligned) {
         const double h = height_above(floor, p);
         if (h >= band_lo && h < band_hi) {
             band.push_back({p.x, p.y});
-            min_x = std::min(min_x, static_cast<double>(p.x));
-            min_y = std::min(min_y, static_cast<double>(p.y));
-            max_x = std::max(max_x, static_cast<double>(p.x));
-            max_y = std::max(max_y, static_cast<double>(p.y));
         }
     }
     if (band.empty()) {
@@ -48,12 +44,12 @@ Grid build_grid(const std::vector<Point>& aligned, const Plane& floor, double ba
     }
 
     // snapped to a multiple of cell: the same wall lands in the same cells on every run
-    grid.origin = {std::floor(min_x / cell) * cell, std::floor(min_y / cell) * cell};
-    const double w = std::floor((max_x - grid.origin.x) / cell) + 1.0;
-    const double h = std::floor((max_y - grid.origin.y) / cell) + 1.0;
+    grid.origin = {std::floor(bounds.min_x / cell) * cell, std::floor(bounds.min_y / cell) * cell};
+    const double w = std::floor((bounds.max_x - grid.origin.x) / cell) + 1.0;
+    const double h = std::floor((bounds.max_y - grid.origin.y) / cell) + 1.0;
     if (w * h > static_cast<double>(kMaxCells)) {
-        throw std::runtime_error("build_grid: band spans " + std::to_string(max_x - min_x) + " x " +
-                                 std::to_string(max_y - min_y) + " m, too large for one level");
+        throw std::runtime_error("build_grid: band spans " + std::to_string(bounds.max_x - bounds.min_x) + " x " +
+                                 std::to_string(bounds.max_y - bounds.min_y) + " m, too large for one level");
     }
     grid.width = static_cast<int>(w);
     grid.height = static_cast<int>(h);

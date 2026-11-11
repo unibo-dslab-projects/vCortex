@@ -78,7 +78,7 @@ ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const P
     return grid;
 }
 
-std::vector<std::uint8_t> bloat_grid(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> grow_by_cell(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                  int radius_cells) {
     std::vector<std::uint8_t> result(mask.size(), 0);
     for (int row = 0; row < grid.height; ++row) {
@@ -90,7 +90,7 @@ std::vector<std::uint8_t> bloat_grid(const ObjectGrid& grid, const std::vector<s
     return result;
 }
 
-std::vector<std::uint8_t> remove_small_gaps(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
+std::vector<std::uint8_t> shrink_by_cell(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                 int radius_cells) {
     std::vector<std::uint8_t> result(mask.size(), 0);
     for (int row = 0; row < grid.height; ++row) {

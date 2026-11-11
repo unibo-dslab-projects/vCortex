@@ -29,4 +29,8 @@ std::vector<std::uint8_t> grow_by_cell(const ObjectGrid& grid, const std::vector
 std::vector<std::uint8_t> shrink_by_cell(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                                 int radius_cells);
 
+std::vector<std::uint32_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask);
+
+std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid, const std::vector<std::uint32_t>& mask, const std::vector<std::uint8_t>& occupied);
+
 }  // namespace vcortex

@@ -102,10 +102,10 @@ std::vector<std::uint8_t> shrink_by_cell(const ObjectGrid& grid, const std::vect
     return result;
 }
 
-std::vector<std::uint8_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask) {
-    std::vector<std::uint8_t> result(mask.size(), 0);
+std::vector<std::uint32_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask) {
+    std::vector<std::uint32_t> result(mask.size(), 0);
 
-    std::uint8_t object_id = 0;
+    std::uint32_t object_id = 0;
     for (int row = 0; row < grid.height; ++row) {
         for (int column = 0; column < grid.width; ++column) {
             const std::size_t index = static_cast<std::size_t>(row * grid.width + column);
@@ -135,6 +135,56 @@ std::vector<std::uint8_t> label_objects(const ObjectGrid& grid, const std::vecto
             }
         }
     }
+    return result;
+}
+
+
+std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid, const std::vector<std::uint32_t>& mask, const std::vector<std::uint8_t>& occupied) {
+    std::vector<std::uint32_t> result(mask.size(), 0);
+    if (mask.empty()) return result;
+    std::queue<std::pair<std::size_t, std::uint32_t>> to_visit;
+    std::uint32_t max_object_id = *std::max_element(mask.begin(), mask.end());
+
+    for (std::size_t idx = 0; idx < mask.size(); ++idx) {
+        result[idx] = mask[idx];
+        if (mask[idx]) {
+            to_visit.push({idx, mask[idx]});
+        }
+    }
+
+    const int column_size = grid.width;
+    const int row_size = grid.height;
+
+    std::size_t next_leftover = 0;
+    while (true) {
+        // occupied points non-labelled by the core algorithm are assigned a new label
+        if (to_visit.empty()) {
+            while (next_leftover < mask.size() &&
+                   (!occupied[next_leftover] || result[next_leftover])) {
+                ++next_leftover;
+            }
+            if (next_leftover == mask.size()) break;
+            result[next_leftover] = ++max_object_id;
+            to_visit.push({next_leftover, max_object_id});
+        }
+        const auto [cell_index, cell_object_id] = to_visit.front();
+        to_visit.pop();
+        const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (const auto& step : steps) {
+            const int neighbour_row = static_cast<int>(cell_index) / column_size + step[0];
+            const int neighbour_column = static_cast<int>(cell_index) % column_size + step[1];
+            if (neighbour_row < 0 || neighbour_row >= row_size ||
+                neighbour_column < 0 || neighbour_column >= column_size) {
+              continue;
+            }
+            const auto neighbour_index =
+                static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column);
+            if (result[neighbour_index] || !occupied[neighbour_index]) continue;
+            result[neighbour_index] = cell_object_id;
+            to_visit.push({neighbour_index, cell_object_id});
+        }
+    }
+
     return result;
 }
 

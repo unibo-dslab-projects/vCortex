@@ -3,15 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <limits>
+#include <cstdint>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include <pcl/search/kdtree.h>
-#include <pcl/segmentation/extract_clusters.h>
-
-#include "pcl_bridge.hpp"
 #include "vcortex/geometry/points.hpp"
 #include "vcortex/model/candidates.hpp"
 #include "vcortex/model/object_grid.hpp"
@@ -65,29 +61,36 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
     const int split_radius_cells =
         static_cast<int>(std::lround(parameters.split_radius / parameters.cell));
     const int padding_cells = std::max(close_radius_cells, split_radius_cells) + 1;
-    // TODO: cut pieces on this grid and drop the point clustering below
     const ObjectGrid grid = build_object_grid(furniture_points, floor, parameters.cell,
                                               padding_cells, parameters.cell_min_points);
 
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud = to_pcl(furniture_points);
-    const pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud(cloud);
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> cluster_extraction;
-    cluster_extraction.setClusterTolerance(parameters.cluster_tolerance);
-    cluster_extraction.setMinClusterSize(static_cast<pcl::uindex_t>(parameters.cluster_min_points));
-    cluster_extraction.setMaxClusterSize(std::numeric_limits<pcl::uindex_t>::max());
-    cluster_extraction.setSearchMethod(tree);
-    cluster_extraction.setInputCloud(cloud);
-    std::vector<pcl::PointIndices> clusters;
-    cluster_extraction.extract(clusters);
+    // closing fills the gaps inside an object, opening cuts the thin bridges between two;
+    // the cut cells then go back to the nearest piece
+    const std::vector<std::uint8_t> closed = shrink_by_cell(
+        grid, grow_by_cell(grid, grid.is_occupied, close_radius_cells), close_radius_cells);
+    const std::vector<std::uint8_t> cores = grow_by_cell(
+        grid, shrink_by_cell(grid, closed, split_radius_cells), split_radius_cells);
+    std::vector<std::uint32_t> labels =
+        assign_non_labelled_objects(grid, label_objects(grid, cores), closed);
+    if (parameters.height_step > 0) {
+        labels = split_by_height(grid, labels, parameters.height_step, parameters.min_piece_cells);
+    }
+
+    // label 0 holds the points of cells under cell_min_points: noise, never an object
+    const std::uint32_t piece_count = *std::max_element(labels.begin(), labels.end());
+    std::vector<std::vector<Point>> pieces(piece_count + 1);
+    for (std::size_t i = 0; i < furniture_points.size(); ++i) {
+        pieces[labels[grid.cell_of_point[i]]].push_back(furniture_points[i]);
+    }
 
     std::vector<WallLine> wall_lines;
     wall_lines.reserve(walls.size());
     for (const Wall& wall : walls) wall_lines.push_back(wall_line(wall));
 
-    objects.reserve(clusters.size());
-    for (const pcl::PointIndices& cluster : clusters) {
-        const std::vector<Point> points = pick(furniture_points, cluster.indices);
+    objects.reserve(piece_count);
+    for (std::size_t label = 1; label < pieces.size(); ++label) {
+        const std::vector<Point>& points = pieces[label];
+        if (points.size() < static_cast<std::size_t>(parameters.cluster_min_points)) continue;
 
         const Bounds bounds = point_bounds(points);
 

@@ -33,4 +33,9 @@ std::vector<std::uint32_t> label_objects(const ObjectGrid& grid, const std::vect
 
 std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid, const std::vector<std::uint32_t>& mask, const std::vector<std::uint8_t>& occupied);
 
+/// Split each piece where the tops of two neighbouring cells differ by more than height_step.
+std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
+                                           const std::vector<std::uint32_t>& labels,
+                                           double height_step, int min_piece_cells);
+
 }  // namespace vcortex

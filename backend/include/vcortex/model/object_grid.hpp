@@ -38,4 +38,15 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
                                            const std::vector<std::uint32_t>& labels,
                                            double height_step, int min_piece_cells);
 
+// a point where grid cells meet: corner (x, y) sits at origin + (x, y) * cell
+struct GridCorner {
+    int x = 0, y = 0;
+};
+
+/// Cell corners of the outer ring of one piece, counter-clockwise, corners only. Holes are
+/// left out, so a desk seen only at its rim comes back whole.
+std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
+                                         const std::vector<std::uint32_t>& labels,
+                                         std::uint32_t piece);
+
 }  // namespace vcortex

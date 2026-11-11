@@ -5,7 +5,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <queue>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "vcortex/geometry/points.hpp"
@@ -286,6 +289,133 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
         is_in_piece[index] = labels[index] ? 1 : 0;
     }
     return assign_non_labelled_objects(grid, result, is_in_piece);
+}
+
+namespace {
+
+// listed counter-clockwise, so the next value is a left turn
+enum class Direction { east, north, west, south };
+
+Direction turn_left(Direction direction) {
+    return static_cast<Direction>((static_cast<int>(direction) + 1) % 4);
+}
+
+struct BoundaryEdge {
+    GridCorner start;
+    Direction direction = Direction::east;
+};
+
+GridCorner end_of(const BoundaryEdge& edge) {
+    switch (edge.direction) {
+        case Direction::east: return {edge.start.x + 1, edge.start.y};
+        case Direction::north: return {edge.start.x, edge.start.y + 1};
+        case Direction::west: return {edge.start.x - 1, edge.start.y};
+        case Direction::south: return {edge.start.x, edge.start.y - 1};
+    }
+    return edge.start;
+}
+
+/// finds the boundary edges af an object
+std::vector<BoundaryEdge> find_boundary_edges(const ObjectGrid& grid,
+                                              const std::vector<std::uint32_t>& labels,
+                                              std::uint32_t object_id) {
+    const auto is_in_object = [&](int column, int row) {
+        if (column < 0 || column >= grid.width || row < 0 || row >= grid.height) return false;
+        return labels[static_cast<std::size_t>(row * grid.width + column)] == object_id;
+    };
+
+    std::vector<BoundaryEdge> edges;
+    for (int row = 0; row < grid.height; ++row) {
+        for (int column = 0; column < grid.width; ++column) {
+            if (!is_in_object(column, row)) continue;
+
+            if (!is_in_object(column, row - 1)) edges.push_back({{column, row}, Direction::east});
+            if (!is_in_object(column + 1, row)) edges.push_back({{column + 1, row}, Direction::north});
+            if (!is_in_object(column, row + 1)) edges.push_back({{column + 1, row + 1}, Direction::west});
+            if (!is_in_object(column - 1, row)) edges.push_back({{column, row + 1}, Direction::south});
+        }
+    }
+    return edges;
+}
+
+std::vector<std::vector<BoundaryEdge>> chain_rings(const ObjectGrid& grid,
+                                                   const std::vector<BoundaryEdge>& edges) {
+    const auto corner_key = [&](GridCorner corner) {
+        return static_cast<std::size_t>(corner.y) * static_cast<std::size_t>(grid.width + 1) +
+               static_cast<std::size_t>(corner.x);
+    };
+    std::unordered_map<std::size_t, std::vector<std::size_t>> edges_starting_at;
+    for (std::size_t index = 0; index < edges.size(); ++index) {
+        edges_starting_at[corner_key(edges[index].start)].push_back(index);
+    }
+
+    std::vector<bool> is_used(edges.size(), false);
+    std::vector<std::vector<BoundaryEdge>> rings;
+    for (std::size_t first_index = 0; first_index < edges.size(); ++first_index) {
+        if (is_used[first_index]) continue;
+
+        std::vector<BoundaryEdge> ring;
+        std::optional<std::size_t> current_index = first_index;
+        while (current_index) {
+            const BoundaryEdge& current = edges[*current_index];
+            is_used[*current_index] = true;
+            ring.push_back(current);
+
+            current_index.reset();
+            for (const std::size_t candidate_index : edges_starting_at[corner_key(end_of(current))]) {
+                if (is_used[candidate_index]) continue;
+                // turn left if more than one is found
+                if (!current_index || edges[candidate_index].direction == turn_left(current.direction)) {
+                    current_index = candidate_index;
+                }
+            }
+        }
+        rings.push_back(std::move(ring));
+    }
+    return rings;
+}
+
+// a corner stays only where the direction turns
+std::vector<GridCorner> keep_corners_only(const std::vector<BoundaryEdge>& ring) {
+    std::vector<GridCorner> corners;
+    for (std::size_t index = 0; index < ring.size(); ++index) {
+        const BoundaryEdge& previous = ring[(index + ring.size() - 1) % ring.size()];
+        if (ring[index].direction != previous.direction) corners.push_back(ring[index].start);
+    }
+    return corners;
+}
+
+// shoelace sum, doubled to stay in integers: positive for a counter-clockwise ring
+long long doubled_signed_area(const std::vector<GridCorner>& ring) {
+    long long doubled_area = 0;
+    for (std::size_t index = 0; index < ring.size(); ++index) {
+        const GridCorner& current = ring[index];
+        const GridCorner& next = ring[(index + 1) % ring.size()];
+        doubled_area += static_cast<long long>(current.x) * next.y -
+                        static_cast<long long>(next.x) * current.y;
+    }
+    return doubled_area;
+}
+
+}  // namespace
+
+std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
+                                         const std::vector<std::uint32_t>& labels,
+                                         std::uint32_t piece) {
+    std::vector<GridCorner> outer_ring;
+    long long outer_doubled_area = 0;
+    // holes run clockwise, so their area is negative and they never win; the largest ring guards
+    // pieces that are not 4-connected, and a tie keeps the ring found first
+    const std::vector<BoundaryEdge> edges = find_boundary_edges(grid, labels, piece);
+    for (const std::vector<BoundaryEdge>& ring : chain_rings(grid, edges)) {
+        std::vector<GridCorner> corners = keep_corners_only(ring);
+        const long long doubled_area = doubled_signed_area(corners);
+        if (doubled_area <= outer_doubled_area) continue;
+
+        outer_doubled_area = doubled_area;
+        outer_ring = std::move(corners);
+    }
+    return outer_ring;
 }
 
 }  // namespace vcortex

@@ -13,8 +13,6 @@ namespace vcortex {
 
 namespace {
 
-// cells past the border are skipped: dilate never grows from them, and erode counts them as
-// full, so an object at the edge is never eaten
 bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
                               int row, int column, int radius_cells, std::uint8_t value) {
     for (int row_offset = -radius_cells; row_offset <= radius_cells; ++row_offset) {
@@ -104,8 +102,7 @@ std::vector<std::uint8_t> remove_small_gaps(const ObjectGrid& grid, const std::v
     return result;
 }
 
-std::vector<std::uint8_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
-                                int radius_cells) {
+std::vector<std::uint8_t> label_objects(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask) {
     std::vector<std::uint8_t> result(mask.size(), 0);
 
     std::uint8_t object_id = 0;

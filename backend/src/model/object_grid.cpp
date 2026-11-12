@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <limits>
 #include <optional>
 #include <queue>
@@ -398,6 +399,90 @@ long long doubled_signed_area(const std::vector<GridCorner>& ring) {
     return doubled_area;
 }
 
+// a ring of right angles cannot have fewer
+constexpr std::size_t MIN_RING_CORNERS = 4;
+
+Direction direction_between(GridCorner from, GridCorner to) {
+    if (to.x > from.x) return Direction::east;
+    if (to.x < from.x) return Direction::west;
+    if (to.y > from.y) return Direction::north;
+    return Direction::south;
+}
+
+int length_between(GridCorner from, GridCorner to) {
+    return std::abs(to.x - from.x) + std::abs(to.y - from.y);
+}
+
+bool is_same_corner(GridCorner first, GridCorner second) {
+    return first.x == second.x && first.y == second.y;
+}
+
+bool is_horizontal(Direction direction) {
+    return direction == Direction::east || direction == Direction::west;
+}
+
+/// Returns a bool indicating if moving `moved_corner` to `corner` would reverse the direction of `neighbour`.
+bool would_reverse(GridCorner corner, GridCorner moved_corner, GridCorner neighbour) {
+    if (is_same_corner(moved_corner, neighbour)) return false;
+
+    return direction_between(corner, neighbour) != direction_between(moved_corner, neighbour);
+}
+
+// remove the points that are on a straight line, leaving only the corners
+void remove_straight_corners(std::vector<GridCorner>& ring) {
+    bool has_changed = true;
+    while (has_changed && ring.size() > 2) {
+        has_changed = false;
+        for (std::size_t index = 0; index < ring.size(); ++index) {
+            const GridCorner previous = ring[(index + ring.size() - 1) % ring.size()];
+            const GridCorner corner = ring[index];
+            const GridCorner next = ring[(index + 1) % ring.size()];
+            const bool is_repeated = is_same_corner(previous, corner);
+            const bool are_on_straight_line = (previous.x == corner.x && corner.x == next.x) ||
+                                             (previous.y == corner.y && corner.y == next.y);
+            if (!is_repeated && !are_on_straight_line) continue;
+
+            ring.erase(ring.begin() + static_cast<std::ptrdiff_t>(index));
+            has_changed = true;
+            break;
+        }
+    }
+}
+
+/// Straightens angles in a corner by straightening the lines composing that corner
+std::optional<std::vector<GridCorner>> straighten_corners(const std::vector<GridCorner>& ring,
+                                                       std::size_t corner_index) {
+    const std::size_t count = ring.size();
+    const std::size_t index_a = (corner_index + count - 1) % count;
+    const std::size_t index_b = corner_index;
+    const std::size_t index_c = (corner_index + 1) % count;
+    const std::size_t index_d = (corner_index + 2) % count;
+    const GridCorner a = ring[index_a], b = ring[index_b], c = ring[index_c], d = ring[index_d];
+    const bool runs_horizontally = is_horizontal(direction_between(a, b));
+
+    // choosing a dominant side (the longer cause it should be more precise)
+    std::vector<GridCorner> straightened = ring;
+    if (length_between(a, b) >= length_between(c, d)) {
+        const GridCorner moved_d = runs_horizontally ? GridCorner{d.x, a.y} : GridCorner{a.x, d.y};
+        if (would_reverse(d, moved_d, ring[(corner_index + 3) % count])) return std::nullopt;
+
+        straightened[index_d] = moved_d;
+    } else {
+        const GridCorner moved_a = runs_horizontally ? GridCorner{a.x, d.y} : GridCorner{d.x, a.y};
+        if (would_reverse(a, moved_a, ring[(corner_index + count - 2) % count])) return std::nullopt;
+
+        straightened[index_a] = moved_a;
+    }
+
+    // getting the indexes that were making the angle to straighten
+    const std::size_t later_index = std::max(index_b, index_c);
+    const std::size_t earlier_index = std::min(index_b, index_c);
+    straightened.erase(straightened.begin() + static_cast<std::ptrdiff_t>(later_index));
+    straightened.erase(straightened.begin() + static_cast<std::ptrdiff_t>(earlier_index));
+    remove_straight_corners(straightened);
+    return straightened;
+}
+
 }  // namespace
 
 std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
@@ -417,6 +502,33 @@ std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
         outer_ring = std::move(corners);
     }
     return outer_ring;
+}
+
+void drop_small_segments(std::vector<GridCorner>& ring, int min_segment_cells) {
+    while (ring.size() > MIN_RING_CORNERS) {
+        const std::size_t count = ring.size();
+        std::optional<std::vector<GridCorner>> best_straightened;
+        // the threshold and the shortest step so far; strict < keeps the first one on a tie
+        int best_segment_length = min_segment_cells;
+        for (std::size_t index = 0; index < count; ++index) {
+            const GridCorner a = ring[(index + count - 1) % count];
+            const GridCorner b = ring[index];
+            const GridCorner c = ring[(index + 1) % count];
+            const GridCorner d = ring[(index + 2) % count];
+            const int segment_length = length_between(b, c);
+            if (segment_length >= best_segment_length) continue;
+            if (direction_between(a, b) != direction_between(c, d)) continue;
+
+            std::optional<std::vector<GridCorner>> straightened = straighten_corners(ring, index);
+            if (!straightened) continue;
+
+            best_segment_length = segment_length;
+            best_straightened = std::move(straightened);
+        }
+        if (!best_straightened) return;
+
+        ring = std::move(*best_straightened);
+    }
 }
 
 }  // namespace vcortex

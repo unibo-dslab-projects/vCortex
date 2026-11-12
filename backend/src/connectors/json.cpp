@@ -17,7 +17,7 @@ namespace {
 using Json = nlohmann::ordered_json;
 
 // major on a renamed or removed field, minor on a new optional one
-constexpr const char* kSchemaVersion = "0.1.0";
+constexpr const char* kSchemaVersion = "0.2.0";
 
 // millimetres: point-lio's noise is centimetres, more digits are noise
 // + 0.0 turns -0.0 into 0.0
@@ -59,6 +59,9 @@ void check(const Level& level) {
         for (const std::string& w : r.wall_ids) must_exist(wall_ids, w, r.id);
     }
     for (const Object& o : level.objects) {
+        if (o.footprint.size() < 4) {
+            throw std::invalid_argument("to_json: " + o.id + " footprint has fewer than 4 points");
+        }
         must_exist(room_ids, o.room_id, o.id);
         must_exist(wall_ids, o.against_wall_id, o.id);
     }
@@ -86,6 +89,8 @@ Json level_json(const Level& level) {
     }
     Json objects = Json::array();
     for (const Object& o : level.objects) {
+        Json footprint = Json::array();
+        for (const Vec2& vertex : o.footprint) footprint.push_back(xy(vertex));
         objects.push_back({{"id", o.id},
                            {"kind", o.kind},
                            {"room_id", text(o.room_id)},
@@ -93,6 +98,7 @@ Json level_json(const Level& level) {
                            {"center", xy(o.center)},
                            {"size", xy(o.size)},
                            {"yaw", o.yaw},
+                           {"footprint", std::move(footprint)},
                            {"bottom_z", mm(o.bottom_z)},
                            {"top_z_seen", mm(o.top_z_seen)},
                            {"points", o.points}});

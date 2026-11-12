@@ -51,6 +51,6 @@ std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
 
 /// Straighten stair steps shorter than min_step_cells: the short edge goes and its two
 /// neighbours join on one line. Spikes and notches (neighbours running opposite ways) stay.
-void drop_small_segments(std::vector<GridCorner>& ring, int min_step_cells);
+void drop_small_segments(std::vector<GridCorner>& ring, int min_segment_cells);
 
 }  // namespace vcortex

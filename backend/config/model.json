@@ -17,6 +17,7 @@
     "close_radius": 0.10,
     "split_radius": 0.10,
     "height_step": 0.0,
+    "min_step": 0.10,
     "min_piece_cells": 8,
     "cluster_min_points": 20,
     "against_wall_distance": 0.15

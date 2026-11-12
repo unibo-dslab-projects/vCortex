@@ -1,6 +1,5 @@
 #include "vcortex/connectors/dxf.hpp"
 
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -99,18 +98,13 @@ void wall(std::string& out, const Wall& w) {
     line(out, kWalls, e1, e2);
 }
 
-// four LINEs, not a closed polyline: importers that ignore layers read every closed polyline as
-// a room
+// one line per footprint side, not a closed polyline: importers that ignore layers read every
+// closed polyline as a room
 void object(std::string& out, const Object& o) {
-    const double c = std::cos(o.yaw), s = std::sin(o.yaw);
-    const double hx = o.size.x / 2.0, hy = o.size.y / 2.0;
-    const double sx[4] = {-1, 1, 1, -1}, sy[4] = {-1, -1, 1, 1};
-    std::array<Vec2, 4> k;
-    for (std::size_t i = 0; i < 4; ++i) {
-        const double lx = sx[i] * hx, ly = sy[i] * hy;
-        k[i] = {o.center.x + c * lx - s * ly, o.center.y + s * lx + c * ly};
+    const std::size_t count = o.footprint.size();
+    for (std::size_t i = 0; i < count; ++i) {
+        line(out, kObjects, o.footprint[i], o.footprint[(i + 1) % count]);
     }
-    for (std::size_t i = 0; i < 4; ++i) line(out, kObjects, k[i], k[(i + 1) % 4]);
 }
 
 void room(std::string& out, const Room& r) {

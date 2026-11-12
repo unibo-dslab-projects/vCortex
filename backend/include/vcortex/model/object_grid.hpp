@@ -38,4 +38,19 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
                                            const std::vector<std::uint32_t>& labels,
                                            double height_step, int min_piece_cells);
 
+// a point where grid cells meet: corner (x, y) sits at origin + (x, y) * cell
+struct GridCorner {
+    int x = 0, y = 0;
+};
+
+/// Cell corners of the outer ring of one object, counter-clockwise, corners only. Holes are
+/// left out, so a desk seen only at its rim comes back whole.
+std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
+                                         const std::vector<std::uint32_t>& labels,
+                                         std::uint32_t object_id);
+
+/// Straighten stair steps shorter than min_step_cells: the short edge goes and its two
+/// neighbours join on one line. Spikes and notches (neighbours running opposite ways) stay.
+void drop_small_segments(std::vector<GridCorner>& ring, int min_segment_cells);
+
 }  // namespace vcortex

@@ -42,6 +42,9 @@ struct Object {
     std::optional<std::string> room_id, against_wall_id;
     Vec2 center, size;
     double yaw = 0.0;
+    // outline seen from above, counter-clockwise, last vertex joins the first; outer ring only,
+    // so a desk seen at its rim is drawn whole. center, size and yaw box it
+    std::vector<Vec2> footprint;
     double bottom_z = 0.0;
     // lidar rarely sees tall furniture tops, so the real top may be higher; reported as seen
     double top_z_seen = 0.0;

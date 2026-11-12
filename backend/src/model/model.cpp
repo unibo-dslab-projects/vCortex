@@ -138,6 +138,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     }
     for (Object& o : objects) {
         o.center = to_map(o.center);
+        for (Vec2& vertex : o.footprint) vertex = to_map(vertex);
         o.yaw += yaw;
     }
 

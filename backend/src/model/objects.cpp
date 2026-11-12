@@ -48,6 +48,23 @@ double box_to_wall_distance(double box_from, double box_to, const WallLine& line
     return std::max({0.0, body_from - box_to, box_from - body_to});
 }
 
+struct FootprintBox {
+    double min_x = 0.0, max_x = 0.0;
+    double min_y = 0.0, max_y = 0.0;
+};
+
+FootprintBox footprint_box(const std::vector<Vec2>& footprint) {
+    FootprintBox box{footprint.front().x, footprint.front().x, footprint.front().y,
+                     footprint.front().y};
+    for (const Vec2& vertex : footprint) {
+        box.min_x = std::min(box.min_x, vertex.x);
+        box.max_x = std::max(box.max_x, vertex.x);
+        box.min_y = std::min(box.min_y, vertex.y);
+        box.max_y = std::max(box.max_y, vertex.y);
+    }
+    return box;
+}
+
 }  // namespace
 
 std::vector<Object> find_objects(const std::vector<Point>& furniture_points, const Plane& floor,
@@ -61,6 +78,7 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
     const int split_radius_cells =
         static_cast<int>(std::lround(parameters.split_radius / parameters.cell));
     const int padding_cells = std::max(close_radius_cells, split_radius_cells) + 1;
+    const int min_step_cells = static_cast<int>(std::lround(parameters.min_step / parameters.cell));
     const ObjectGrid grid = build_object_grid(furniture_points, floor, parameters.cell,
                                               padding_cells, parameters.cell_min_points);
 
@@ -94,9 +112,19 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
 
         const Bounds bounds = point_bounds(points);
 
+        std::vector<GridCorner> ring =
+            trace_outer_ring(grid, labels, static_cast<std::uint32_t>(label));
+        drop_small_segments(ring, min_step_cells);
+
         Object object;
-        object.center = {(bounds.min_x + bounds.max_x) / 2.0, (bounds.min_y + bounds.max_y) / 2.0};
-        object.size = {static_cast<double>(bounds.max_x - bounds.min_x), static_cast<double>(bounds.max_y - bounds.min_y)};
+        for (const GridCorner& corner : ring) {
+            object.footprint.push_back({grid.origin.x + corner.x * grid.cell,
+                                        grid.origin.y + corner.y * grid.cell});
+        }
+        // points sit anywhere in their cell, so their box can be a cell short of what is drawn
+        const FootprintBox box = footprint_box(object.footprint);
+        object.center = {(box.min_x + box.max_x) / 2.0, (box.min_y + box.max_y) / 2.0};
+        object.size = {box.max_x - box.min_x, box.max_y - box.min_y};
         object.bottom_z = bounds.min_z;
         object.top_z_seen = bounds.max_z;
         object.points = points.size();
@@ -105,11 +133,11 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
         for (std::size_t i = 0; i < walls.size(); ++i) {
             const WallLine& line = wall_lines[i];
             const bool is_along = line.axis == Axis::X
-                                      ? overlaps(bounds.min_y, bounds.max_y, line.from, line.to)
-                                      : overlaps(bounds.min_x, bounds.max_x, line.from, line.to);
+                                      ? overlaps(box.min_y, box.max_y, line.from, line.to)
+                                      : overlaps(box.min_x, box.max_x, line.from, line.to);
             const double distance = line.axis == Axis::X
-                                        ? box_to_wall_distance(bounds.min_x, bounds.max_x, line)
-                                        : box_to_wall_distance(bounds.min_y, bounds.max_y, line);
+                                        ? box_to_wall_distance(box.min_x, box.max_x, line)
+                                        : box_to_wall_distance(box.min_y, box.max_y, line);
             if (is_along && distance <= best_distance) {
                 best_distance = distance;
                 object.against_wall_id = walls[i].id;

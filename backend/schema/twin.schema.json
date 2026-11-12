@@ -82,7 +82,7 @@
     },
     "object": {
       "type": "object",
-      "required": ["id", "kind", "room_id", "against_wall_id", "center", "size", "yaw", "bottom_z", "top_z_seen", "points"],
+      "required": ["id", "kind", "room_id", "against_wall_id", "center", "size", "yaw", "footprint", "bottom_z", "top_z_seen", "points"],
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/id" },
@@ -90,8 +90,14 @@
         "room_id": { "type": ["string", "null"] },
         "against_wall_id": { "type": ["string", "null"] },
         "center": { "$ref": "#/$defs/xy" },
-        "size": { "$ref": "#/$defs/xy", "description": "Footprint along the object's own axes after turning by yaw." },
+        "size": { "$ref": "#/$defs/xy", "description": "Box around the footprint, along the object's own axes after turning by yaw." },
         "yaw": { "type": "number", "description": "Radians, counter-clockwise from x." },
+        "footprint": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/xy" },
+          "minItems": 4,
+          "description": "Outline seen from above, metres, map frame, counter-clockwise; the last vertex joins the first. Outer ring only: an object seen at its rim is drawn whole."
+        },
         "bottom_z": { "type": "number" },
         "top_z_seen": { "type": "number", "description": "Highest point seen. A sensor may not see the top, so the real top may be higher." },
         "points": { "type": "integer", "minimum": 0 }

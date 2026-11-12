@@ -76,6 +76,7 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(ob.close_radius >= 0)) return problem("objects.close_radius", ">= 0", ob.close_radius);
     if (!(ob.split_radius >= 0)) return problem("objects.split_radius", ">= 0", ob.split_radius);
     if (!(ob.height_step >= 0)) return problem("objects.height_step", ">= 0", ob.height_step);
+    if (!(ob.min_step >= 0)) return problem("objects.min_step", ">= 0", ob.min_step);
     if (ob.min_piece_cells < 1) {
         return problem("objects.min_piece_cells", ">= 1", ob.min_piece_cells);
     }

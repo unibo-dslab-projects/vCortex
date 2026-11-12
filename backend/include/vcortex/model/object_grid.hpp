@@ -43,10 +43,10 @@ struct GridCorner {
     int x = 0, y = 0;
 };
 
-/// Cell corners of the outer ring of one piece, counter-clockwise, corners only. Holes are
+/// Cell corners of the outer ring of one object, counter-clockwise, corners only. Holes are
 /// left out, so a desk seen only at its rim comes back whole.
 std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
                                          const std::vector<std::uint32_t>& labels,
-                                         std::uint32_t piece);
+                                         std::uint32_t object_id);
 
 }  // namespace vcortex

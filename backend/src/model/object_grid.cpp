@@ -344,6 +344,7 @@ std::vector<std::vector<BoundaryEdge>> chain_rings(const ObjectGrid& grid,
         return static_cast<std::size_t>(corner.y) * static_cast<std::size_t>(grid.width + 1) +
                static_cast<std::size_t>(corner.x);
     };
+
     std::unordered_map<std::size_t, std::vector<std::size_t>> edges_starting_at;
     for (std::size_t index = 0; index < edges.size(); ++index) {
         edges_starting_at[corner_key(edges[index].start)].push_back(index);
@@ -375,7 +376,7 @@ std::vector<std::vector<BoundaryEdge>> chain_rings(const ObjectGrid& grid,
     return rings;
 }
 
-// a corner stays only where the direction turns
+// corners-only compression of all the edges of a ring
 std::vector<GridCorner> keep_corners_only(const std::vector<BoundaryEdge>& ring) {
     std::vector<GridCorner> corners;
     for (std::size_t index = 0; index < ring.size(); ++index) {
@@ -401,12 +402,12 @@ long long doubled_signed_area(const std::vector<GridCorner>& ring) {
 
 std::vector<GridCorner> trace_outer_ring(const ObjectGrid& grid,
                                          const std::vector<std::uint32_t>& labels,
-                                         std::uint32_t piece) {
+                                         std::uint32_t object_id) {
     std::vector<GridCorner> outer_ring;
     long long outer_doubled_area = 0;
     // holes run clockwise, so their area is negative and they never win; the largest ring guards
     // pieces that are not 4-connected, and a tie keeps the ring found first
-    const std::vector<BoundaryEdge> edges = find_boundary_edges(grid, labels, piece);
+    const std::vector<BoundaryEdge> edges = find_boundary_edges(grid, labels, object_id);
     for (const std::vector<BoundaryEdge>& ring : chain_rings(grid, edges)) {
         std::vector<GridCorner> corners = keep_corners_only(ring);
         const long long doubled_area = doubled_signed_area(corners);

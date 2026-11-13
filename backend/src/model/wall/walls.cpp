@@ -37,8 +37,8 @@ struct Piece {
 
 void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
     for (const Pose& pose : traj) {
-        const double u = along_of(f.c.axis, pose.x, pose.y);
-        const double d = normal_of(f.c.axis, pose.x, pose.y) - f.c.position;
+        const double u = along_of(f.c.axis, pose.position.x(), pose.position.y());
+        const double d = normal_of(f.c.axis, pose.position.x(), pose.position.y()) - f.c.position;
         if (u < f.c.from - p.span_margin || u > f.c.to + p.span_margin ||
             std::abs(d) > p.both_sides_range || std::abs(d) < kEps) {
             continue;
@@ -49,19 +49,19 @@ void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
     f.interior = f.hi > 0 ? 1 : f.lo > 0 ? -1 : 0;
 }
 
-Vec2 occupied_centre(const Grid& g) {
+Eigen::Vector2d occupied_centre(const Grid& g) {
     double sx = 0.0, sy = 0.0, n = 0.0;
     for (int iy = 0; iy < g.height; ++iy) {
         for (int ix = 0; ix < g.width; ++ix) {
             if (g.column[static_cast<std::size_t>(iy) * static_cast<std::size_t>(g.width) +
                          static_cast<std::size_t>(ix)] > 0) {
-                sx += g.origin.x + (ix + 0.5) * g.cell;
-                sy += g.origin.y + (iy + 0.5) * g.cell;
+                sx += g.origin.x() + (ix + 0.5) * g.cell;
+                sy += g.origin.y() + (iy + 0.5) * g.cell;
                 n += 1.0;
             }
         }
     }
-    return n > 0.0 ? Vec2{sx / n, sy / n} : Vec2{};
+    return n > 0.0 ? Eigen::Vector2d{sx / n, sy / n} : Eigen::Vector2d::Zero();
 }
 
 // pairs first: each face of a wall between two walked rooms has poses on both sides, which
@@ -299,13 +299,14 @@ void keep_walls_hanging_from_shell(std::vector<Piece>& walls, const WallParams& 
 }
 
 // 95th percentile of band heights near the wall body, so one stray high point does not set it
-double seen_top(const Piece& wall, const std::vector<Point>& aligned, const Plane& floor,
+double seen_top(const Piece& wall, const std::vector<LidarPoint>& aligned, const Plane& floor,
                 double band_lo, double band_hi, const WallParams& p) {
     std::vector<double> heights;
-    for (const Point& point : aligned) {
+    for (const LidarPoint& point : aligned) {
         const double height = height_above(floor, point);
         if (height < band_lo || height >= band_hi) continue;
-        if (point_to_wall(point.x, point.y, wall) <= p.object_clearance + kEps) {
+        if (point_to_wall(point.position.x(), point.position.y(), wall) <=
+            p.object_clearance + kEps) {
             heights.push_back(height);
         }
     }
@@ -318,7 +319,7 @@ double seen_top(const Piece& wall, const std::vector<Point>& aligned, const Plan
 
 // a desk walked around passes every rule by shape; only its height gives it away. the lidar
 // never sees the true top, so inside walls are compared with what it saw of the shell
-double drop_low_walls(std::vector<Piece>& walls, const std::vector<Point>& aligned,
+double drop_low_walls(std::vector<Piece>& walls, const std::vector<LidarPoint>& aligned,
                       const Plane& floor, double band_lo, double band_hi, const WallParams& p) {
     std::vector<double> tops(walls.size());
     double shell_top_sum = 0.0;
@@ -346,7 +347,7 @@ double drop_low_walls(std::vector<Piece>& walls, const std::vector<Point>& align
 
 WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
                                     const std::vector<OutlineSide>& outline, const Grid& grid,
-                                    const std::vector<Point>& aligned, const Plane& floor,
+                                    const std::vector<LidarPoint>& aligned, const Plane& floor,
                                     double band_lo, double band_hi,
                                     const Trajectory& aligned_traj, const WallParams& p) {
     std::vector<Face> faces;
@@ -384,10 +385,10 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
 
     // no poses near a face (or no trajectory at all): guess its room is towards the middle of
     // the map, so the outermost of overlapping parallel faces becomes the wall
-    const Vec2 middle = occupied_centre(grid);
+    const Eigen::Vector2d middle = occupied_centre(grid);
     for (Face& f : faces) {
         if (!f.paired && !f.inside && f.interior == 0) {
-            f.interior = normal_of(f.c.axis, middle.x, middle.y) >= f.c.position ? 1 : -1;
+            f.interior = normal_of(f.c.axis, middle.x(), middle.y()) >= f.c.position ? 1 : -1;
         }
     }
     for (Face& f : faces) {
@@ -440,8 +441,10 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         const Piece& w = walls[i];
         Wall wall;
         wall.id = "wall-" + std::to_string(i + 1);
-        wall.start = w.axis == Axis::X ? Vec2{w.centre, w.from} : Vec2{w.from, w.centre};
-        wall.end = w.axis == Axis::X ? Vec2{w.centre, w.to} : Vec2{w.to, w.centre};
+        wall.start = w.axis == Axis::X ? Eigen::Vector2d{w.centre, w.from}
+                                        : Eigen::Vector2d{w.from, w.centre};
+        wall.end = w.axis == Axis::X ? Eigen::Vector2d{w.centre, w.to}
+                                      : Eigen::Vector2d{w.to, w.centre};
         wall.thickness = w.thickness;
         const double length = w.to - w.from;
         wall.coverage = length > 0.0
@@ -451,14 +454,14 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
     }
 
     // band points near a wall body count for that wall; the rest are furniture
-    std::vector<Point> rest;
-    for (const Point& pt : aligned) {
+    std::vector<LidarPoint> rest;
+    for (const LidarPoint& pt : aligned) {
         const double h = height_above(floor, pt);
         if (h < band_lo || h >= band_hi) continue;
         std::size_t nearest = walls.size();
         double nearest_d = p.object_clearance + kEps;
         for (std::size_t i = 0; i < walls.size(); ++i) {
-            const double d = point_to_wall(pt.x, pt.y, walls[i]);
+            const double d = point_to_wall(pt.position.x(), pt.position.y(), walls[i]);
             if (d <= nearest_d) {
                 nearest = i;
                 nearest_d = d;
@@ -466,8 +469,10 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         }
         if (nearest < walls.size()) {
             ++out.walls[nearest].points;
-        } else if (!is_beyond_outline_side(Axis::X, pt.x, pt.y, outline, -p.object_clearance) &&
-                   !is_beyond_outline_side(Axis::Y, pt.y, pt.x, outline, -p.object_clearance)) {
+        } else if (!is_beyond_outline_side(Axis::X, pt.position.x(), pt.position.y(), outline,
+                                           -p.object_clearance) &&
+                   !is_beyond_outline_side(Axis::Y, pt.position.y(), pt.position.x(), outline,
+                                           -p.object_clearance)) {
             // points past the room shell lie outside the room, so they are not furniture
             rest.push_back(pt);
         }

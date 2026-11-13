@@ -28,6 +28,9 @@ if(TARGET FLANN::FLANN)
     set_property(TARGET ${_flann} PROPERTY INTERFACE_LINK_LIBRARIES ${LZ4_STATIC_LIBRARY})
   endif()
 endif()
+# vectors, boxes and rotations for the domain and the model; no version asked: eigen 5 rejects
+# a 3.x request, and pcl already needs some eigen 3.3+
+find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(nlohmann_json 3.11 REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -48,7 +51,7 @@ add_library(vcortex_warnings INTERFACE)
 target_compile_options(vcortex_warnings INTERFACE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic -Wshadow -Wconversion>)
 
-# --- vcortex_core: domain, model, connectors, protocol; c++ and pcl only, no crow, no files ---
+# --- vcortex_core: domain, model, connectors, protocol; c++, eigen and pcl only, no crow, no files ---
 
 add_library(vcortex_core STATIC
   src/geometry/points.cpp
@@ -83,6 +86,7 @@ target_link_libraries(vcortex_core
   PUBLIC
     pcl_common pcl_kdtree pcl_search pcl_sample_consensus pcl_filters pcl_segmentation
     $<TARGET_NAME_IF_EXISTS:FLANN::FLANN>
+    Eigen3::Eigen
     nlohmann_json::nlohmann_json
   PRIVATE
     vcortex_warnings)

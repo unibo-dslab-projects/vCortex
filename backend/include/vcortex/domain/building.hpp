@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include <Eigen/Core>
+
 #include "vcortex/domain/settings.hpp"
 
 namespace vcortex {
@@ -18,7 +19,8 @@ namespace vcortex {
 // and shifts it out by half the thickness
 struct Wall {
     std::string id;
-    Vec2 start, end;
+    Eigen::Vector2d start = Eigen::Vector2d::Zero();
+    Eigen::Vector2d end = Eigen::Vector2d::Zero();
     double thickness = 0.0;
     std::size_t points = 0;
     // share of length where points were seen, rest filled in (behind furniture, gaps);
@@ -30,7 +32,7 @@ struct Wall {
 struct Room {
     std::string id;
     std::optional<std::string> name;
-    std::vector<Vec2> outline;
+    std::vector<Eigen::Vector2d> outline;
     std::vector<std::string> wall_ids;
     bool closed = false;  // false: the free space leaked out through a missing wall
 };
@@ -40,11 +42,12 @@ struct Object {
     std::string id;
     std::string kind = "unknown";  // TODO: classify objects; nothing sets another kind yet
     std::optional<std::string> room_id, against_wall_id;
-    Vec2 center, size;
+    Eigen::Vector2d center = Eigen::Vector2d::Zero();
+    Eigen::Vector2d size = Eigen::Vector2d::Zero();
     double yaw = 0.0;
     // outline seen from above, counter-clockwise, last vertex joins the first; outer ring only,
     // so a desk seen at its rim is drawn whole. center, size and yaw box it
-    std::vector<Vec2> footprint;
+    std::vector<Eigen::Vector2d> footprint;
     double bottom_z = 0.0;
     // lidar rarely sees tall furniture tops, so the real top may be higher; reported as seen
     double top_z_seen = 0.0;

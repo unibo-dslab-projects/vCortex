@@ -3,7 +3,7 @@
 #include <optional>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
 #include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/floor/floor.hpp"
@@ -28,7 +28,7 @@ struct WallFaceSample {
 // one sample per strip, in order of from; walks out from the outermost room cell of each strip, so furniture
 // in the middle of the room is never asked
 std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
-                                        const std::vector<Point>& aligned, const Plane& floor,
+                                        const std::vector<LidarPoint>& aligned, const Plane& floor,
                                         double low_lo, double band_hi, Direction d,
                                         const OutlineParams& p);
 

@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 
+#include <Eigen/Core>
+
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/object/object_grid.hpp"
 
@@ -11,19 +13,16 @@ namespace vcortex {
 
 using Mask = std::vector<std::uint8_t>;
 
-struct Offset {
-    int dx, dy;
-};
-
 bool in_grid(const Grid& grid, int x, int y);
 
 std::size_t at(const Grid& grid, int x, int y);
 
 bool cell_of(const Grid& g, double x, double y, int& ix, int& iy);
 
-std::vector<Offset> disk(double radius_cells);
+// cell steps from the centre cell to every cell within the radius
+std::vector<Eigen::Vector2i> disk(double radius_cells);
 
-Mask grow(const Mask& m, const Grid& g, const std::vector<Offset>& offsets);
+Mask grow(const Mask& m, const Grid& g, const std::vector<Eigen::Vector2i>& offsets);
 
 Mask invert(Mask m);
 
@@ -41,10 +40,6 @@ bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uin
 std::vector<std::size_t> neighbour_indices(const ObjectGrid& grid, std::size_t index);
 
 // shoelace sum, doubled to stay in integers: positive for a counter-clockwise ring
-long long doubled_signed_area(const std::vector<GridCorner>& ring);
-
-int length_between(GridCorner from, GridCorner to);
-
-bool is_same_corner(GridCorner first, GridCorner second);
+long long doubled_signed_area(const std::vector<Eigen::Vector2i>& ring);
 
 }  // namespace vcortex

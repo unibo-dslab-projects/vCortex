@@ -10,7 +10,7 @@
 
 namespace vcortex {
 
-RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& floor, const Grid& grid, const Trajectory& trajectory, const RoomSpaceParams& params) {
+RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane& floor, const Grid& grid, const Trajectory& trajectory, const RoomSpaceParams& params) {
     RoomSpace out;
 
     if (grid.width <= 0 || grid.height <= 0) return out;
@@ -21,9 +21,9 @@ RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& flo
 
     std::vector<std::uint16_t> low(column_size, 0);
     Mask floor_hit(column_size, 0);
-    for (const Point& pt: aligned) {
+    for (const LidarPoint& pt: aligned) {
         int ix = 0, iy = 0;
-        if (!cell_of(grid, pt.x, pt.y, ix, iy)) continue;
+        if (!cell_of(grid, pt.position.x(), pt.position.y(), ix, iy)) continue;
         const double h = height_above(floor, pt);
         const std::size_t i = at(grid, ix, iy);
         if (h >= params.low_lo && h < params.low_hi && low[i] < std::numeric_limits<std::uint16_t>::max()) {
@@ -38,7 +38,7 @@ RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& flo
     // a missing voxel is not a hole; unseen floor blocks, so a live map never leaks into
     // a part not seen yet
     const Mask seen = close_holes(floor_hit, grid);
-    const std::vector<Offset> coin = disk(params.coin_radius / grid.cell);
+    const std::vector<Eigen::Vector2i> coin = disk(params.coin_radius / grid.cell);
     Mask no_centre = grow(blocked, grid, coin);
     for (std::size_t i = 0; i < column_size; ++i) {
         if (seen[i] == 0) no_centre[i] = 1;
@@ -49,19 +49,19 @@ RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& flo
     std::queue<std::pair<int, int>> todo;
     for (const Pose& pose : trajectory) {
         int ix = 0, iy = 0;
-        if (!cell_of(grid, pose.x, pose.y, ix, iy)) continue;
+        if (!cell_of(grid, pose.position.x(), pose.position.y(), ix, iy)) continue;
         const std::size_t i = at(grid, ix, iy);
         if (no_centre[i] != 0 || centres[i] != 0) continue;
         centres[i] = 1;
         todo.push({ix, iy});
     }
-    constexpr Offset kSteps[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    const Eigen::Vector2i steps[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     while (!todo.empty()) {
         const auto [ix, iy] = todo.front();
         todo.pop();
         if (ix == 0 || iy == 0 || ix == grid.width - 1 || iy == grid.height - 1) out.leaked = true;
-        for (const Offset& s : kSteps) {
-            const int nx = ix + s.dx, ny = iy + s.dy;
+        for (const Eigen::Vector2i& step : steps) {
+            const int nx = ix + step.x(), ny = iy + step.y();
             if (!in_grid(grid, nx, ny)) continue;
             const std::size_t n = at(grid, nx, ny);
             if (no_centre[n] != 0 || centres[n] != 0) continue;

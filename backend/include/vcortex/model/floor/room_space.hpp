@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
 #include "vcortex/domain/snapshot.hpp"
 #include "vcortex/model/floor/floor.hpp"
@@ -20,7 +20,7 @@ struct RoomSpace {
 };
 
 // aligned frame; same cells as grid, so later steps read both with one index
-RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& floor,
+RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane& floor,
                              const Grid& grid, const Trajectory& trajectory,
                              const RoomSpaceParams& params);
 

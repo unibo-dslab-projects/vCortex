@@ -156,7 +156,7 @@ void join_outline_corners(std::vector<OutlineSide>& sides, const OutlineParams& 
 }
 
 void measure_outline_coverage(std::vector<OutlineSide>& sides,
-                              const std::vector<Point>& aligned_points,
+                              const std::vector<LidarPoint>& aligned_points,
                               const Plane& aligned_floor, double band_bottom_metres,
                               double band_top_metres, double cell_size_metres,
                               double coverage_tolerance_metres) {
@@ -167,12 +167,12 @@ void measure_outline_coverage(std::vector<OutlineSide>& sides,
             std::ceil(side_length_metres / cell_size_metres - kEpsilon));
         std::vector<bool> step_has_point(step_count, false);
 
-        for (const Point& point : aligned_points) {
+        for (const LidarPoint& point : aligned_points) {
             const double height_metres = height_above(aligned_floor, point);
             if (height_metres < band_bottom_metres || height_metres >= band_top_metres) continue;
 
-            const double normal_coordinate = is_x_axis ? point.x : point.y;
-            const double along_coordinate = is_x_axis ? point.y : point.x;
+            const double normal_coordinate = is_x_axis ? point.position.x() : point.position.y();
+            const double along_coordinate = is_x_axis ? point.position.y() : point.position.x();
             if (std::abs(normal_coordinate - side.face) > coverage_tolerance_metres + kEpsilon) {
                 continue;
             }

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 
 namespace vcortex {
 
@@ -21,11 +21,11 @@ inline constexpr std::size_t kRawMapRecordSize = 12;
 inline constexpr std::size_t kRawDeltaRecordSize = 16;
 
 std::string encode_raw_map(std::uint32_t run_id, std::uint32_t seq,
-                           const std::vector<Point>& points);
+                           const std::vector<LidarPoint>& points);
 
 // indices: one per point, as MapStore::put_delta returns them
 std::string encode_raw_delta(std::uint32_t run_id, std::uint32_t seq,
-                             const std::vector<Point>& points,
+                             const std::vector<LidarPoint>& points,
                              const std::vector<std::uint32_t>& indices);
 
 }  // namespace vcortex

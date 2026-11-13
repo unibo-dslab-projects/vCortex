@@ -22,14 +22,14 @@ double radians(int tenths) { return tenths * kPi / 1800.0; }
 
 // sum of squared bin counts of x and y after turning by -theta: peaks when walls pile into
 // few bins
-double score(const std::vector<Vec2>& pts, double radius, int tenths,
+double score(const std::vector<Eigen::Vector2d>& pts, double radius, int tenths,
              std::vector<std::uint32_t>& hx, std::vector<std::uint32_t>& hy) {
     const double c = std::cos(radians(tenths)), s = std::sin(radians(tenths));
     std::fill(hx.begin(), hx.end(), 0);
     std::fill(hy.begin(), hy.end(), 0);
-    for (const Vec2& p : pts) {
-        const double x = c * p.x + s * p.y;
-        const double y = -s * p.x + c * p.y;
+    for (const Eigen::Vector2d& p : pts) {
+        const double x = c * p.x() + s * p.y();
+        const double y = -s * p.x() + c * p.y();
         ++hx[static_cast<std::size_t>((x + radius) / kBin)];
         ++hy[static_cast<std::size_t>((y + radius) / kBin)];
     }
@@ -41,25 +41,21 @@ double score(const std::vector<Vec2>& pts, double radius, int tenths,
 
 }  // namespace
 
-double dominant_yaw(const std::vector<Vec2>& band_cells) {
+double dominant_yaw(const std::vector<Eigen::Vector2d>& band_cells) {
     if (band_cells.size() < 2) {
         return 0.0;
     }
 
     // centred, so every turned point stays within radius and the histograms have fixed size
-    Vec2 mean;
-    for (const Vec2& p : band_cells) {
-        mean.x += p.x;
-        mean.y += p.y;
-    }
-    mean.x /= static_cast<double>(band_cells.size());
-    mean.y /= static_cast<double>(band_cells.size());
-    std::vector<Vec2> pts;
+    Eigen::Vector2d mean = Eigen::Vector2d::Zero();
+    for (const Eigen::Vector2d& p : band_cells) mean += p;
+    mean /= static_cast<double>(band_cells.size());
+    std::vector<Eigen::Vector2d> pts;
     pts.reserve(band_cells.size());
     double radius = 0.0;
-    for (const Vec2& p : band_cells) {
-        pts.push_back({p.x - mean.x, p.y - mean.y});
-        radius = std::max(radius, std::hypot(pts.back().x, pts.back().y));
+    for (const Eigen::Vector2d& p : band_cells) {
+        pts.push_back(p - mean);
+        radius = std::max(radius, std::hypot(pts.back().x(), pts.back().y()));
     }
     const auto bins = static_cast<std::size_t>(2.0 * radius / kBin) + 2;
     std::vector<std::uint32_t> hx(bins), hy(bins);

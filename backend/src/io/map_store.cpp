@@ -1,26 +1,23 @@
 #include "vcortex/io/map_store.hpp"
 
-#include <cmath>
 #include <utility>
 
 namespace vcortex {
 
-std::size_t MapStore::KeyHash::operator()(const Key& k) const {
+std::size_t MapStore::KeyHash::operator()(const Eigen::Vector3i& k) const {
     // large odd primes spread neighbouring voxels across buckets
-    const auto ux = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.x));
-    const auto uy = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.y));
-    const auto uz = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.z));
+    const auto ux = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.x()));
+    const auto uy = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.y()));
+    const auto uz = static_cast<std::uint64_t>(static_cast<std::uint32_t>(k.z()));
     return static_cast<std::size_t>(ux * 73856093ULL ^ uy * 19349663ULL ^ uz * 83492791ULL);
 }
 
 // the source sends one point per voxel, inside that voxel, so both sides get the same key
-MapStore::Key MapStore::key_of(const Point& p) const {
-    return {static_cast<std::int32_t>(std::floor(p.x / voxel_size_)),
-            static_cast<std::int32_t>(std::floor(p.y / voxel_size_)),
-            static_cast<std::int32_t>(std::floor(p.z / voxel_size_))};
+Eigen::Vector3i MapStore::key_of(const LidarPoint& p) const {
+    return (p.position.cast<double>() / voxel_size_).array().floor().cast<int>();
 }
 
-std::size_t MapStore::upsert(const Point& p) {
+std::size_t MapStore::upsert(const LidarPoint& p) {
     const auto [it, added] = index_.try_emplace(key_of(p), points_.size());
     if (added) {
         points_.push_back(p);
@@ -42,7 +39,7 @@ void MapStore::reset(std::string frame_id, double voxel_size) {
     dirty_ = false;
 }
 
-void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points) {
+void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<LidarPoint>& points) {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (run_id_ != run_id) {
         points_.clear();
@@ -52,19 +49,19 @@ void MapStore::put_map(std::uint32_t run_id, std::uint32_t seq, const std::vecto
     }
     points_.reserve(points.size());
     index_.reserve(points.size());
-    for (const Point& p : points) upsert(p);
+    for (const LidarPoint& p : points) upsert(p);
     seq_ = seq;
     dirty_ = true;
 }
 
 std::optional<std::vector<std::uint32_t>> MapStore::put_delta(std::uint32_t run_id,
                                                               std::uint32_t seq,
-                                                              const std::vector<Point>& points) {
+                                                              const std::vector<LidarPoint>& points) {
     const std::lock_guard<std::mutex> lock(mutex_);
     if (run_id_ != run_id || seq != seq_ + 1) return std::nullopt;
     std::vector<std::uint32_t> indices;
     indices.reserve(points.size());
-    for (const Point& p : points) indices.push_back(static_cast<std::uint32_t>(upsert(p)));
+    for (const LidarPoint& p : points) indices.push_back(static_cast<std::uint32_t>(upsert(p)));
     seq_ = seq;
     dirty_ = true;
     return indices;

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdlib>
 
 namespace vcortex {
 
@@ -20,14 +19,14 @@ std::size_t at(const Grid& grid, int x, int y) {
 }
 
 bool cell_of(const Grid& g, double x, double y, int& ix, int& iy) {
-    ix = static_cast<int>(std::floor((x - g.origin.x) / g.cell));
-    iy = static_cast<int>(std::floor((y - g.origin.y) / g.cell));
+    ix = static_cast<int>(std::floor((x - g.origin.x()) / g.cell));
+    iy = static_cast<int>(std::floor((y - g.origin.y()) / g.cell));
     return in_grid(g, ix, iy);
 }
 
-std::vector<Offset> disk(double radius_cells) {
+std::vector<Eigen::Vector2i> disk(double radius_cells) {
     const int reach = static_cast<int>(std::floor(radius_cells + kSlack));
-    std::vector<Offset> out;
+    std::vector<Eigen::Vector2i> out;
 
     // keeping only the points within the circle
     for (int dy = -reach; dy <= reach; ++dy) {
@@ -39,13 +38,13 @@ std::vector<Offset> disk(double radius_cells) {
     return out;
 }
 
-Mask grow(const Mask& m, const Grid& g, const std::vector<Offset>& offsets) {
+Mask grow(const Mask& m, const Grid& g, const std::vector<Eigen::Vector2i>& offsets) {
     Mask out(m.size(), 0);
     for (int iy = 0; iy < g.height; ++iy) {
         for (int ix = 0; ix < g.width; ++ix) {
             if (m[at(g, ix, iy)] == 0) continue;
-            for (const Offset& o : offsets) {
-                const int nx = ix + o.dx, ny = iy + o.dy;
+            for (const Eigen::Vector2i& offset : offsets) {
+                const int nx = ix + offset.x(), ny = iy + offset.y();
                 if (in_grid(g, nx, ny)) out[at(g, nx, ny)] = 1;
             }
         }
@@ -59,7 +58,7 @@ Mask invert(Mask m) {
 }
 
 Mask close_holes(const Mask& m, const Grid& g) {
-    const std::vector<Offset> one = disk(1.0);
+    const std::vector<Eigen::Vector2i> one = disk(1.0);
     return invert(grow(invert(grow(m, g, one)), g, one));
 }
 
@@ -107,23 +106,15 @@ std::vector<std::size_t> neighbour_indices(const ObjectGrid& grid, std::size_t i
     return neighbours;
 }
 
-long long doubled_signed_area(const std::vector<GridCorner>& ring) {
+long long doubled_signed_area(const std::vector<Eigen::Vector2i>& ring) {
     long long doubled_area = 0;
     for (std::size_t index = 0; index < ring.size(); ++index) {
-        const GridCorner& current = ring[index];
-        const GridCorner& next = ring[(index + 1) % ring.size()];
-        doubled_area += static_cast<long long>(current.x) * next.y -
-                        static_cast<long long>(next.x) * current.y;
+        const Eigen::Vector2i& current = ring[index];
+        const Eigen::Vector2i& next = ring[(index + 1) % ring.size()];
+        doubled_area += static_cast<long long>(current.x()) * next.y() -
+                        static_cast<long long>(next.x()) * current.y();
     }
     return doubled_area;
-}
-
-int length_between(GridCorner from, GridCorner to) {
-    return std::abs(to.x - from.x) + std::abs(to.y - from.y);
-}
-
-bool is_same_corner(GridCorner first, GridCorner second) {
-    return first.x == second.x && first.y == second.y;
 }
 
 }  // namespace vcortex

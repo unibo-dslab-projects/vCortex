@@ -5,7 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include <Eigen/Core>
+
+#include "vcortex/domain/lidar_point.hpp"
 
 namespace vcortex {
 
@@ -15,7 +17,7 @@ struct Snapshot {
     std::uint32_t seq = 0;
     // named by the source (ros header frame_id): another robot's map has another origin
     std::string frame_id;
-    std::vector<Point> points;    // source map frame, z up, metres
+    std::vector<LidarPoint> points;    // source map frame, z up, metres
 };
 
 // z kept though one floor needs only x, y: it tells the level and draws the walk in 3d
@@ -24,7 +26,7 @@ struct Pose {
     // source clock (ros time; bag time on replay), unix ns
     // int64: a double keeps only ~0.2 us at today's epoch
     std::int64_t time_ns = 0;
-    double x = 0.0, y = 0.0, z = 0.0;
+    Eigen::Vector3d position = Eigen::Vector3d::Zero();
     double yaw = 0.0;  // radians about z, counter-clockwise from x (ros rep 103)
 };
 
@@ -37,7 +39,8 @@ inline constexpr double kPoseSpacing = 0.2;  // metres
 
 // false when p is closer than kPoseSpacing to the last kept pose
 inline bool append_pose(Trajectory& traj, const Pose& p) {
-    if (!traj.empty() && std::hypot(p.x - traj.back().x, p.y - traj.back().y) < kPoseSpacing) {
+    if (!traj.empty() && std::hypot(p.position.x() - traj.back().position.x(),
+                                    p.position.y() - traj.back().position.y()) < kPoseSpacing) {
         return false;
     }
     traj.push_back(p);

@@ -41,20 +41,20 @@ IngestFrame decode_frame(const std::string& bytes) {
         if (frame.header.kind == FrameKind::Poses) {
             Pose p;
             p.time_ns = read_at<std::int64_t>(bytes, at);
-            p.x = static_cast<double>(read_at<float>(bytes, at + 8));
-            p.y = static_cast<double>(read_at<float>(bytes, at + 12));
-            p.z = static_cast<double>(read_at<float>(bytes, at + 16));
+            p.position.x() = static_cast<double>(read_at<float>(bytes, at + 8));
+            p.position.y() = static_cast<double>(read_at<float>(bytes, at + 12));
+            p.position.z() = static_cast<double>(read_at<float>(bytes, at + 16));
             p.yaw = static_cast<double>(read_at<float>(bytes, at + 20));
             frame.poses.push_back(p);
         } else {
-            Point p;
-            p.x = read_at<float>(bytes, at);
-            p.y = read_at<float>(bytes, at + 4);
-            p.z = read_at<float>(bytes, at + 8);
+            LidarPoint p;
+            p.position.x() = read_at<float>(bytes, at);
+            p.position.y() = read_at<float>(bytes, at + 4);
+            p.position.z() = read_at<float>(bytes, at + 8);
             p.intensity = read_at<float>(bytes, at + 12);
             p.num_scan_seen = read_at<std::uint32_t>(bytes, at + 16);
             // a voxel key from nan is undefined behaviour
-            if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
+            if (!p.position.allFinite()) {
                 throw std::invalid_argument("frame holds a point that is not finite");
             }
             frame.points.push_back(p);

@@ -73,12 +73,12 @@ Snapshot read_pcd(const std::filesystem::path& file) {
     const std::size_t n = static_cast<std::size_t>(cloud.width) * cloud.height;
     snap.points.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {
-        Point p;
-        p.x = static_cast<float>(x.at(i));
-        p.y = static_cast<float>(y.at(i));
-        p.z = static_cast<float>(z.at(i));
+        LidarPoint p;
+        p.position.x() = static_cast<float>(x.at(i));
+        p.position.y() = static_cast<float>(y.at(i));
+        p.position.z() = static_cast<float>(z.at(i));
         // organised clouds mark missing returns with nan
-        if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
+        if (!p.position.allFinite()) continue;
         if (intensity.present()) p.intensity = static_cast<float>(intensity.at(i));
         if (num_scan_seen.present()) p.num_scan_seen = static_cast<std::uint32_t>(num_scan_seen.at(i));
         snap.points.push_back(p);
@@ -113,7 +113,8 @@ Trajectory read_tum(const std::filesystem::path& file) {
         std::string stamp;
         double qx = 0.0, qy = 0.0, qz = 0.0, qw = 0.0;
         Pose p;
-        if (!(ls >> stamp >> p.x >> p.y >> p.z >> qx >> qy >> qz >> qw)) {
+        if (!(ls >> stamp >> p.position.x() >> p.position.y() >> p.position.z() >> qx >> qy >>
+              qz >> qw)) {
             throw std::runtime_error("load_offline: " + file.string() + " line " +
                                      std::to_string(line_no) + " is not a tum pose");
         }

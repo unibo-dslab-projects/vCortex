@@ -19,19 +19,17 @@ std::string with_header(FrameKind kind, std::uint32_t run_id, std::uint32_t seq,
     return out;
 }
 
-void put_position(std::string& out, std::size_t at, const Point& p) {
-    std::memcpy(&out[at], &p.x, sizeof p.x);
-    std::memcpy(&out[at + 4], &p.y, sizeof p.y);
-    std::memcpy(&out[at + 8], &p.z, sizeof p.z);
+void put_position(std::string& out, std::size_t at, const LidarPoint& p) {
+    std::memcpy(&out[at], p.position.data(), sizeof(float) * 3);  // x, y, z, contiguous
 }
 
 }  // namespace
 
 std::string encode_raw_map(std::uint32_t run_id, std::uint32_t seq,
-                           const std::vector<Point>& points) {
+                           const std::vector<LidarPoint>& points) {
     std::string out = with_header(FrameKind::Map, run_id, seq, points.size(), kRawMapRecordSize);
     std::size_t at = kFrameHeaderSize;
-    for (const Point& p : points) {
+    for (const LidarPoint& p : points) {
         put_position(out, at, p);
         at += kRawMapRecordSize;
     }
@@ -39,7 +37,7 @@ std::string encode_raw_map(std::uint32_t run_id, std::uint32_t seq,
 }
 
 std::string encode_raw_delta(std::uint32_t run_id, std::uint32_t seq,
-                             const std::vector<Point>& points,
+                             const std::vector<LidarPoint>& points,
                              const std::vector<std::uint32_t>& indices) {
     std::string out =
         with_header(FrameKind::Delta, run_id, seq, points.size(), kRawDeltaRecordSize);

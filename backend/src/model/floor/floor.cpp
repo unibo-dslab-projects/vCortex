@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <Eigen/Core>
 
 namespace vcortex {
 
@@ -24,72 +25,61 @@ namespace {
     constexpr double kPeakRange = 0.20;
     constexpr double kPeakBin = 0.01;
 
-    struct Seed {
-        double avg_x, avg_y, percentile_z;
-    };
-
     struct Tile {
-        double total_x, total_y;
+        Eigen::Vector2d total = Eigen::Vector2d::Zero();
         std::vector<float> z;
     };
 
 }  // namespace
 
-std::vector<Seed> tile_seeds(const std::vector<Point>& input_points) {
+// one seed per tile: x, y the mean of its points, z their low percentile
+std::vector<Eigen::Vector3d> tile_seeds(const std::vector<LidarPoint>& input_points) {
     std::map<std::pair<long long, long long>, Tile> tiles;
 
-    for (const Point& p : input_points) {
-        long long tile_x = static_cast<long long>(floor(p.x / kTile));
-        long long tile_y = static_cast<long long>(floor(p.y / kTile));
+    for (const LidarPoint& p : input_points) {
+        long long tile_x = static_cast<long long>(floor(p.position.x() / kTile));
+        long long tile_y = static_cast<long long>(floor(p.position.y() / kTile));
         Tile& t = tiles[{tile_x, tile_y}];
-        t.total_x += p.x;
-        t.total_y += p.y;
-        t.z.push_back(p.z);
+        t.total += p.position.head<2>().cast<double>();
+        t.z.push_back(p.position.z());
     }
 
-    std::vector<Seed> seeds;
+    std::vector<Eigen::Vector3d> seeds;
 
     for (auto& tile : tiles) {
         Tile& t = tile.second;
         size_t len = t.z.size();
         if (len < kTileMinPoints) continue;
-        double avg_x = t.total_x / static_cast<double>(len);
-        double avg_y = t.total_y / static_cast<double>(len);
+        const Eigen::Vector2d average = t.total / static_cast<double>(len);
         const auto z_index_percentile = static_cast<size_t>(static_cast<double>(len - 1) * kSeedPercentile);
         // z is in arrival order; a percentile needs it partly sorted
         std::nth_element(t.z.begin(), t.z.begin() + static_cast<std::ptrdiff_t>(z_index_percentile), t.z.end());
-        seeds.push_back(Seed { avg_x, avg_y, t.z[z_index_percentile] });
+        seeds.emplace_back(average.x(), average.y(), t.z[z_index_percentile]);
     }
 
     return seeds;
 }
 
-Plane fit_plane_from_seeds(const std::vector<Seed>& seeds) {
+Plane fit_plane_from_seeds(const std::vector<Eigen::Vector3d>& seeds) {
     if (seeds.size() < 3) {
         throw std::runtime_error("fit_plane_from_seeds: fewer than 3 seeds");
     }
     const double n = static_cast<double>(seeds.size());
 
     // finding the center of the plane
-    double mx = 0.0, my = 0.0, mz = 0.0;
-    for (const Seed& s : seeds) {
-        mx += s.avg_x;
-        my += s.avg_y;
-        mz += s.percentile_z;
-    }
-    mx /= n;
-    my /= n;
-    mz /= n;
-
+    Eigen::Vector3d mean = Eigen::Vector3d::Zero();
+    for (const Eigen::Vector3d& s : seeds) mean += s;
+    mean /= n;
+    const double mx = mean.x(), my = mean.y(), mz = mean.z();
 
     // ax + by + c = z
     // a = sxz / sxx
     // b = syz / syy
     double sxx = 0.0, sxy = 0.0, syy = 0.0, sxz = 0.0, syz = 0.0;
-    for (const Seed& s : seeds) {
-        const double dx = s.avg_x - mx;
-        const double dy = s.avg_y - my;
-        const double dz = s.percentile_z - mz;
+    for (const Eigen::Vector3d& s : seeds) {
+        const double dx = s.x() - mx;
+        const double dy = s.y() - my;
+        const double dz = s.z() - mz;
         sxy += dx * dy; // how much x and y are correlated
         sxx += dx * dx; // how many seeds are sparse in x
         syy += dy * dy; // how many seeds are sparse in y
@@ -112,12 +102,12 @@ Plane fit_plane_from_seeds(const std::vector<Seed>& seeds) {
     return plane;
 }
 
-double find_peak_shift(const std::vector<Point>& input_points, const Plane& plane) {
+double find_peak_shift(const std::vector<LidarPoint>& input_points, const Plane& plane) {
     constexpr std::size_t kBins = static_cast<std::size_t>(2.0 * kPeakRange / kPeakBin + 0.5);
     std::vector<std::size_t> hist(kBins, 0);
 
-    for (const Point& p : input_points) {
-        const double r = p.z - (plane.a * p.x + plane.b * p.y + plane.c);
+    for (const LidarPoint& p : input_points) {
+        const double r = height_above(plane, p);
         if (r < -kPeakRange || r >= kPeakRange) continue;
         const auto bin = static_cast<std::size_t>((r + kPeakRange) / kPeakBin);
         ++hist[std::min(bin, kBins - 1)];
@@ -132,17 +122,17 @@ double find_peak_shift(const std::vector<Point>& input_points, const Plane& plan
     return (static_cast<double>(best) + 0.5) * kPeakBin - kPeakRange;
 }
 
-Plane find_floor(const std::vector<Point>& in) {
+Plane find_floor(const std::vector<LidarPoint>& in) {
     if (in.empty()) {
         throw std::runtime_error("find_floor: no points");
     }
-    std::vector<Seed> seeds = tile_seeds(in);
+    std::vector<Eigen::Vector3d> seeds = tile_seeds(in);
     Plane floor = fit_plane_from_seeds(seeds);
 
     // removing the last seeds in order to avoid to fails due to the outliers
     for (int round = 0; round < kFitRounds; ++round) {
-        const auto is_too_far = [&](const Seed& s) {
-            return std::abs(s.percentile_z - (floor.a * s.avg_x + floor.b * s.avg_y + floor.c)) > kSeedResidual;
+        const auto is_too_far = [&](const Eigen::Vector3d& s) {
+            return std::abs(s.z() - (floor.a * s.x() + floor.b * s.y() + floor.c)) > kSeedResidual;
         };
 
         const auto last = std::remove_if(seeds.begin(), seeds.end(), is_too_far);

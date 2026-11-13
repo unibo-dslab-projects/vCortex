@@ -33,10 +33,10 @@ struct View {
                            static_cast<std::size_t>(ix)] >= min_column;
     }
     double position(int line) const {
-        return (axis == Axis::Y ? grid.origin.y : grid.origin.x) + (line + 0.5) * grid.cell;
+        return (axis == Axis::Y ? grid.origin.y() : grid.origin.x()) + (line + 0.5) * grid.cell;
     }
     double edge(int k) const {
-        return (axis == Axis::Y ? grid.origin.x : grid.origin.y) + k * grid.cell;
+        return (axis == Axis::Y ? grid.origin.x() : grid.origin.y()) + k * grid.cell;
     }
 };
 

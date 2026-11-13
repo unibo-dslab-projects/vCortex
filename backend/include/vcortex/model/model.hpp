@@ -31,7 +31,7 @@ struct ModelReport {
 
 struct ModelResult {
     Building building;
-    std::vector<Point> cleaned;  // after drop_outliers, for the ply connector
+    std::vector<LidarPoint> cleaned;  // after drop_outliers, for the ply connector
     ModelReport report;
 };
 

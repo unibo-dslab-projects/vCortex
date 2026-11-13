@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <Eigen/Core>
+
 #include "vcortex/domain/snapshot.hpp"
 
 namespace vcortex {
@@ -34,14 +36,14 @@ public:
 
     // a new run_id is a new map: old points and poses go; the same run_id is a resync, so
     // every record replaces its voxel
-    void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<Point>& points);
+    void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<LidarPoint>& points);
 
     // where each record landed in the map's point list (a new voxel goes at the end), so a
     // viewer holding the same list can replace points in place; nothing when the delta does
     // not follow the last seq of this run: nothing is applied and the source must send a
     // fresh map
     std::optional<std::vector<std::uint32_t>> put_delta(std::uint32_t run_id, std::uint32_t seq,
-                                                        const std::vector<Point>& points);
+                                                        const std::vector<LidarPoint>& points);
 
 
     // poses of another run belong to a map this store does not hold, so they are dropped
@@ -59,17 +61,14 @@ public:
     StoreStatus status() const;
 
 private:
-    struct Key {
-        std::int32_t x, y, z;
-        bool operator==(const Key& o) const { return x == o.x && y == o.y && z == o.z; }
-    };
     struct KeyHash {
-        std::size_t operator()(const Key& k) const;
+        std::size_t operator()(const Eigen::Vector3i& k) const;
     };
 
-    Key key_of(const Point& p) const;
+    // voxel index in x, y and z
+    Eigen::Vector3i key_of(const LidarPoint& p) const;
     // returns the voxel's index in points_
-    std::size_t upsert(const Point& p);
+    std::size_t upsert(const LidarPoint& p);
     MapCopy copy_locked() const;
 
     mutable std::mutex mutex_;
@@ -78,8 +77,8 @@ private:
     std::optional<std::uint32_t> run_id_;
     std::uint32_t seq_ = 0;
     // points in a vector, not as map values: take() then copies one contiguous block
-    std::vector<Point> points_;
-    std::unordered_map<Key, std::size_t, KeyHash> index_;
+    std::vector<LidarPoint> points_;
+    std::unordered_map<Eigen::Vector3i, std::size_t, KeyHash> index_;
     Trajectory trajectory_;
     bool dirty_ = false;
 };

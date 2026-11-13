@@ -23,7 +23,7 @@ constexpr const char* kSchemaVersion = "0.2.0";
 // + 0.0 turns -0.0 into 0.0
 double mm(double v) { return std::round(v * 1000.0) / 1000.0 + 0.0; }
 
-Json xy(const Vec2& v) { return Json::array({mm(v.x), mm(v.y)}); }
+Json xy(const Eigen::Vector2d& v) { return Json::array({mm(v.x()), mm(v.y())}); }
 
 // the schema wants null for unknown, never ""
 Json text(const std::optional<std::string>& s) { return s ? Json(*s) : Json(nullptr); }
@@ -80,7 +80,7 @@ Json level_json(const Level& level) {
     Json rooms = Json::array();
     for (const Room& r : level.rooms) {
         Json outline = Json::array();
-        for (const Vec2& v : r.outline) outline.push_back(xy(v));
+        for (const Eigen::Vector2d& v : r.outline) outline.push_back(xy(v));
         rooms.push_back({{"id", r.id},
                          {"name", text(r.name)},
                          {"closed", r.closed},
@@ -90,7 +90,7 @@ Json level_json(const Level& level) {
     Json objects = Json::array();
     for (const Object& o : level.objects) {
         Json footprint = Json::array();
-        for (const Vec2& vertex : o.footprint) footprint.push_back(xy(vertex));
+        for (const Eigen::Vector2d& vertex : o.footprint) footprint.push_back(xy(vertex));
         objects.push_back({{"id", o.id},
                            {"kind", o.kind},
                            {"room_id", text(o.room_id)},

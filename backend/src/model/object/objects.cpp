@@ -8,6 +8,8 @@
 #include <tuple>
 #include <vector>
 
+#include <Eigen/Geometry>
+
 #include "vcortex/geometry/points.hpp"
 #include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/wall/candidates.hpp"
@@ -30,10 +32,10 @@ struct WallLine {
 
 WallLine wall_line(const Wall& wall) {
     WallLine line;
-    line.axis = wall.start.x == wall.end.x ? Axis::X : Axis::Y;
-    line.position = line.axis == Axis::X ? wall.start.x : wall.start.y;
-    const double along_start = line.axis == Axis::X ? wall.start.y : wall.start.x;
-    const double along_end = line.axis == Axis::X ? wall.end.y : wall.end.x;
+    line.axis = wall.start.x() == wall.end.x() ? Axis::X : Axis::Y;
+    line.position = line.axis == Axis::X ? wall.start.x() : wall.start.y();
+    const double along_start = line.axis == Axis::X ? wall.start.y() : wall.start.x();
+    const double along_end = line.axis == Axis::X ? wall.end.y() : wall.end.x();
     line.from = std::min(along_start, along_end);
     line.to = std::max(along_start, along_end);
     line.half_thickness = wall.thickness / 2.0;
@@ -49,7 +51,7 @@ double box_to_wall_distance(double box_from, double box_to, const WallLine& line
 
 }  // namespace
 
-std::vector<Object> find_objects(const std::vector<Point>& furniture_points, const Plane& floor,
+std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points, const Plane& floor,
                                  const std::vector<Wall>& walls, const ObjectParams& parameters) {
     std::vector<Object> objects;
     if (furniture_points.empty()) return objects;
@@ -78,7 +80,7 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
 
     // label 0 holds the points of cells under cell_min_points: noise, never an object
     const std::uint32_t piece_count = *std::max_element(labels.begin(), labels.end());
-    std::vector<std::vector<Point>> pieces(piece_count + 1);
+    std::vector<std::vector<LidarPoint>> pieces(piece_count + 1);
     for (std::size_t i = 0; i < furniture_points.size(); ++i) {
         pieces[labels[grid.cell_of_point[i]]].push_back(furniture_points[i]);
     }
@@ -89,37 +91,39 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
 
     objects.reserve(piece_count);
     for (std::size_t label = 1; label < pieces.size(); ++label) {
-        const std::vector<Point>& points = pieces[label];
+        const std::vector<LidarPoint>& points = pieces[label];
         if (points.size() < static_cast<std::size_t>(parameters.cluster_min_points)) continue;
 
-        const Bounds bounds = point_bounds(points);
+        const Eigen::AlignedBox3f bounds = point_bounds(points);
 
-        std::vector<GridCorner> ring =
+        std::vector<Eigen::Vector2i> ring =
             trace_outer_ring(grid, labels, static_cast<std::uint32_t>(label));
         drop_small_segments(ring, min_step_cells);
 
         Object object;
-        for (const GridCorner& corner : ring) {
-            object.footprint.push_back({grid.origin.x + corner.x * grid.cell,
-                                        grid.origin.y + corner.y * grid.cell});
-        }
         // points sit anywhere in their cell, so their box can be a cell short of what is drawn
-        const FootprintBox box = footprint_box(object.footprint);
-        object.center = {(box.min_x + box.max_x) / 2.0, (box.min_y + box.max_y) / 2.0};
-        object.size = {box.max_x - box.min_x, box.max_y - box.min_y};
-        object.bottom_z = bounds.min_z;
-        object.top_z_seen = bounds.max_z;
+        Eigen::AlignedBox2d box;
+        for (const Eigen::Vector2i& corner : ring) {
+            object.footprint.push_back(grid.origin + corner.cast<double>() * grid.cell);
+            box.extend(object.footprint.back());
+        }
+        object.center = box.center();
+        object.size = box.sizes();
+        object.bottom_z = bounds.min().z();
+        object.top_z_seen = bounds.max().z();
         object.points = points.size();
 
         double best_distance = parameters.against_wall_distance + kEps;
         for (std::size_t i = 0; i < walls.size(); ++i) {
             const WallLine& line = wall_lines[i];
-            const bool is_along = line.axis == Axis::X
-                                      ? overlaps(box.min_y, box.max_y, line.from, line.to)
-                                      : overlaps(box.min_x, box.max_x, line.from, line.to);
-            const double distance = line.axis == Axis::X
-                                        ? box_to_wall_distance(box.min_x, box.max_x, line)
-                                        : box_to_wall_distance(box.min_y, box.max_y, line);
+            const bool is_along =
+                line.axis == Axis::X
+                    ? overlaps(box.min().y(), box.max().y(), line.from, line.to)
+                    : overlaps(box.min().x(), box.max().x(), line.from, line.to);
+            const double distance =
+                line.axis == Axis::X
+                    ? box_to_wall_distance(box.min().x(), box.max().x(), line)
+                    : box_to_wall_distance(box.min().y(), box.max().y(), line);
             if (is_along && distance <= best_distance) {
                 best_distance = distance;
                 object.against_wall_id = walls[i].id;
@@ -129,7 +133,7 @@ std::vector<Object> find_objects(const std::vector<Point>& furniture_points, con
     }
 
     std::sort(objects.begin(), objects.end(), [](const Object& a, const Object& b) {
-        return std::tie(a.center.x, a.center.y) < std::tie(b.center.x, b.center.y);
+        return std::tie(a.center.x(), a.center.y()) < std::tie(b.center.x(), b.center.y());
     });
     for (std::size_t i = 0; i < objects.size(); ++i) {
         objects[i].id = "object-" + std::to_string(i + 1);

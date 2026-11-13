@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdio>
 #include <string>
+#include <vector>
+
+#include <Eigen/Core>
 
 namespace vcortex {
 
@@ -38,46 +41,48 @@ std::string one_line(std::string s) {
 }
 
 // r2000 readers (ezdxf, cad programs) refuse entities without their 100 subclass markers
-void line(std::string& out, const char* layer, Vec2 a, Vec2 b) {
+void line(std::string& out, const char* layer, const Eigen::Vector2d& a,
+          const Eigen::Vector2d& b) {
     pair(out, 0, "LINE");
     pair(out, 100, "AcDbEntity");
     pair(out, 8, layer);
     pair(out, 100, "AcDbLine");
-    pair(out, 10, a.x);
-    pair(out, 20, a.y);
+    pair(out, 10, a.x());
+    pair(out, 20, a.y());
     pair(out, 30, 0.0);
-    pair(out, 11, b.x);
-    pair(out, 21, b.y);
+    pair(out, 11, b.x());
+    pair(out, 21, b.y());
     pair(out, 31, 0.0);
 }
 
-void polyline(std::string& out, const char* layer, const std::vector<Vec2>& vertices) {
+void polyline(std::string& out, const char* layer, const std::vector<Eigen::Vector2d>& vertices) {
     pair(out, 0, "LWPOLYLINE");
     pair(out, 100, "AcDbEntity");
     pair(out, 8, layer);
     pair(out, 100, "AcDbPolyline");
     pair(out, 90, std::to_string(vertices.size()));
     pair(out, 70, "1");  // closed: the last vertex joins the first
-    for (const Vec2& v : vertices) {
-        pair(out, 10, v.x);
-        pair(out, 20, v.y);
+    for (const Eigen::Vector2d& v : vertices) {
+        pair(out, 10, v.x());
+        pair(out, 20, v.y());
     }
 }
 
 // 72 = 1 and 73 = 2 centre the text on 11/21; 10/20 must still be there
-void text(std::string& out, const char* layer, Vec2 at, const std::string& s) {
+void text(std::string& out, const char* layer, const Eigen::Vector2d& at,
+          const std::string& s) {
     pair(out, 0, "TEXT");
     pair(out, 100, "AcDbEntity");
     pair(out, 8, layer);
     pair(out, 100, "AcDbText");
-    pair(out, 10, at.x);
-    pair(out, 20, at.y);
+    pair(out, 10, at.x());
+    pair(out, 20, at.y());
     pair(out, 30, 0.0);
     pair(out, 40, kTextHeight);
     pair(out, 1, one_line(s));
     pair(out, 72, "1");
-    pair(out, 11, at.x);
-    pair(out, 21, at.y);
+    pair(out, 11, at.x());
+    pair(out, 21, at.y());
     pair(out, 31, 0.0);
     pair(out, 100, "AcDbText");  // TEXT repeats its subclass marker before 73
     pair(out, 73, "2");
@@ -85,13 +90,13 @@ void text(std::string& out, const char* layer, Vec2 at, const std::string& s) {
 
 // both faces plus the two ends, as an architect draws a wall, instead of the centreline alone
 void wall(std::string& out, const Wall& w) {
-    const double dx = w.end.x - w.start.x, dy = w.end.y - w.start.y;
-    const double len = std::hypot(dx, dy);
+    const Eigen::Vector2d direction = w.end - w.start;
+    const double len = std::hypot(direction.x(), direction.y());
     if (!(len > 0.0)) return;  // no direction to offset the faces along
-    const double h = w.thickness / 2.0;
-    const double nx = -dy / len * h, ny = dx / len * h;
-    const Vec2 s1{w.start.x + nx, w.start.y + ny}, s2{w.start.x - nx, w.start.y - ny};
-    const Vec2 e1{w.end.x + nx, w.end.y + ny}, e2{w.end.x - nx, w.end.y - ny};
+    const Eigen::Vector2d half_normal =
+        Eigen::Vector2d(-direction.y(), direction.x()) / len * (w.thickness / 2.0);
+    const Eigen::Vector2d s1 = w.start + half_normal, s2 = w.start - half_normal;
+    const Eigen::Vector2d e1 = w.end + half_normal, e2 = w.end - half_normal;
     line(out, kWalls, s1, e1);
     line(out, kWalls, s2, e2);
     line(out, kWalls, s1, s2);
@@ -110,13 +115,9 @@ void object(std::string& out, const Object& o) {
 void room(std::string& out, const Room& r) {
     if (r.outline.size() < 3) return;
     polyline(out, kRooms, r.outline);
-    Vec2 mid;
-    for (const Vec2& v : r.outline) {
-        mid.x += v.x;
-        mid.y += v.y;
-    }
-    mid.x /= static_cast<double>(r.outline.size());
-    mid.y /= static_cast<double>(r.outline.size());
+    Eigen::Vector2d mid = Eigen::Vector2d::Zero();
+    for (const Eigen::Vector2d& v : r.outline) mid += v;
+    mid /= static_cast<double>(r.outline.size());
     text(out, kRooms, mid, r.name.value_or(r.id));
 }
 

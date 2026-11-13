@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 
 namespace vcortex {
 
@@ -15,10 +15,10 @@ struct Plane {
 };
 
 // throws if no floor is found
-Plane find_floor(const std::vector<Point>& in);
+Plane find_floor(const std::vector<LidarPoint>& in);
 
-inline double height_above(const Plane& floor, const Point& p) {
-    return p.z - (floor.a * p.x + floor.b * p.y + floor.c);
+inline double height_above(const Plane& floor, const LidarPoint& p) {
+    return p.position.z() - (floor.a * p.position.x() + floor.b * p.position.y() + floor.c);
 }
 
 }  // namespace vcortex

@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
 #include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/wall/wall_face_samples.hpp"
@@ -32,7 +32,7 @@ void join_outline_corners(std::vector<OutlineSide>& sides, const OutlineParams& 
 // counts the cells along each side where a point of the band lies near its face; the other
 // cells are drawn, not seen. Run after join_outline_corners, so corner stretches count as unseen.
 void measure_outline_coverage(std::vector<OutlineSide>& sides,
-                              const std::vector<Point>& aligned_points,
+                              const std::vector<LidarPoint>& aligned_points,
                               const Plane& aligned_floor, double band_bottom_metres,
                               double band_top_metres, double cell_size_metres,
                               double coverage_tolerance_metres);

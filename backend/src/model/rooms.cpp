@@ -7,6 +7,8 @@
 #include <string>
 #include <tuple>
 
+#include <Eigen/Geometry>
+
 namespace vcortex {
 
 namespace {
@@ -22,11 +24,11 @@ struct Body {
 
 Body body_of(const Wall& w) {
     Body b;
-    b.vertical = std::abs(w.start.x - w.end.x) < kEps;
-    b.centre = b.vertical ? w.start.x : w.start.y;
+    b.vertical = std::abs(w.start.x() - w.end.x()) < kEps;
+    b.centre = b.vertical ? w.start.x() : w.start.y();
     b.half = w.thickness / 2.0;
-    b.from = b.vertical ? std::min(w.start.y, w.end.y) : std::min(w.start.x, w.end.x);
-    b.to = b.vertical ? std::max(w.start.y, w.end.y) : std::max(w.start.x, w.end.x);
+    b.from = b.vertical ? std::min(w.start.y(), w.end.y()) : std::min(w.start.x(), w.end.x());
+    b.to = b.vertical ? std::max(w.start.y(), w.end.y()) : std::max(w.start.x(), w.end.x());
     return b;
 }
 
@@ -52,10 +54,10 @@ struct Mask {
         const auto last = [&](double v, double o) {
             return static_cast<int>(std::ceil((v - o) / grid.cell - kEps)) - 1;
         };
-        const int ix0 = std::max(0, first(x0, grid.origin.x));
-        const int ix1 = std::min(grid.width - 1, last(x1, grid.origin.x));
-        const int iy0 = std::max(0, first(y0, grid.origin.y));
-        const int iy1 = std::min(grid.height - 1, last(y1, grid.origin.y));
+        const int ix0 = std::max(0, first(x0, grid.origin.x()));
+        const int ix1 = std::min(grid.width - 1, last(x1, grid.origin.x()));
+        const int iy0 = std::max(0, first(y0, grid.origin.y()));
+        const int iy1 = std::min(grid.height - 1, last(y1, grid.origin.y()));
         for (int iy = iy0; iy <= iy1; ++iy) {
             for (int ix = ix0; ix <= ix1; ++ix) at(ix, iy) = -1;
         }
@@ -92,14 +94,14 @@ void close_doors(const std::vector<Body>& bodies, double door_max, Mask& m) {
 
 struct Fill {
     std::size_t cells = 0;
-    int ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
+    Eigen::AlignedBox2i cell_box;  // first and last cell reached in x and y
     bool leaked = false;
 };
 
 // 4 neighbours, not 8: diagonal steps slip between two wall cells that meet at a corner
 Fill flood(Mask& m, int sx, int sy, int k) {
     const Grid& g = m.grid;
-    Fill f{0, sx, sx, sy, sy, false};
+    Fill f;
     std::queue<std::pair<int, int>> todo;
     // labelled when queued, not when taken out, so no cell is queued twice
     m.at(sx, sy) = k;
@@ -108,10 +110,7 @@ Fill flood(Mask& m, int sx, int sy, int k) {
         const auto [ix, iy] = todo.front();
         todo.pop();
         ++f.cells;
-        f.ix0 = std::min(f.ix0, ix);
-        f.ix1 = std::max(f.ix1, ix);
-        f.iy0 = std::min(f.iy0, iy);
-        f.iy1 = std::max(f.iy1, iy);
+        f.cell_box.extend(Eigen::Vector2i(ix, iy));
         if (ix == 0 || iy == 0 || ix == g.width - 1 || iy == g.height - 1) f.leaked = true;
         const int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
         for (const auto& s : step) {
@@ -153,8 +152,10 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
     std::vector<Room> out;
     int k = 0;
     for (const Pose& pose : aligned_traj) {
-        const int ix = static_cast<int>(std::floor((pose.x - grid.origin.x) / grid.cell));
-        const int iy = static_cast<int>(std::floor((pose.y - grid.origin.y) / grid.cell));
+        const int ix =
+            static_cast<int>(std::floor((pose.position.x() - grid.origin.x()) / grid.cell));
+        const int iy =
+            static_cast<int>(std::floor((pose.position.y() - grid.origin.y()) / grid.cell));
         // a pose close to a wall can fall on its drawn cells; later poses cover the room
         if (ix < 0 || iy < 0 || ix >= grid.width || iy >= grid.height || m.at(ix, iy) != 0) {
             continue;
@@ -163,10 +164,10 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
         if (static_cast<double>(f.cells) * grid.cell * grid.cell < p.min_area) continue;
 
         // TODO: rectilinear outline that follows the cells; the box overstates l-shaped rooms
-        const double x0 = grid.origin.x + f.ix0 * grid.cell;
-        const double x1 = grid.origin.x + (f.ix1 + 1) * grid.cell;
-        const double y0 = grid.origin.y + f.iy0 * grid.cell;
-        const double y1 = grid.origin.y + (f.iy1 + 1) * grid.cell;
+        const double x0 = grid.origin.x() + f.cell_box.min().x() * grid.cell;
+        const double x1 = grid.origin.x() + (f.cell_box.max().x() + 1) * grid.cell;
+        const double y0 = grid.origin.y() + f.cell_box.min().y() * grid.cell;
+        const double y1 = grid.origin.y() + (f.cell_box.max().y() + 1) * grid.cell;
         Room r;
         r.outline = {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}};
         r.closed = !f.leaked;
@@ -180,7 +181,8 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
     // ids by lower-left corner, not by pose order: the same map gives the same ids however
     // the robot walked it
     std::sort(out.begin(), out.end(), [](const Room& a, const Room& b) {
-        return std::tie(a.outline[0].x, a.outline[0].y) < std::tie(b.outline[0].x, b.outline[0].y);
+        return std::tie(a.outline[0].x(), a.outline[0].y()) <
+               std::tie(b.outline[0].x(), b.outline[0].y());
     });
     for (std::size_t i = 0; i < out.size(); ++i) out[i].id = "room-" + std::to_string(i + 1);
     return out;

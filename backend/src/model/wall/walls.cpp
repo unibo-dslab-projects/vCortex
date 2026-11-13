@@ -16,11 +16,6 @@ constexpr double kPairMin = 0.05;
 constexpr double kPairMax = 0.35;
 constexpr double kEps = 1e-9;
 
-double normal_of(Axis a, double x, double y) { return a == Axis::X ? x : y; }
-double along_of(Axis a, double x, double y) { return a == Axis::X ? y : x; }
-
-bool overlaps(double a0, double a1, double b0, double b1) { return a0 < b1 && b0 < a1; }
-
 // interior: +1 room at larger normal coordinate, -1 at smaller, 0 both (wall seen from two rooms)
 struct Face {
     Candidate c;

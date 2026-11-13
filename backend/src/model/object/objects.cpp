@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "vcortex/geometry/points.hpp"
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/object/object_grid.hpp"
 
@@ -17,8 +18,6 @@ namespace vcortex {
 namespace {
 
 constexpr double kEps = 1e-9;
-
-bool overlaps(double a0, double a1, double b0, double b1) { return a0 < b1 && b0 < a1; }
 
 // a wall in the aligned frame as a line of constant x or y, so a box side can be measured
 // against its body; walls are axis-aligned here, they turn only in the map frame
@@ -46,23 +45,6 @@ double box_to_wall_distance(double box_from, double box_to, const WallLine& line
     const double body_from = line.position - line.half_thickness;
     const double body_to = line.position + line.half_thickness;
     return std::max({0.0, body_from - box_to, box_from - body_to});
-}
-
-struct FootprintBox {
-    double min_x = 0.0, max_x = 0.0;
-    double min_y = 0.0, max_y = 0.0;
-};
-
-FootprintBox footprint_box(const std::vector<Vec2>& footprint) {
-    FootprintBox box{footprint.front().x, footprint.front().x, footprint.front().y,
-                     footprint.front().y};
-    for (const Vec2& vertex : footprint) {
-        box.min_x = std::min(box.min_x, vertex.x);
-        box.max_x = std::max(box.max_x, vertex.x);
-        box.min_y = std::min(box.min_y, vertex.y);
-        box.max_y = std::max(box.max_y, vertex.y);
-    }
-    return box;
 }
 
 }  // namespace

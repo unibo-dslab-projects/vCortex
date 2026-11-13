@@ -1,4 +1,5 @@
 #include "vcortex/model/grid.hpp"
+#include "vcortex/geometry/grids.hpp"
 #include "vcortex/geometry/points.hpp"
 
 #include <algorithm>
@@ -15,11 +16,6 @@ namespace {
 // 300 MB of counts and means (205 m square at 5 cm); a bigger grid means a stray point far
 // away, not a building
 constexpr std::size_t kMaxCells = std::size_t{1} << 24;
-
-int cell_index(double v, double origin, double cell, int size) {
-    // clamp: float rounding can put the max point one cell past the end
-    return std::clamp(static_cast<int>(std::floor((v - origin) / cell)), 0, size - 1);
-}
 
 }  // namespace
 

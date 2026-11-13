@@ -12,49 +12,10 @@
 #include <utility>
 #include <vector>
 
+#include "vcortex/geometry/grids.hpp"
 #include "vcortex/geometry/points.hpp"
 
 namespace vcortex {
-
-namespace {
-
-bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uint8_t>& mask,
-                              int row, int column, int radius_cells, std::uint8_t value) {
-    for (int row_offset = -radius_cells; row_offset <= radius_cells; ++row_offset) {
-        for (int column_offset = -radius_cells; column_offset <= radius_cells; ++column_offset) {
-            const int neighbour_row = row + row_offset;
-            const int neighbour_column = column + column_offset;
-            if (neighbour_row < 0 || neighbour_row >= grid.height || neighbour_column < 0 ||
-                neighbour_column >= grid.width) {
-                continue;
-            }
-            const auto index =
-                static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column);
-            if (mask[index] == value) return true;
-        }
-    }
-    return false;
-}
-
-// only the 4 side neighbours inside the grid, so cells touching at a corner stay apart
-std::vector<std::size_t> neighbour_indices(const ObjectGrid& grid, std::size_t index) {
-    const int row = static_cast<int>(index) / grid.width;
-    const int column = static_cast<int>(index) % grid.width;
-    std::vector<std::size_t> neighbours;
-    const int steps[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    for (const auto& step : steps) {
-        const int neighbour_row = row + step[0];
-        const int neighbour_column = column + step[1];
-        if (neighbour_row < 0 || neighbour_row >= grid.height || neighbour_column < 0 ||
-            neighbour_column >= grid.width) {
-            continue;
-        }
-        neighbours.push_back(static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column));
-    }
-    return neighbours;
-}
-
-}  // namespace
 
 ObjectGrid build_object_grid(const std::vector<Point>& furniture_points, const Plane& floor,
                              double cell, int padding_cells, int cell_min_points) {
@@ -387,18 +348,6 @@ std::vector<GridCorner> keep_corners_only(const std::vector<BoundaryEdge>& ring)
     return corners;
 }
 
-// shoelace sum, doubled to stay in integers: positive for a counter-clockwise ring
-long long doubled_signed_area(const std::vector<GridCorner>& ring) {
-    long long doubled_area = 0;
-    for (std::size_t index = 0; index < ring.size(); ++index) {
-        const GridCorner& current = ring[index];
-        const GridCorner& next = ring[(index + 1) % ring.size()];
-        doubled_area += static_cast<long long>(current.x) * next.y -
-                        static_cast<long long>(next.x) * current.y;
-    }
-    return doubled_area;
-}
-
 // a ring of right angles cannot have fewer
 constexpr std::size_t MIN_RING_CORNERS = 4;
 
@@ -407,14 +356,6 @@ Direction direction_between(GridCorner from, GridCorner to) {
     if (to.x < from.x) return Direction::west;
     if (to.y > from.y) return Direction::north;
     return Direction::south;
-}
-
-int length_between(GridCorner from, GridCorner to) {
-    return std::abs(to.x - from.x) + std::abs(to.y - from.y);
-}
-
-bool is_same_corner(GridCorner first, GridCorner second) {
-    return first.x == second.x && first.y == second.y;
 }
 
 bool is_horizontal(Direction direction) {

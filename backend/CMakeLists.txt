@@ -52,6 +52,8 @@ target_compile_options(vcortex_warnings INTERFACE
 
 add_library(vcortex_core STATIC
   src/geometry/points.cpp
+  src/geometry/vectors.cpp
+  src/geometry/grids.cpp
   src/domain/settings.cpp
   src/model/clean.cpp
   src/model/floor/floor.cpp

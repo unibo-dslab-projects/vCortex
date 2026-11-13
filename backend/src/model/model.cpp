@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/align.hpp"
 #include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/clean.hpp"
@@ -24,17 +25,6 @@ namespace {
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
 
 constexpr Direction kOut[4] = {{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
-
-// turn about z by the angle whose cos and sin are given; z stays, so heights need no fix
-struct Turn {
-    double c = 1.0, s = 0.0;
-    Vec2 operator()(double x, double y) const { return {c * x - s * y, s * x + c * y}; }
-    Vec2 operator()(const Vec2& v) const { return (*this)(v.x, v.y); }
-};
-
-bool inside(const Vec2& p, const std::vector<Vec2>& box) {
-    return p.x >= box[0].x && p.x <= box[2].x && p.y >= box[0].y && p.y <= box[2].y;
-}
 
 }  // namespace
 

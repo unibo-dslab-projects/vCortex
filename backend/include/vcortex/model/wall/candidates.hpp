@@ -4,14 +4,13 @@
 #include <vector>
 
 #include "vcortex/domain/settings.hpp"
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/grid.hpp"
 
 namespace vcortex {
 
 // only runs parallel to x or y: dominant_yaw squares the map first, so one pass per row and
 // column; walls and furniture faces both land here, split_walls_objects sorts them
-
-enum class Axis { X, Y };  // X: constant x, runs along y
 
 // aligned frame, metres
 struct Candidate {

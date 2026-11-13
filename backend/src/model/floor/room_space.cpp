@@ -1,4 +1,5 @@
 #include "vcortex/model/floor/room_space.hpp"
+#include "vcortex/geometry/grids.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -8,70 +9,6 @@
 #include <utility>
 
 namespace vcortex {
-
-namespace {
-    constexpr double kSlack = 1e-9;
-
-    using Mask = std::vector<std::uint8_t>;
-
-    struct Offset {
-        int dx, dy;
-    };
-
-    bool in_grid(const Grid& grid, int x, int y) {
-        return x >= 0 && x < grid.width && y >= 0 && y < grid.height;
-    }
-
-    std::size_t at(const Grid& grid, int x, int y) {
-        return static_cast<std::size_t>(y) * static_cast<std::size_t>(grid.width) +
-            static_cast<std::size_t>(x);
-    }
-
-    bool cell_of(const Grid& g, double x, double y, int& ix, int& iy) {
-        ix = static_cast<int>(std::floor((x - g.origin.x) / g.cell));
-        iy = static_cast<int>(std::floor((y - g.origin.y) / g.cell));
-        return in_grid(g, ix, iy);
-    }
-
-    std::vector<Offset> disk(double radius_cells) {
-        const int reach = static_cast<int>(std::floor(radius_cells + kSlack));
-        std::vector<Offset> out;
-
-        // keeping only the points within the circle
-        for (int dy = -reach; dy <= reach; ++dy) {
-            for (int dx = -reach; dx <= reach; ++dx) {
-                if (dx * dx + dy * dy <= radius_cells * radius_cells + kSlack) out.push_back({dx, dy});
-            }
-        }
-
-        return out;
-    }
-
-    Mask grow(const Mask& m, const Grid& g, const std::vector<Offset>& offsets) {
-        Mask out(m.size(), 0);
-        for (int iy = 0; iy < g.height; ++iy) {
-            for (int ix = 0; ix < g.width; ++ix) {
-                if (m[at(g, ix, iy)] == 0) continue;
-                for (const Offset& o : offsets) {
-                    const int nx = ix + o.dx, ny = iy + o.dy;
-                    if (in_grid(g, nx, ny)) out[at(g, nx, ny)] = 1;
-                }
-            }
-        }
-        return out;
-    }
-
-    Mask invert(Mask m) {
-        for (std::uint8_t& v : m) v = static_cast<std::uint8_t>(v == 0);
-        return m;
-    }
-
-    // grow, then shrink; shrink = grow the opposite, so the grid edge does not eat the mask
-    Mask close_holes(const Mask& m, const Grid& g) {
-        const std::vector<Offset> one = disk(1.0);
-        return invert(grow(invert(grow(m, g, one)), g, one));
-    }
-} // namespace
 
 RoomSpace compute_room_space(const std::vector<Point>& aligned, const Plane& floor, const Grid& grid, const Trajectory& trajectory, const RoomSpaceParams& params) {
     RoomSpace out;

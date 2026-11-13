@@ -6,17 +6,10 @@
 #include <cstdint>
 #include <utility>
 
+#include "vcortex/geometry/grids.hpp"
 #include "vcortex/model/median.hpp"
 
 namespace vcortex {
-
-namespace {
-
-int cells_in(double length, double cell) {
-    return std::max(1, static_cast<int>(std::lround(length / cell)));
-}
-
-}  // namespace
 
 std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
                                         const std::vector<Point>& aligned, const Plane& floor,

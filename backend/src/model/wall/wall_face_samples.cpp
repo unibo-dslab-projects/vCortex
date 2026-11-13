@@ -26,10 +26,10 @@ std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid
     const int along_len = search_axis_is_x ? grid.height : grid.width;
     const double across_start = search_axis_is_x ? grid.origin.x() : grid.origin.y(); // grid border starting coordinates
     const double along_start = search_axis_is_x ? grid.origin.y() : grid.origin.x();  // grid base starting coordinates
-    const int cells_per_strip = cells_in(p.strip, grid.cell);
+    const int cells_per_strip = num_cells_in_len(p.strip, grid.cell);
     const int num_strips = along_len / cells_per_strip;
-    const int max_gap = cells_in(p.max_gap, grid.cell);
-    const int max_reach = cells_in(p.max_reach, grid.cell);
+    const int max_gap = num_cells_in_len(p.max_gap, grid.cell);
+    const int max_reach = num_cells_in_len(p.max_reach, grid.cell);
     const auto get_index = [&](int y, int x) {
         return static_cast<std::size_t>(y) * static_cast<std::size_t>(across_len) +
                static_cast<std::size_t>(x);

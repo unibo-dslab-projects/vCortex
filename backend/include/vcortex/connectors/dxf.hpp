@@ -6,6 +6,7 @@
 
 namespace vcortex {
 
+/// Converts a ModelResult to a DXF string
 std::string to_dxf(const ModelResult& result);
 
 }  // namespace vcortex

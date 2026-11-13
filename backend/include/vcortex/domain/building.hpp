@@ -12,46 +12,39 @@
 
 namespace vcortex {
 
-// mirrors schema/twin.schema.json; ifc (open bim standard) names, so an ifc export is a
-// rename, not a remodel
+// mirrors schema/twin.schema.json; ifc (open bim standard) names
 
-// IfcWall; start/end are the centreline, as in ifc; the model sees only the interior face
-// and shifts it out by half the thickness
+// IfcWall
 struct Wall {
     std::string id;
     Eigen::Vector2d start = Eigen::Vector2d::Zero();
     Eigen::Vector2d end = Eigen::Vector2d::Zero();
     double thickness = 0.0;
-    std::size_t points = 0;
-    // share of length where points were seen, rest filled in (behind furniture, gaps);
-    // measurable, unlike a "confidence" score
+    std::size_t num_points = 0;
     double coverage = 0.0;
 };
 
-// IfcSpace.
+// IfcSpace
 struct Room {
     std::string id;
     std::optional<std::string> name;
     std::vector<Eigen::Vector2d> outline;
     std::vector<std::string> wall_ids;
-    bool closed = false;  // false: the free space leaked out through a missing wall
+    bool closed = false;
 };
 
-// IfcBuildingElementProxy: ifc's type for an element of unknown kind
+// IfcBuildingElementProxy
 struct Object {
     std::string id;
-    std::string kind = "unknown";  // TODO: classify objects; nothing sets another kind yet
+    std::string kind = "unknown";
     std::optional<std::string> room_id, against_wall_id;
     Eigen::Vector2d center = Eigen::Vector2d::Zero();
     Eigen::Vector2d size = Eigen::Vector2d::Zero();
     double yaw = 0.0;
-    // outline seen from above, counter-clockwise, last vertex joins the first; outer ring only,
-    // so a desk seen at its rim is drawn whole. center, size and yaw box it
     std::vector<Eigen::Vector2d> footprint;
     double bottom_z = 0.0;
-    // lidar rarely sees tall furniture tops, so the real top may be higher; reported as seen
     double top_z_seen = 0.0;
-    std::size_t points = 0;
+    std::size_t num_points = 0;
 };
 
 struct Level {
@@ -67,7 +60,7 @@ struct Level {
 struct Building {
     std::uint32_t run_id = 0;
     std::uint32_t seq = 0;
-    std::string frame_id;  // copied from Snapshot: coordinates mean nothing without their frame
+    std::string frame_id;
     std::vector<Level> levels;
 };
 

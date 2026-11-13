@@ -196,7 +196,7 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
             to_visit.pop();
             cells_of_region[region_id].push_back(cell_index);
             top_sum_of_region[region_id] += grid.top_metres[cell_index];
-            for (const std::size_t neighbour_index : neighbour_indices(grid, cell_index)) {
+            for (const std::size_t neighbour_index : get_neighbour_indices(grid, cell_index)) {
                 if (result[neighbour_index] || !grid.point_count[neighbour_index] ||
                     labels[neighbour_index] != labels[cell_index]) {
                     continue;
@@ -223,7 +223,7 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
         std::uint32_t closest_region_id = 0;
         double closest_top_difference = std::numeric_limits<double>::infinity();
         for (const std::size_t cell_index : cells) {
-            for (const std::size_t neighbour_index : neighbour_indices(grid, cell_index)) {
+            for (const std::size_t neighbour_index : get_neighbour_indices(grid, cell_index)) {
                 const std::uint32_t neighbour_region_id = result[neighbour_index];
                 if (!neighbour_region_id || neighbour_region_id == region_id ||
                     labels[neighbour_index] != labels[cell_index]) {

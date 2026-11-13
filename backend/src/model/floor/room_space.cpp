@@ -20,7 +20,7 @@ RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane
     if (trajectory.empty()) return out;
 
     std::vector<std::uint16_t> low(column_size, 0);
-    Mask floor_hit(column_size, 0);
+    std::vector<std::uint8_t> floor_hit(column_size, 0);
     for (const LidarPoint& pt: aligned) {
         int ix = 0, iy = 0;
         if (!cell_of(grid, pt.position.x(), pt.position.y(), ix, iy)) continue;
@@ -32,20 +32,20 @@ RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane
         if (std::abs(h) < params.floor_band) floor_hit[i] = 1;
     }
 
-    Mask blocked(column_size, 0);
+    std::vector<std::uint8_t> blocked(column_size, 0);
     for (std::size_t i = 0; i < column_size; ++i) blocked[i] = low[i] >= params.min_points;
 
     // a missing voxel is not a hole; unseen floor blocks, so a live map never leaks into
     // a part not seen yet
-    const Mask seen = close_holes(floor_hit, grid);
+    const std::vector<std::uint8_t> seen = close_holes(floor_hit, grid);
     const std::vector<Eigen::Vector2i> coin = disk(params.coin_radius / grid.cell);
-    Mask no_centre = grow(blocked, grid, coin);
+    std::vector<std::uint8_t> no_centre = grow(blocked, grid, coin);
     for (std::size_t i = 0; i < column_size; ++i) {
         if (seen[i] == 0) no_centre[i] = 1;
     }
 
     // 4 neighbours, as flood in rooms.cpp: diagonal steps slip between cells meeting at a corner
-    Mask centres(column_size, 0);
+    std::vector<std::uint8_t> centres(column_size, 0);
     std::queue<std::pair<int, int>> todo;
     for (const Pose& pose : trajectory) {
         int ix = 0, iy = 0;
@@ -62,7 +62,7 @@ RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane
         if (ix == 0 || iy == 0 || ix == grid.width - 1 || iy == grid.height - 1) out.leaked = true;
         for (const Eigen::Vector2i& step : steps) {
             const int nx = ix + step.x(), ny = iy + step.y();
-            if (!in_grid(grid, nx, ny)) continue;
+            if (!is_in_grid(grid, nx, ny)) continue;
             const std::size_t n = at(grid, nx, ny);
             if (no_centre[n] != 0 || centres[n] != 0) continue;
             centres[n] = 1;

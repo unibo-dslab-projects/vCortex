@@ -60,18 +60,18 @@ struct RoomSpaceParams {
 };
 
 struct OutlineParams {
-    double strip = 0.25;       // strip width along the wall; one face per strip
-    double max_reach = 1.5;    // walk past the room space at most this far
-    double max_gap = 0.30;     // this much empty floor ends the walk: what lies past is outside
-    double face_depth = 0.10;  // points this deep in the last occupied cell give the face
-    double run_jump = 0.15;    // a face this far from its run starts a new run
-    int min_strips_per_run = 2;          // shorter runs are a leg or a bag, not a wall
-    double merge_distance = 0.10;        // neighbour runs this close are one line
-    double dent_depth = 0.50;   // runs at most this far in, and at most dent_length long,
-    double dent_length = 2.0;   //   are furniture against the wall
+    double strip = 0.25;               // strip width along the wall; one face per strip
+    double max_reach = 1.5;            // walk past the room space at most this far
+    double max_gap = 0.30;             // this much empty floor ends the walk: what lies past is outside
+    double face_depth = 0.10;          // points this deep in the last occupied cell give the face
+    double run_jump = 0.15;            // a face this far from its run starts a new run
+    int min_strips_per_run = 2;        // shorter runs are a leg or a bag, not a wall
+    double merge_distance = 0.10;      // neighbour runs this close are one line
+    double dent_depth = 0.50;          // runs at most this far in, and at most dent_length long,
+    double dent_length = 2.0;          //   are furniture against the wall
     // desks along the walls hide metres of wall: a 1.5 m reach left a furnished office open
     double corner_max_extension = 8.0;
-    double corner_overshoot = 0.5;  // a side may poke this far past the corner; trimmed back
+    double corner_overshoot = 0.5;     // a side may poke this far past the corner; trimmed back
     double coverage_tolerance = 0.10;  // points this close to a face line count as seeing it
 };
 
@@ -88,13 +88,10 @@ struct ModelSettings {
     OutlineParams outline;
 };
 
-// below 1.5 m the band is too thin to tell walls from furniture; above 6 m it is not one
-// storey; both ends excluded
 inline constexpr double kWallHeightMin = 1.5;
 inline constexpr double kWallHeightMax = 6.0;
 
-// guards config/model.json and PUT /api/settings, so bad values fail at entry, not mid-run
-// returns the first problem by json key (e.g. "candidates.cell"), or nothing
+/// validate the models settings
 std::optional<std::string> validate(const ModelSettings& s);
 
 }  // namespace vcortex

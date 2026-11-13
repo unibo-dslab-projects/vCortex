@@ -111,7 +111,7 @@ std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points
         object.size = box.sizes();
         object.bottom_z = bounds.min().z();
         object.top_z_seen = bounds.max().z();
-        object.points = points.size();
+        object.num_points = points.size();
 
         double best_distance = parameters.against_wall_distance + kEps;
         for (std::size_t i = 0; i < walls.size(); ++i) {

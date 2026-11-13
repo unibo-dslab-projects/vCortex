@@ -468,7 +468,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
             }
         }
         if (nearest < walls.size()) {
-            ++out.walls[nearest].points;
+            ++out.walls[nearest].num_points;
         } else if (!is_beyond_outline_side(Axis::X, pt.position.x(), pt.position.y(), outline,
                                            -p.object_clearance) &&
                    !is_beyond_outline_side(Axis::Y, pt.position.y(), pt.position.x(), outline,

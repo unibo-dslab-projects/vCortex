@@ -74,7 +74,7 @@ Json level_json(const Level& level) {
                          {"start", xy(w.start)},
                          {"end", xy(w.end)},
                          {"thickness", mm(w.thickness)},
-                         {"points", w.points},
+                         {"points", w.num_points},
                          {"coverage", w.coverage}});
     }
     Json rooms = Json::array();
@@ -101,7 +101,7 @@ Json level_json(const Level& level) {
                            {"footprint", std::move(footprint)},
                            {"bottom_z", mm(o.bottom_z)},
                            {"top_z_seen", mm(o.top_z_seen)},
-                           {"points", o.points}});
+                           {"points", o.num_points}});
     }
     return {{"id", level.id},
             {"floor_z", mm(level.floor_z)},

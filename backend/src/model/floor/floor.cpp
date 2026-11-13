@@ -1,4 +1,4 @@
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/floor/floor.hpp"
 
 #include <cmath>
 #include <cstddef>

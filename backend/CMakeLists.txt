@@ -54,18 +54,18 @@ add_library(vcortex_core STATIC
   src/geometry/points.cpp
   src/domain/settings.cpp
   src/model/clean.cpp
-  src/model/floor.cpp
+  src/model/floor/floor.cpp
   src/model/align.cpp
   src/model/grid.cpp
-  src/model/candidates.cpp
-  src/model/walls.cpp
+  src/model/wall/candidates.cpp
+  src/model/wall/walls.cpp
   src/model/rooms.cpp
-  src/model/room_space.cpp
-  src/model/wall_face_samples.cpp
-  src/model/outline.cpp
+  src/model/floor/room_space.cpp
+  src/model/wall/wall_face_samples.cpp
+  src/model/wall/outline.cpp
   src/model/model.cpp
-  src/model/objects.cpp
-  src/model/object_grid.cpp
+  src/model/object/objects.cpp
+  src/model/object/object_grid.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp

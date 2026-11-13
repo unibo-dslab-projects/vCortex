@@ -5,10 +5,10 @@
 
 #include "vcortex/domain/point.hpp"
 #include "vcortex/domain/settings.hpp"
-#include "vcortex/model/candidates.hpp"
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/wall/candidates.hpp"
+#include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/room_space.hpp"
+#include "vcortex/model/floor/room_space.hpp"
 
 namespace vcortex {
 

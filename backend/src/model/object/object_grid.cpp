@@ -1,4 +1,4 @@
-#include "vcortex/model/object_grid.hpp"
+#include "vcortex/model/object/object_grid.hpp"
 
 #include <algorithm>
 #include <cmath>

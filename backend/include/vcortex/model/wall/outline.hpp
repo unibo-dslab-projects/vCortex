@@ -5,8 +5,8 @@
 
 #include "vcortex/domain/point.hpp"
 #include "vcortex/domain/settings.hpp"
-#include "vcortex/model/floor.hpp"
-#include "vcortex/model/wall_face_samples.hpp"
+#include "vcortex/model/floor/floor.hpp"
+#include "vcortex/model/wall/wall_face_samples.hpp"
 
 namespace vcortex {
 

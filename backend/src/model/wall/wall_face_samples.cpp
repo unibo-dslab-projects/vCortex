@@ -1,4 +1,4 @@
-#include "vcortex/model/wall_face_samples.hpp"
+#include "vcortex/model/wall/wall_face_samples.hpp"
 
 #include <algorithm>
 #include <cmath>

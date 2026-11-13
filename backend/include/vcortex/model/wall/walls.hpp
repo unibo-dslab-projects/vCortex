@@ -4,10 +4,10 @@
 
 #include "vcortex/domain/building.hpp"
 #include "vcortex/domain/snapshot.hpp"
-#include "vcortex/model/candidates.hpp"
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/wall/candidates.hpp"
+#include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/outline.hpp"
+#include "vcortex/model/wall/outline.hpp"
 #include "vcortex/domain/point.hpp"
 
 namespace vcortex {

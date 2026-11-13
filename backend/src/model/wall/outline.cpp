@@ -1,4 +1,4 @@
-#include "vcortex/model/outline.hpp"
+#include "vcortex/model/wall/outline.hpp"
 
 #include <algorithm>
 #include <cmath>

@@ -1,4 +1,4 @@
-#include "vcortex/model/candidates.hpp"
+#include "vcortex/model/wall/candidates.hpp"
 
 #include <algorithm>
 #include <cmath>

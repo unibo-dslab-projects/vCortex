@@ -7,15 +7,15 @@
 #include <vector>
 
 #include "vcortex/model/align.hpp"
-#include "vcortex/model/candidates.hpp"
+#include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/outline.hpp"
-#include "vcortex/model/room_space.hpp"
+#include "vcortex/model/wall/outline.hpp"
+#include "vcortex/model/floor/room_space.hpp"
 #include "vcortex/model/rooms.hpp"
-#include "vcortex/model/wall_face_samples.hpp"
-#include "vcortex/model/walls.hpp"
-#include "vcortex/model/objects.hpp"
+#include "vcortex/model/wall/wall_face_samples.hpp"
+#include "vcortex/model/wall/walls.hpp"
+#include "vcortex/model/object/objects.hpp"
 
 namespace vcortex {
 

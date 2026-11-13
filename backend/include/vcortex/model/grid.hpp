@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "vcortex/domain/point.hpp"
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/floor/floor.hpp"
 
 namespace vcortex {
 

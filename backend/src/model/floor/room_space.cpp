@@ -1,4 +1,4 @@
-#include "vcortex/model/room_space.hpp"
+#include "vcortex/model/floor/room_space.hpp"
 
 #include <cmath>
 #include <cstddef>

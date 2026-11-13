@@ -6,7 +6,7 @@
 #include "vcortex/domain/point.hpp"
 #include "vcortex/domain/settings.hpp"
 #include "vcortex/domain/snapshot.hpp"
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/grid.hpp"
 
 namespace vcortex {

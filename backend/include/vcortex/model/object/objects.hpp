@@ -5,7 +5,7 @@
 #include "vcortex/domain/building.hpp"
 #include "vcortex/domain/point.hpp"
 #include "vcortex/domain/settings.hpp"
-#include "vcortex/model/floor.hpp"
+#include "vcortex/model/floor/floor.hpp"
 
 namespace vcortex {
 

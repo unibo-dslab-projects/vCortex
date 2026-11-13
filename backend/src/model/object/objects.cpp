@@ -1,4 +1,4 @@
-#include "vcortex/model/objects.hpp"
+#include "vcortex/model/object/objects.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "vcortex/geometry/points.hpp"
-#include "vcortex/model/candidates.hpp"
-#include "vcortex/model/object_grid.hpp"
+#include "vcortex/model/wall/candidates.hpp"
+#include "vcortex/model/object/object_grid.hpp"
 
 namespace vcortex {
 

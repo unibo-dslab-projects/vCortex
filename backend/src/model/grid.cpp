@@ -28,7 +28,7 @@ Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, doub
     grid.cell = cell;
 
     std::vector<Eigen::Vector2d> band;
-    const Eigen::AlignedBox3f bounds = point_bounds(aligned);
+    const Eigen::AlignedBox3f bounds = get_points_bounding_box(aligned);
     for (const LidarPoint& p : aligned) {
         const double h = height_above(floor, p);
         if (h >= band_lo && h < band_hi) {

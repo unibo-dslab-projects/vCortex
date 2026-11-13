@@ -94,7 +94,7 @@ std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points
         const std::vector<LidarPoint>& points = pieces[label];
         if (points.size() < static_cast<std::size_t>(parameters.cluster_min_points)) continue;
 
-        const Eigen::AlignedBox3f bounds = point_bounds(points);
+        const Eigen::AlignedBox3f bounds = get_points_bounding_box(points);
 
         std::vector<Eigen::Vector2i> ring =
             trace_outer_ring(grid, labels, static_cast<std::uint32_t>(label));

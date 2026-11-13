@@ -23,7 +23,7 @@ ObjectGrid build_object_grid(const std::vector<LidarPoint>& furniture_points, co
     grid.cell = cell;
     if (furniture_points.empty()) return grid;
 
-    const Eigen::AlignedBox3f bounds = point_bounds(furniture_points);
+    const Eigen::AlignedBox3f bounds = get_points_bounding_box(furniture_points);
 
     // adding padding to support spatial algorithms boundary conditions
     const double padding_metres = padding_cells * cell;

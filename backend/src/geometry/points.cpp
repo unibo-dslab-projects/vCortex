@@ -4,7 +4,7 @@
 
 namespace vcortex {
 
-Eigen::AlignedBox3f point_bounds(const std::vector<LidarPoint>& points) {
+Eigen::AlignedBox3f get_points_bounding_box(const std::vector<LidarPoint>& points) {
     if (points.empty()) throw std::invalid_argument("point_bounds: no points");
 
     Eigen::AlignedBox3f bounds;

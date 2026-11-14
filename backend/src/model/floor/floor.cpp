@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <utility>
 #include <vector>
@@ -32,8 +33,8 @@ namespace {
 
 }  // namespace
 
-// one seed per tile: x, y the mean of its points, z their low percentile
-std::vector<Eigen::Vector3d> tile_seeds(const std::vector<LidarPoint>& input_points) {
+/// Returns a vector containing the coordinates that better approximate/represent the floor tiles.
+std::vector<Eigen::Vector3d> find_tiles_centroids(const std::vector<LidarPoint>& input_points) {
     std::map<std::pair<long long, long long>, Tile> tiles;
 
     for (const LidarPoint& p : input_points) {
@@ -60,15 +61,16 @@ std::vector<Eigen::Vector3d> tile_seeds(const std::vector<LidarPoint>& input_poi
     return seeds;
 }
 
-Plane fit_plane_from_seeds(const std::vector<Eigen::Vector3d>& seeds) {
-    if (seeds.size() < 3) {
-        throw std::runtime_error("fit_plane_from_seeds: fewer than 3 seeds");
+/// Fits a plane from the given coordinates.
+Plane fit_plane_from_coordinates(const std::vector<Eigen::Vector3d>& input_coordinates) {
+    if (input_coordinates.size() < 3) {
+        throw std::runtime_error("fit_plane_from_coordinates: fewer than 3 points");
     }
-    const double n = static_cast<double>(seeds.size());
+    const double n = static_cast<double>(input_coordinates.size());
 
     // finding the center of the plane
     Eigen::Vector3d mean = Eigen::Vector3d::Zero();
-    for (const Eigen::Vector3d& s : seeds) mean += s;
+    for (const Eigen::Vector3d& s : input_coordinates) mean += s;
     mean /= n;
     const double mx = mean.x(), my = mean.y(), mz = mean.z();
 
@@ -76,7 +78,7 @@ Plane fit_plane_from_seeds(const std::vector<Eigen::Vector3d>& seeds) {
     // a = sxz / sxx
     // b = syz / syy
     double sxx = 0.0, sxy = 0.0, syy = 0.0, sxz = 0.0, syz = 0.0;
-    for (const Eigen::Vector3d& s : seeds) {
+    for (const Eigen::Vector3d& s : input_coordinates) {
         const double dx = s.x() - mx;
         const double dy = s.y() - my;
         const double dz = s.z() - mz;
@@ -102,7 +104,8 @@ Plane fit_plane_from_seeds(const std::vector<Eigen::Vector3d>& seeds) {
     return plane;
 }
 
-double find_peak_shift(const std::vector<LidarPoint>& input_points, const Plane& plane) {
+/// Returns the peak shift between the given points and the given plane.
+double find_peak_shift_between(const std::vector<LidarPoint>& input_points, const Plane& plane) {
     constexpr std::size_t kBins = static_cast<std::size_t>(2.0 * kPeakRange / kPeakBin + 0.5);
     std::vector<std::size_t> hist(kBins, 0);
 
@@ -113,35 +116,33 @@ double find_peak_shift(const std::vector<LidarPoint>& input_points, const Plane&
         ++hist[std::min(bin, kBins - 1)];
     }
 
-    std::size_t best = 0;
-    for (std::size_t i = 1; i < kBins; ++i) {
-        if (hist[i] > hist[best]) best = i;
-    }
-    if (hist[best] == 0) return 0.0;
+    const auto best_bin = std::max_element(hist.begin(), hist.end());
+    if (*best_bin == 0) return 0.0;
+    const auto peak_bin = static_cast<std::size_t>(std::distance(hist.begin(), best_bin));
 
-    return (static_cast<double>(best) + 0.5) * kPeakBin - kPeakRange;
+    return (static_cast<double>(peak_bin) + 0.5) * kPeakBin - kPeakRange;
 }
 
 Plane find_floor(const std::vector<LidarPoint>& in) {
     if (in.empty()) {
         throw std::runtime_error("find_floor: no points");
     }
-    std::vector<Eigen::Vector3d> seeds = tile_seeds(in);
-    Plane floor = fit_plane_from_seeds(seeds);
+    std::vector<Eigen::Vector3d> centroids = find_tiles_centroids(in);
+    Plane floor = fit_plane_from_coordinates(centroids);
 
-    // removing the last seeds in order to avoid to fails due to the outliers
+    // removing the last centroids in order to avoid to fails due to the outliers
     for (int round = 0; round < kFitRounds; ++round) {
         const auto is_too_far = [&](const Eigen::Vector3d& s) {
             return std::abs(s.z() - (floor.a * s.x() + floor.b * s.y() + floor.c)) > kSeedResidual;
         };
 
-        const auto last = std::remove_if(seeds.begin(), seeds.end(), is_too_far);
-        if (last == seeds.end()) break;      // nothing dropped -> converged
-        seeds.erase(last, seeds.end());
-        floor = fit_plane_from_seeds(seeds); // throws if too few seeds are left
+        const auto last = std::remove_if(centroids.begin(), centroids.end(), is_too_far);
+        if (last == centroids.end()) break;      // nothing dropped -> converged
+        centroids.erase(last, centroids.end());
+        floor = fit_plane_from_coordinates(centroids); // throws if too few centroids are left
     }
 
-    floor.c += find_peak_shift(in, floor);
+    floor.c += find_peak_shift_between(in, floor);
     return floor;
 }
 

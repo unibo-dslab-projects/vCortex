@@ -12,7 +12,6 @@
 
 #include "vcortex/geometry/points.hpp"
 #include "vcortex/geometry/vectors.hpp"
-#include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/object/grid.hpp"
 #include "vcortex/model/object/labels.hpp"
 #include "vcortex/model/object/outline.hpp"

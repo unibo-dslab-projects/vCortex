@@ -59,6 +59,8 @@ std::vector<BoundaryEdge> find_boundary_edges(const ObjectGrid& grid,
     return edges;
 }
 
+/// Chains the boundary edges into closed rings: the outer one, one per hole and one per
+/// detached piece.
 std::vector<std::vector<BoundaryEdge>> chain_rings(const ObjectGrid& grid,
                                                    const std::vector<BoundaryEdge>& edges) {
     const auto corner_key = [&](Eigen::Vector2i corner) {

@@ -9,7 +9,7 @@
 
 namespace vcortex {
 
-// aligned frame in and out; walls must already carry their ids, objects point at them
+/// Return a vector of objects found in the given points.
 std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points, const Plane& floor,
                                  const std::vector<Wall>& walls, const ObjectParams& parameters);
 

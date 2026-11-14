@@ -78,9 +78,9 @@ std::vector<std::uint8_t> shrink_by_cell(const ObjectGrid& grid,
     std::vector<std::uint8_t> shrunk(marked_cells.size(), 0);
     for (int row = 0; row < grid.height; ++row) {
         for (int column = 0; column < grid.width; ++column) {
-            const bool is_full =
+            const bool is_square_full =
                 !has_neighbour_with_value(grid, marked_cells, row, column, radius_cells, 0);
-            shrunk[static_cast<std::size_t>(row * grid.width + column)] = is_full;
+            shrunk[static_cast<std::size_t>(row * grid.width + column)] = is_square_full;
         }
     }
     return shrunk;

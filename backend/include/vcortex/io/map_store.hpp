@@ -31,44 +31,44 @@ struct StoreStatus {
 // waits for it
 class MapStore {
 public:
-    // new source (ingest hello, or the offline file): forgets the old map and trajectory
+    /// Forgets the old map and trajectory, ready for a new source with the given frame and voxel size.
     void reset(std::string frame_id, double voxel_size);
 
-    // a new run_id is a new map: old points and poses go; the same run_id is a resync, so
-    // every record replaces its voxel
+    /// Stores a full map. A new run_id drops the old points and poses; the same run_id
+    /// replaces each point in its voxel.
     void put_map(std::uint32_t run_id, std::uint32_t seq, const std::vector<LidarPoint>& points);
 
-    // where each record landed in the map's point list (a new voxel goes at the end), so a
-    // viewer holding the same list can replace points in place; nothing when the delta does
-    // not follow the last seq of this run: nothing is applied and the source must send a
-    // fresh map
+    /// Stores a delta and returns where each point landed in the point list (new voxels go at the end).
+    /// Returns nothing, and stores nothing, if seq does not follow the last one of this run.
     std::optional<std::vector<std::uint32_t>> put_delta(std::uint32_t run_id, std::uint32_t seq,
                                                         const std::vector<LidarPoint>& points);
 
-
-    // poses of another run belong to a map this store does not hold, so they are dropped
+    /// Adds the poses to the trajectory, or drops them if they belong to another run.
     void put_poses(std::uint32_t run_id, const std::vector<Pose>& poses);
 
-    // the map if it changed since the last take, else nothing
+    /// Returns a copy of the map if it changed since the last take, nothing otherwise.
     std::optional<MapCopy> take();
 
-    // the map as it is, leaving it marked changed or not; for a viewer that just joined
+    /// Returns a copy of the map without marking it as taken, for a viewer that just joined.
     std::optional<MapCopy> peek() const;
 
-    // run the model again on the same map, e.g. after new settings
+    /// Marks the map as changed, so the model runs again on it (e.g. after new settings).
     void touch();
 
+    /// Returns the current run, seq and the number of points and poses.
     StoreStatus status() const;
 
 private:
     struct KeyHash {
+        /// Returns the hash of a voxel index.
         std::size_t operator()(const Eigen::Vector3i& k) const;
     };
 
-    // voxel index in x, y and z
+    /// Returns the voxel index in x, y and z of the given point.
     Eigen::Vector3i key_of(const LidarPoint& p) const;
-    // returns the voxel's index in points_
+    /// Inserts the point, or replaces the one already in its voxel, returning its index in points_.
     std::size_t upsert(const LidarPoint& p);
+    /// Returns a copy of the map; the caller must already hold mutex_.
     MapCopy copy_locked() const;
 
     mutable std::mutex mutex_;

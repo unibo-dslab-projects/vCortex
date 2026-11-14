@@ -13,6 +13,8 @@ struct OfflineInput {
     Trajectory trajectory;
 };
 
+/// Loads the map from the given PCD file, and the trajectory from trajectory.tum beside it
+/// if present, throwing on any error.
 OfflineInput load_offline(const std::filesystem::path& pcd_file);
 
 }  // namespace vcortex

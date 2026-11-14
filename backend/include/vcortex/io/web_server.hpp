@@ -23,13 +23,13 @@ namespace vcortex {
 // one port for every route: robot, browser and docker need only 9002
 class WebServer {
 public:
-    // offline_source: name of the saved map; set, /ingest refuses every source.
-    // live, a source with a valid hello replaces the one before it
-    // an empty ingest_token skips the check
+    /// Creates the server. With offline_source set (the saved map's name), /ingest refuses every
+    /// source; without it, a source with a valid hello replaces the one before. An empty
+    /// ingest_token skips the token check.
     WebServer(MapStore& store, const Config& config, std::optional<std::string> offline_source,
               std::string ingest_token);
 
-    // blocks until SIGINT or SIGTERM
+    /// Serves every route on the given port, blocking until SIGINT or SIGTERM.
     void run(std::uint16_t port);
 
 private:
@@ -43,25 +43,32 @@ private:
         std::chrono::steady_clock::time_point next_full_allowed;
     };
 
+    /// Sends a new model output to the twin viewers of each format, unless a new source made it stale.
     void publish(const std::shared_ptr<const ModelOutput>& output);
 
-    /// handles a new viewer connection: sends the full map on open, then delta updates
+    /// Adds a new point cloud viewer and sends it the full map.
     void raw_open(Connection& conn);
+    /// Removes a point cloud viewer.
     void raw_close(Connection& conn);
-    /// broadcasts a full map to all viewers
+    /// Sends a full map to every point cloud viewer, which also catches up the slow ones.
     void raw_send_map(const std::string& map_frame);
-    /// broadcasts a delta update to all viewers
+    /// Sends a delta to every point cloud viewer; a viewer over its byte budget gets a full map later instead.
     void raw_send_delta(const std::string& delta_frame);
 
-    // digital twin management methods
+    /// Adds a twin viewer for the connection's format and sends it the last output.
     void twin_open(Connection& conn);
+    /// Removes a twin viewer.
     void twin_close(Connection& conn);
 
-    // robot ingest management methods
+    /// Refuses the robot connection in offline mode.
     void ingest_open(Connection& conn);
+    /// Forgets the source if the closed connection was it.
     void ingest_close(Connection& conn);
+    /// Routes a robot message: frames from the source, a hello from anyone else.
     void ingest_message(Connection& conn, const std::string& data, bool is_binary);
+    /// Checks the hello and, if valid, makes the connection the new source, replacing the old one.
     void ingest_hello(Connection& conn, const std::string& text);
+    /// Applies a map, delta or poses frame to the store and forwards it to the point cloud viewers.
     void ingest_frame(Connection& conn, const std::string& bytes);
 
     MapStore& store_;

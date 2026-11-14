@@ -30,27 +30,34 @@ public:
     // called on the worker thread after each run; a slow listener delays the next run
     using Listener = std::function<void(const std::shared_ptr<const ModelOutput>&)>;
 
+    /// Creates the worker without starting its thread; on_output is called after each run.
     ModelWorker(MapStore& store, ModelSettings settings, double period_s, Listener on_output);
+    /// Stops the thread before the worker goes away.
     ~ModelWorker();
     ModelWorker(const ModelWorker&) = delete;
     ModelWorker& operator=(const ModelWorker&) = delete;
 
-    // not in the constructor: the listener may use its owner, which is still being built
+    /// Starts the worker thread. Kept out of the constructor because the listener
+    /// may use its owner, which is still being built.
     void start();
+    /// Stops the worker thread and waits for it to end.
     void stop();
 
-    // checked settings only (apply_settings); runs again on the same map
+    /// Replaces the settings, already checked by apply_settings, and runs the model again on the same map.
     void set_settings(const ModelSettings& settings);
+    /// Returns a copy of the current settings.
     ModelSettings settings() const;
 
-    // shared, not copied: a download and a broadcast read the same bytes
+    /// Returns the last output, shared and not copied, so a download and a broadcast read the same bytes.
     std::shared_ptr<const ModelOutput> latest() const;
 
-    // a new source: forget the old output, and drop the run that may still be on the old map
+    /// Forgets the last output and drops the run that may still be working on the old map.
     void clear();
 
 private:
+    /// Runs the model once at start, then again on each period or wake-up, until stop.
     void loop();
+    /// Runs the model and every connector on the map, if the map changed since the last run.
     void run_once(const ModelSettings& settings);
 
     MapStore& store_;

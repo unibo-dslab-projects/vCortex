@@ -16,7 +16,7 @@
 #include "vcortex/model/wall/outline.hpp"
 #include "vcortex/model/floor/room_space.hpp"
 #include "vcortex/model/rooms.hpp"
-#include "vcortex/model/wall/wall_face_samples.hpp"
+#include "vcortex/model/wall/face_samples.hpp"
 #include "vcortex/model/wall/walls.hpp"
 #include "vcortex/model/object/objects.hpp"
 

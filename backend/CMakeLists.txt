@@ -66,11 +66,13 @@ add_library(vcortex_core STATIC
   src/model/wall/walls.cpp
   src/model/rooms.cpp
   src/model/floor/room_space.cpp
-  src/model/wall/wall_face_samples.cpp
+  src/model/wall/face_samples.cpp
   src/model/wall/outline.cpp
   src/model/model.cpp
   src/model/object/objects.cpp
-  src/model/object/object_grid.cpp
+  src/model/object/grid.cpp
+  src/model/object/labels.cpp
+  src/model/object/outline.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp

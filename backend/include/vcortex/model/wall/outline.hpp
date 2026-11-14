@@ -6,7 +6,7 @@
 #include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
 #include "vcortex/model/floor/floor.hpp"
-#include "vcortex/model/wall/wall_face_samples.hpp"
+#include "vcortex/model/wall/face_samples.hpp"
 
 namespace vcortex {
 

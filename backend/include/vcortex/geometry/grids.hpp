@@ -7,7 +7,7 @@
 #include <Eigen/Core>
 
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/object/object_grid.hpp"
+#include "vcortex/model/object/grid.hpp"
 
 namespace vcortex {
 

@@ -18,14 +18,14 @@ constexpr double kEps = 1e-9;
 // walls leave split_walls_objects parallel to x or y, so each is a box
 struct Body {
     bool vertical = false;  // runs along y, constant x
-    double centre = 0.0, half = 0.0;
+    double center = 0.0, half = 0.0;
     double from = 0.0, to = 0.0;
 };
 
 Body body_of(const Wall& w) {
     Body b;
     b.vertical = std::abs(w.start.x() - w.end.x()) < kEps;
-    b.centre = b.vertical ? w.start.x() : w.start.y();
+    b.center = b.vertical ? w.start.x() : w.start.y();
     b.half = w.thickness / 2.0;
     b.from = b.vertical ? std::min(w.start.y(), w.end.y()) : std::min(w.start.x(), w.end.x());
     b.to = b.vertical ? std::max(w.start.y(), w.end.y()) : std::max(w.start.x(), w.end.x());
@@ -45,8 +45,8 @@ struct Mask {
                      static_cast<std::size_t>(ix)];
     }
 
-    // every cell the box touches, not only cells whose centre it covers: a 7 cm wall can
-    // fall between two centres and leave a leak
+    // every cell the box touches, not only cells whose center it covers: a 7 cm wall can
+    // fall between two centers and leave a leak
     void block(double x0, double x1, double y0, double y1) {
         const auto first = [&](double v, double o) {
             return static_cast<int>(std::floor((v - o) / grid.cell + kEps));
@@ -65,9 +65,9 @@ struct Mask {
 
     void block(const Body& b) {
         if (b.vertical) {
-            block(b.centre - b.half, b.centre + b.half, b.from, b.to);
+            block(b.center - b.half, b.center + b.half, b.from, b.to);
         } else {
-            block(b.from, b.to, b.centre - b.half, b.centre + b.half);
+            block(b.from, b.to, b.center - b.half, b.center + b.half);
         }
     }
 };
@@ -78,12 +78,12 @@ void close_doors(const std::vector<Body>& bodies, double door_max, Mask& m) {
         for (const Body& b : bodies) {
             const double gap = b.from - a.to;
             if (&a == &b || a.vertical != b.vertical || gap <= 0.0 || gap > door_max + kEps ||
-                std::abs(a.centre - b.centre) > a.half + b.half) {
+                std::abs(a.center - b.center) > a.half + b.half) {
                 continue;
             }
             Body door;
             door.vertical = a.vertical;
-            door.centre = (a.centre + b.centre) / 2.0;
+            door.center = (a.center + b.center) / 2.0;
             door.half = std::min(a.half, b.half);
             door.from = a.to;
             door.to = b.from;
@@ -128,12 +128,12 @@ Fill flood(Mask& m, int sx, int sy, int k) {
 bool touches(const Body& b, double x0, double x1, double y0, double y1, double d) {
     if (b.vertical) {
         if (std::min(b.to, y1) - std::max(b.from, y0) <= 0.0) return false;
-        return std::abs(b.centre + b.half - x0) <= d + kEps ||
-               std::abs(b.centre - b.half - x1) <= d + kEps;
+        return std::abs(b.center + b.half - x0) <= d + kEps ||
+               std::abs(b.center - b.half - x1) <= d + kEps;
     }
     if (std::min(b.to, x1) - std::max(b.from, x0) <= 0.0) return false;
-    return std::abs(b.centre + b.half - y0) <= d + kEps ||
-           std::abs(b.centre - b.half - y1) <= d + kEps;
+    return std::abs(b.center + b.half - y0) <= d + kEps ||
+           std::abs(b.center - b.half - y1) <= d + kEps;
 }
 
 }  // namespace

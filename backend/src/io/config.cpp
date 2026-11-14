@@ -136,7 +136,7 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("low_lo", r.low_lo);
         o.number("low_hi", r.low_hi);
         o.integer("min_points", r.min_points);
-        o.number("coin_radius", r.coin_radius);
+        o.number("clearance_radius", r.clearance_radius);
     });
     f.object("outline", [&](Fields& o) {
         OutlineParams& l = s.outline;

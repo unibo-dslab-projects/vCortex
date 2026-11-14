@@ -11,7 +11,7 @@
 
 namespace vcortex {
 
-// floor a disk of coin_radius reaches from the poses without touching a low point: walls
+// floor a disk of clearance_radius reaches from the poses without touching a low point: walls
 // with gaps under twice the radius keep it in, and what lies beyond them never counts
 struct RoomSpace {
     std::vector<std::uint8_t> inside;  // same index as Grid::column; 1 = room space

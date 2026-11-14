@@ -46,7 +46,7 @@ double dominant_yaw(const std::vector<Eigen::Vector2d>& band_cells) {
         return 0.0;
     }
 
-    // centred, so every turned point stays within radius and the histograms have fixed size
+    // centered, so every turned point stays within radius and the histograms have fixed size
     Eigen::Vector2d mean = Eigen::Vector2d::Zero();
     for (const Eigen::Vector2d& p : band_cells) mean += p;
     mean /= static_cast<double>(band_cells.size());

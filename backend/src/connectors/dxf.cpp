@@ -68,7 +68,7 @@ void polyline(std::string& out, const char* layer, const std::vector<Eigen::Vect
     }
 }
 
-// 72 = 1 and 73 = 2 centre the text on 11/21; 10/20 must still be there
+// 72 = 1 and 73 = 2 center the text on 11/21; 10/20 must still be there
 void text(std::string& out, const char* layer, const Eigen::Vector2d& at,
           const std::string& s) {
     pair(out, 0, "TEXT");
@@ -88,7 +88,7 @@ void text(std::string& out, const char* layer, const Eigen::Vector2d& at,
     pair(out, 73, "2");
 }
 
-// both faces plus the two ends, as an architect draws a wall, instead of the centreline alone
+// both faces plus the two ends, as an architect draws a wall, instead of the centerline alone
 void wall(std::string& out, const Wall& w) {
     const Eigen::Vector2d direction = w.end - w.start;
     const double len = std::hypot(direction.x(), direction.y());

@@ -10,75 +10,128 @@
 
 namespace vcortex {
 
-RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane& floor, const Grid& grid, const Trajectory& trajectory, const RoomSpaceParams& params) {
-    RoomSpace out;
+namespace {
 
-    if (grid.width <= 0 || grid.height <= 0) return out;
+struct ClassifiedCells {
+    std::vector<std::uint8_t> blocked;    // enough points in the low band: furniture or wall
+    std::vector<std::uint8_t> floor_hit;  // at least one point on the floor
+};
 
-    const std::size_t column_size = grid.column.size();
-    out.inside.assign(column_size, 0);
-    if (trajectory.empty()) return out;
+struct Flood {
+    std::vector<std::uint8_t> centers;  // cells the disk's center can reach from the poses
+    bool reached_grid_edge = false;
+};
 
-    std::vector<std::uint16_t> low(column_size, 0);
-    std::vector<std::uint8_t> floor_hit(column_size, 0);
-    for (const LidarPoint& pt: aligned) {
-        int ix = 0, iy = 0;
-        if (!cell_of(grid, pt.position.x(), pt.position.y(), ix, iy)) continue;
-        const double h = height_above(floor, pt);
-        const std::size_t i = at(grid, ix, iy);
-        if (h >= params.low_lo && h < params.low_hi && low[i] < std::numeric_limits<std::uint16_t>::max()) {
-            ++low[i];
+/// Marks each cell as blocked (enough points in the low band, meaning an object is in)
+/// and as floor hit (a point on the floor).
+ClassifiedCells classify_cells(const std::vector<LidarPoint>& aligned, const Plane& floor,
+                               const Grid& grid, const RoomSpaceParams& params) {
+    const std::size_t cell_count = grid.column.size();
+    std::vector<std::uint16_t> low_point_counts(cell_count, 0);
+    ClassifiedCells cells;
+    cells.floor_hit.assign(cell_count, 0);
+    for (const LidarPoint& point : aligned) {
+        int cell_x = 0, cell_y = 0;
+        if (!cell_of(grid, point.position.x(), point.position.y(), cell_x, cell_y)) continue;
+        const double height = height_above(floor, point);
+        const std::size_t cell = at(grid, cell_x, cell_y);
+        if (height >= params.low_lo && height < params.low_hi &&
+            low_point_counts[cell] < std::numeric_limits<std::uint16_t>::max()) {
+            ++low_point_counts[cell];
         }
-        if (std::abs(h) < params.floor_band) floor_hit[i] = 1;
+        if (std::abs(height) < params.floor_band) cells.floor_hit[cell] = 1;
     }
 
-    std::vector<std::uint8_t> blocked(column_size, 0);
-    for (std::size_t i = 0; i < column_size; ++i) blocked[i] = low[i] >= params.min_points;
-
-    // a missing voxel is not a hole; unseen floor blocks, so a live map never leaks into
-    // a part not seen yet
-    const std::vector<std::uint8_t> seen = close_holes(floor_hit, grid);
-    const std::vector<Eigen::Vector2i> coin = disk(params.coin_radius / grid.cell);
-    std::vector<std::uint8_t> no_centre = grow(blocked, grid, coin);
-    for (std::size_t i = 0; i < column_size; ++i) {
-        if (seen[i] == 0) no_centre[i] = 1;
+    cells.blocked.assign(cell_count, 0);
+    for (std::size_t i = 0; i < cell_count; ++i) {
+        cells.blocked[i] = low_point_counts[i] >= params.min_points;
     }
-
-    // 4 neighbours, as flood in rooms.cpp: diagonal steps slip between cells meeting at a corner
-    std::vector<std::uint8_t> centres(column_size, 0);
-    std::queue<std::pair<int, int>> todo;
-    for (const Pose& pose : trajectory) {
-        int ix = 0, iy = 0;
-        if (!cell_of(grid, pose.position.x(), pose.position.y(), ix, iy)) continue;
-        const std::size_t i = at(grid, ix, iy);
-        if (no_centre[i] != 0 || centres[i] != 0) continue;
-        centres[i] = 1;
-        todo.push({ix, iy});
-    }
-    const Eigen::Vector2i steps[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-    while (!todo.empty()) {
-        const auto [ix, iy] = todo.front();
-        todo.pop();
-        if (ix == 0 || iy == 0 || ix == grid.width - 1 || iy == grid.height - 1) out.leaked = true;
-        for (const Eigen::Vector2i& step : steps) {
-            const int nx = ix + step.x(), ny = iy + step.y();
-            if (!is_in_grid(grid, nx, ny)) continue;
-            const std::size_t n = at(grid, nx, ny);
-            if (no_centre[n] != 0 || centres[n] != 0) continue;
-            centres[n] = 1;
-            todo.push({nx, ny});
-        }
-    }
-
-    // growing back returns the radius, so straight walls lose nothing; corners lose r^2 (1 - pi/4)
-    out.inside = grow(centres, grid, coin);
-    std::size_t cells = 0;
-    for (std::size_t i = 0; i < column_size; ++i) {
-        if (blocked[i] != 0) out.inside[i] = 0;
-        cells += out.inside[i];
-    }
-    out.area = static_cast<double>(cells) * grid.cell * grid.cell;
-    return out;
+    return cells;
 }
 
-} // namespace vcortex
+/// Returns the cells where the disk's center cannot go: within its radius of a blocked cell,
+/// or on floor never seen.
+std::vector<std::uint8_t> find_blocked_centers(const ClassifiedCells& cells, const Grid& grid,
+                                               const std::vector<Eigen::Vector2i>& clearance_disk) {
+    // a missing voxel is not a hole; unseen floor blocks, so a live map never leaks into
+    // a part not seen yet
+    const std::vector<std::uint8_t> seen = close_holes(cells.floor_hit, grid);
+    std::vector<std::uint8_t> blocked_centers = grow(cells.blocked, grid, clearance_disk);
+    for (std::size_t i = 0; i < blocked_centers.size(); ++i) {
+        if (!seen[i]) blocked_centers[i] = 1;
+    }
+    return blocked_centers;
+}
+
+/// Spreads the disk's center from every pose to the cells it can reach, noting if it reached the grid edge.
+Flood flood_from_poses(const Trajectory& trajectory,
+                       const std::vector<std::uint8_t>& blocked_centers, const Grid& grid) {
+    Flood flood;
+    flood.centers.assign(blocked_centers.size(), 0);
+    std::queue<std::pair<int, int>> cells_to_visit;
+    for (const Pose& pose : trajectory) {
+        int cell_x = 0, cell_y = 0;
+        if (!cell_of(grid, pose.position.x(), pose.position.y(), cell_x, cell_y)) continue;
+        const std::size_t cell = at(grid, cell_x, cell_y);
+        if (blocked_centers[cell] || flood.centers[cell]) continue;
+        flood.centers[cell] = 1;
+        cells_to_visit.push({cell_x, cell_y});
+    }
+
+    const Eigen::Vector2i directions[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    while (!cells_to_visit.empty()) {
+        const auto [cell_x, cell_y] = cells_to_visit.front();
+        cells_to_visit.pop();
+        if (cell_x == 0 || cell_y == 0 || cell_x == grid.width - 1 || cell_y == grid.height - 1) {
+            flood.reached_grid_edge = true;
+        }
+        for (const Eigen::Vector2i& direction : directions) {
+            const int neighbour_x = cell_x + direction.x(), neighbour_y = cell_y + direction.y();
+            if (!is_in_grid(grid, neighbour_x, neighbour_y)) continue;
+            const std::size_t neighbour = at(grid, neighbour_x, neighbour_y);
+            if (blocked_centers[neighbour] || flood.centers[neighbour]) continue;
+            flood.centers[neighbour] = 1;
+            cells_to_visit.push({neighbour_x, neighbour_y});
+        }
+
+
+
+    }
+    return flood;
+}
+
+/// Grows the reached centers back by the clearance radius, without blocked cells, and measures the area.
+RoomSpace grow_room_space(const Flood& flood, const std::vector<std::uint8_t>& blocked,
+                          const Grid& grid, const std::vector<Eigen::Vector2i>& clearance_disk) {
+    RoomSpace space;
+    space.leaked = flood.reached_grid_edge;
+    // growing back returns the radius, so straight walls lose nothing; corners lose r^2 (1 - pi/4)
+    space.inside = grow(flood.centers, grid, clearance_disk);
+    std::size_t inside_cell_count = 0;
+    for (std::size_t i = 0; i < space.inside.size(); ++i) {
+        if (blocked[i]) space.inside[i] = 0;
+        inside_cell_count += space.inside[i];
+    }
+    space.area = static_cast<double>(inside_cell_count) * grid.cell * grid.cell;
+    return space;
+}
+
+}  // namespace
+
+RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane& floor,
+                             const Grid& grid, const Trajectory& trajectory,
+                             const RoomSpaceParams& params) {
+    RoomSpace space;
+    if (grid.width <= 0 || grid.height <= 0) return space;
+    space.inside.assign(grid.column.size(), 0);
+    if (trajectory.empty()) return space;
+
+    const std::vector<Eigen::Vector2i> clearance_disk = disk(params.clearance_radius / grid.cell);
+    const ClassifiedCells cells = classify_cells(aligned, floor, grid, params);
+    const std::vector<std::uint8_t> blocked_centers =
+        find_blocked_centers(cells, grid, clearance_disk);
+    const Flood flood = flood_from_poses(trajectory, blocked_centers, grid);
+    return grow_room_space(flood, cells.blocked, grid, clearance_disk);
+}
+
+}  // namespace vcortex

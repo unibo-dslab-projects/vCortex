@@ -61,7 +61,7 @@
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/id" },
-        "start": { "$ref": "#/$defs/xy", "description": "Centreline start, metres." },
+        "start": { "$ref": "#/$defs/xy", "description": "Centerline start, metres." },
         "end": { "$ref": "#/$defs/xy" },
         "thickness": { "type": "number", "exclusiveMinimum": 0 },
         "points": { "type": "integer", "minimum": 0 },

@@ -102,7 +102,7 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("room_space.low_hi", "> room_space.low_lo", rs.low_hi);
     }
     if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
-    if (!(rs.coin_radius > 0)) return problem("room_space.coin_radius", "> 0", rs.coin_radius);
+    if (!(rs.clearance_radius > 0)) return problem("room_space.clearance_radius", "> 0", rs.clearance_radius);
 
     const OutlineParams& o = s.outline;
     // a strip narrower than a cell holds no whole cell

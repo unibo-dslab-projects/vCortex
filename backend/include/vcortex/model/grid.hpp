@@ -15,8 +15,8 @@ struct Grid {
     Eigen::Vector2d origin = Eigen::Vector2d::Zero();  // lower-left corner of cell (0, 0)
     int width = 0, height = 0;          // int, not size_t: neighbour walks step by -1
     std::vector<std::uint16_t> column;  // row-major, column[iy * width + ix]; points in band
-    // same index, mean x y of those points; centres sit on a lattice, and at 45 degrees whole
-    // diagonals of centres land in one dominant_yaw bin (room_around scored 45 instead of 85.5)
+    // same index, mean x y of those points; centers sit on a lattice, and at 45 degrees whole
+    // diagonals of centers land in one dominant_yaw bin (room_around scored 45 instead of 85.5)
     std::vector<Eigen::Vector2d> mean;
 };
 

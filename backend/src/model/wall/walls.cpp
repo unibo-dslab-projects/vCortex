@@ -28,7 +28,7 @@ struct Face {
 
 struct Piece {
     Axis axis = Axis::X;
-    double centre = 0.0, thickness = 0.0;
+    double center = 0.0, thickness = 0.0;
     double from = 0.0, to = 0.0;
     int interior = 0;
     std::size_t cells = 0;
@@ -49,7 +49,7 @@ void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
     f.interior = f.hi > 0 ? 1 : f.lo > 0 ? -1 : 0;
 }
 
-Eigen::Vector2d occupied_centre(const Grid& g) {
+Eigen::Vector2d occupied_center(const Grid& g) {
     double sx = 0.0, sy = 0.0, n = 0.0;
     for (int iy = 0; iy < g.height; ++iy) {
         for (int ix = 0; ix < g.width; ++ix) {
@@ -90,7 +90,7 @@ void pair_faces(std::vector<Face>& faces, std::vector<Piece>& pieces) {
         a.paired = b.paired = true;
         Piece w;
         w.axis = a.c.axis;
-        w.centre = (a.c.position + b.c.position) / 2.0;
+        w.center = (a.c.position + b.c.position) / 2.0;
         w.thickness = best_d;
         w.from = std::min(a.c.from, b.c.from);
         w.to = std::max(a.c.to, b.c.to);
@@ -133,7 +133,7 @@ bool gap_hidden(const Piece& w, double g0, double g1, const std::vector<Face>& f
                 const WallParams& p) {
     for (const Face& f : faces) {
         if (!f.object_front || f.c.axis != w.axis) continue;
-        const double d = f.c.position - w.centre;
+        const double d = f.c.position - w.center;
         const double ahead = w.interior == 0 ? std::abs(d) : d * w.interior;
         if (ahead > 0.0 && ahead <= p.max_depth && f.c.from <= g0 + p.min_gap &&
             f.c.to >= g1 - p.min_gap) {
@@ -146,16 +146,16 @@ bool gap_hidden(const Piece& w, double g0, double g1, const std::vector<Face>& f
 std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<Face>& faces,
                                   const WallParams& p) {
     std::sort(pieces.begin(), pieces.end(), [](const Piece& a, const Piece& b) {
-        return std::tie(a.axis, a.interior, a.centre) < std::tie(b.axis, b.interior, b.centre);
+        return std::tie(a.axis, a.interior, a.center) < std::tie(b.axis, b.interior, b.center);
     });
     std::vector<Piece> out;
     std::size_t i = 0;
     while (i < pieces.size()) {
-        // one line: same axis and room side, centres chained within collinear_tolerance
+        // one line: same axis and room side, centers chained within collinear_tolerance
         std::size_t j = i + 1;
         while (j < pieces.size() && pieces[j].axis == pieces[i].axis &&
                pieces[j].interior == pieces[i].interior &&
-               pieces[j].centre - pieces[j - 1].centre <= p.collinear_tolerance + kEps) {
+               pieces[j].center - pieces[j - 1].center <= p.collinear_tolerance + kEps) {
             ++j;
         }
         std::vector<Piece> line(pieces.begin() + static_cast<std::ptrdiff_t>(i),
@@ -164,10 +164,10 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
                   [](const Piece& a, const Piece& b) { return a.from < b.from; });
         Piece cur = line.front();
         double weight = static_cast<double>(cur.cells);
-        double centre_sum = cur.centre * weight, thick_sum = cur.thickness * weight;
+        double center_sum = cur.center * weight, thick_sum = cur.thickness * weight;
         auto flush = [&] {
             if (weight > 0.0) {
-                cur.centre = centre_sum / weight;
+                cur.center = center_sum / weight;
                 cur.thickness = thick_sum / weight;
             }
             out.push_back(cur);
@@ -181,14 +181,14 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
                 cur.cells += n.cells;
                 cur.is_shell = cur.is_shell || n.is_shell;
                 const double nw = static_cast<double>(n.cells);
-                centre_sum += n.centre * nw;
+                center_sum += n.center * nw;
                 thick_sum += n.thickness * nw;
                 weight += nw;
             } else {
                 flush();
                 cur = n;
                 weight = static_cast<double>(n.cells);
-                centre_sum = n.centre * weight;
+                center_sum = n.center * weight;
                 thick_sum = n.thickness * weight;
             }
         }
@@ -198,19 +198,19 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
     return out;
 }
 
-// ends snap to the centreline of a perpendicular wall within corner_gap, extending or trimming
+// ends snap to the centerline of a perpendicular wall within corner_gap, extending or trimming
 void close_corners(std::vector<Piece>& walls, const WallParams& p) {
     const std::vector<Piece> before = walls;
     for (Piece& w : walls) {
         for (double* end : {&w.from, &w.to}) {
             double best = std::numeric_limits<double>::max();
             for (const Piece& q : before) {
-                if (q.axis == w.axis || w.centre < q.from - p.corner_gap ||
-                    w.centre > q.to + p.corner_gap) {
+                if (q.axis == w.axis || w.center < q.from - p.corner_gap ||
+                    w.center > q.to + p.corner_gap) {
                     continue;
                 }
-                const double d = std::abs(q.centre - *end);
-                if (d <= p.corner_gap + kEps && d < std::abs(best - *end)) best = q.centre;
+                const double d = std::abs(q.center - *end);
+                if (d <= p.corner_gap + kEps && d < std::abs(best - *end)) best = q.center;
             }
             if (best != std::numeric_limits<double>::max()) *end = best;
         }
@@ -252,7 +252,7 @@ bool is_in_front_of_outline(const Face& candidate_face, const std::vector<Outlin
 
 double point_to_wall(double x, double y, const Piece& w) {
     const double dn =
-        std::max(0.0, std::abs(normal_of(w.axis, x, y) - w.centre) - w.thickness / 2.0);
+        std::max(0.0, std::abs(normal_of(w.axis, x, y) - w.center) - w.thickness / 2.0);
     const double u = along_of(w.axis, x, y);
     const double du = std::max({0.0, w.from - u, u - w.to});
     return std::hypot(dn, du);
@@ -262,11 +262,11 @@ double point_to_wall(double x, double y, const Piece& w) {
 // another inside wall the end must touch (corner_gap), or rows of desks chain to each other
 bool ends_meet(const Piece& wall, const Piece& other, const WallParams& p) {
     const bool is_in_line = other.axis == wall.axis &&
-                            std::abs(other.centre - wall.centre) <= p.collinear_tolerance + kEps;
+                            std::abs(other.center - wall.center) <= p.collinear_tolerance + kEps;
     const double allowed_gap = is_in_line || other.is_shell ? p.door_max : p.corner_gap;
     for (const double end : {wall.from, wall.to}) {
-        const double x = wall.axis == Axis::X ? wall.centre : end;
-        const double y = wall.axis == Axis::X ? end : wall.centre;
+        const double x = wall.axis == Axis::X ? wall.center : end;
+        const double y = wall.axis == Axis::X ? end : wall.center;
         if (point_to_wall(x, y, other) <= allowed_gap + kEps) return true;
     }
     return false;
@@ -375,7 +375,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         f.paired = true;
         Piece w;
         w.axis = f.c.axis;
-        w.centre = f.c.position;
+        w.center = f.c.position;
         w.thickness = p.thickness;
         w.from = f.c.from;
         w.to = f.c.to;
@@ -385,7 +385,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
 
     // no poses near a face (or no trajectory at all): guess its room is towards the middle of
     // the map, so the outermost of overlapping parallel faces becomes the wall
-    const Eigen::Vector2d middle = occupied_centre(grid);
+    const Eigen::Vector2d middle = occupied_center(grid);
     for (Face& f : faces) {
         if (!f.paired && !f.inside && f.interior == 0) {
             f.interior = normal_of(f.c.axis, middle.x(), middle.y()) >= f.c.position ? 1 : -1;
@@ -401,8 +401,8 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         Piece w;
         w.axis = f.c.axis;
         w.thickness = p.thickness;
-        // the face seen is the room side; the centreline lies half a thickness behind it
-        w.centre = f.c.position - f.interior * p.thickness / 2.0;
+        // the face seen is the room side; the centerline lies half a thickness behind it
+        w.center = f.c.position - f.interior * p.thickness / 2.0;
         w.from = f.c.from;
         w.to = f.c.to;
         w.interior = f.interior;
@@ -415,8 +415,8 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         Piece shell_wall;
         shell_wall.axis = side.direction.axis;
         shell_wall.thickness = p.thickness;
-        // the face seen is the room side; the centreline lies half a thickness outward
-        shell_wall.centre = side.face + side.direction.outward * p.thickness / 2.0;
+        // the face seen is the room side; the centerline lies half a thickness outward
+        shell_wall.center = side.face + side.direction.outward * p.thickness / 2.0;
         shell_wall.from = side.from;
         shell_wall.to = side.to;
         shell_wall.interior = -side.direction.outward;
@@ -434,17 +434,17 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         keep_walls_hanging_from_shell(walls, p);
     }
     std::sort(walls.begin(), walls.end(), [](const Piece& a, const Piece& b) {
-        return std::tie(a.axis, a.centre, a.from) < std::tie(b.axis, b.centre, b.from);
+        return std::tie(a.axis, a.center, a.from) < std::tie(b.axis, b.center, b.from);
     });
 
     for (std::size_t i = 0; i < walls.size(); ++i) {
         const Piece& w = walls[i];
         Wall wall;
         wall.id = "wall-" + std::to_string(i + 1);
-        wall.start = w.axis == Axis::X ? Eigen::Vector2d{w.centre, w.from}
-                                        : Eigen::Vector2d{w.from, w.centre};
-        wall.end = w.axis == Axis::X ? Eigen::Vector2d{w.centre, w.to}
-                                      : Eigen::Vector2d{w.to, w.centre};
+        wall.start = w.axis == Axis::X ? Eigen::Vector2d{w.center, w.from}
+                                        : Eigen::Vector2d{w.from, w.center};
+        wall.end = w.axis == Axis::X ? Eigen::Vector2d{w.center, w.to}
+                                      : Eigen::Vector2d{w.to, w.center};
         wall.thickness = w.thickness;
         const double length = w.to - w.from;
         wall.coverage = length > 0.0

@@ -7,7 +7,7 @@
 
 export type Id = string
 /**
- * Centreline start, metres.
+ * Centerline start, metres.
  *
  * @minItems 2
  * @maxItems 2

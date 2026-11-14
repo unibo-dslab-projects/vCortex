@@ -188,41 +188,41 @@ std::optional<std::vector<Eigen::Vector2i>> straighten_corners(const std::vector
 
 }  // namespace
 
-std::vector<Eigen::Vector2i> trace_outer_ring(const ObjectGrid& grid,
-                                              const std::vector<std::uint32_t>& labels,
-                                              std::uint32_t object_id) {
-    std::vector<Eigen::Vector2i> outer_ring;
-    long long outer_doubled_area = 0;
+std::vector<Eigen::Vector2i> trace_outline(const ObjectGrid& grid,
+                                           const std::vector<std::uint32_t>& labels,
+                                           std::uint32_t object_id) {
+    std::vector<Eigen::Vector2i> outline;
+    long long outline_doubled_area = 0;
     // holes run clockwise, so their area is negative and they never win; the largest ring guards
     // pieces that are not 4-connected, and a tie keeps the ring found first
     const std::vector<BoundaryEdge> edges = find_boundary_edges(grid, labels, object_id);
     for (const std::vector<BoundaryEdge>& ring : chain_rings(grid, edges)) {
         std::vector<Eigen::Vector2i> corners = keep_corners_only(ring);
         const long long doubled_area = doubled_signed_area(corners);
-        if (doubled_area <= outer_doubled_area) continue;
+        if (doubled_area <= outline_doubled_area) continue;
 
-        outer_doubled_area = doubled_area;
-        outer_ring = std::move(corners);
+        outline_doubled_area = doubled_area;
+        outline = std::move(corners);
     }
-    return outer_ring;
+    return outline;
 }
 
-void drop_small_segments(std::vector<Eigen::Vector2i>& ring, int min_segment_cells) {
-    while (ring.size() > MIN_RING_CORNERS) {
-        const std::size_t count = ring.size();
+void drop_small_segments(std::vector<Eigen::Vector2i>& outline, int min_segment_cells) {
+    while (outline.size() > MIN_RING_CORNERS) {
+        const std::size_t count = outline.size();
         std::optional<std::vector<Eigen::Vector2i>> best_straightened;
         // the threshold and the shortest step so far; strict < keeps the first one on a tie
         int best_segment_length = min_segment_cells;
         for (std::size_t index = 0; index < count; ++index) {
-            const Eigen::Vector2i a = ring[(index + count - 1) % count];
-            const Eigen::Vector2i b = ring[index];
-            const Eigen::Vector2i c = ring[(index + 1) % count];
-            const Eigen::Vector2i d = ring[(index + 2) % count];
+            const Eigen::Vector2i a = outline[(index + count - 1) % count];
+            const Eigen::Vector2i b = outline[index];
+            const Eigen::Vector2i c = outline[(index + 1) % count];
+            const Eigen::Vector2i d = outline[(index + 2) % count];
             const int segment_length = (c - b).lpNorm<1>();
             if (segment_length >= best_segment_length) continue;
             if (direction_between(a, b) != direction_between(c, d)) continue;
 
-            std::optional<std::vector<Eigen::Vector2i>> straightened = straighten_corners(ring, index);
+            std::optional<std::vector<Eigen::Vector2i>> straightened = straighten_corners(outline, index);
             if (!straightened) continue;
 
             best_segment_length = segment_length;
@@ -230,7 +230,7 @@ void drop_small_segments(std::vector<Eigen::Vector2i>& ring, int min_segment_cel
         }
         if (!best_straightened) return;
 
-        ring = std::move(*best_straightened);
+        outline = std::move(*best_straightened);
     }
 }
 

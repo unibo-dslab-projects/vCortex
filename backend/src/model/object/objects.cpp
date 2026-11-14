@@ -98,14 +98,14 @@ std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points
 
         const Eigen::AlignedBox3f bounds = get_points_bounding_box(points);
 
-        std::vector<Eigen::Vector2i> ring =
-            trace_outer_ring(grid, labels, static_cast<std::uint32_t>(label));
-        drop_small_segments(ring, min_step_cells);
+        std::vector<Eigen::Vector2i> outline =
+            trace_outline(grid, labels, static_cast<std::uint32_t>(label));
+        drop_small_segments(outline, min_step_cells);
 
         Object object;
         // points sit anywhere in their cell, so their box can be a cell short of what is drawn
         Eigen::AlignedBox2d box;
-        for (const Eigen::Vector2i& corner : ring) {
+        for (const Eigen::Vector2i& corner : outline) {
             object.footprint.push_back(grid.origin + corner.cast<double>() * grid.cell);
             box.extend(object.footprint.back());
         }

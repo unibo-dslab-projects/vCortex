@@ -45,8 +45,8 @@ export interface Twin {
     points_in: number
     after_outliers: number
     floor_tilt_deg: number
-    room_space_area_m2?: number
-    room_space_leaked?: boolean
+    free_space_area_m2?: number
+    free_space_leaked?: boolean
     wall_faces_found?: number
     outline_sides?: number
     yaw_deg: number

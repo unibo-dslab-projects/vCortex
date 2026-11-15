@@ -65,7 +65,7 @@ add_library(vcortex_core STATIC
   src/model/wall/candidates.cpp
   src/model/wall/walls.cpp
   src/model/rooms.cpp
-  src/model/floor/room_space.cpp
+  src/model/floor/free_space.cpp
   src/model/wall/face_samples.cpp
   src/model/wall/outline.cpp
   src/model/model.cpp

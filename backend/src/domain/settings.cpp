@@ -93,18 +93,28 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("rooms.wall_touch_distance", ">= 0", r.wall_touch_distance);
     }
 
-    const RoomSpaceParams& rs = s.room_space;
-    if (!(rs.floor_band > 0)) return problem("room_space.floor_band", "> 0", rs.floor_band);
-    if (!(rs.low_lo >= rs.floor_band)) {
-        return problem("room_space.low_lo", ">= room_space.floor_band", rs.low_lo);
+    const FreeSpaceParams& free_space = s.free_space;
+    if (!(free_space.floor_band > 0)) {
+        return problem("free_space.floor_band", "> 0", free_space.floor_band);
     }
-    if (!(rs.low_hi > rs.low_lo)) {
-        return problem("room_space.low_hi", "> room_space.low_lo", rs.low_hi);
+    if (!(free_space.low_lo >= free_space.floor_band)) {
+        return problem("free_space.low_lo", ">= free_space.floor_band", free_space.low_lo);
     }
-    if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
-    if (!(rs.clearance_radius > 0)) return problem("room_space.clearance_radius", "> 0", rs.clearance_radius);
+    if (!(free_space.low_hi > free_space.low_lo)) {
+        return problem("free_space.low_hi", "> free_space.low_lo", free_space.low_hi);
+    }
+    if (free_space.min_points < 1) {
+        return problem("free_space.min_points", ">= 1", free_space.min_points);
+    }
+    if (!(free_space.clearance_radius > 0)) {
+        return problem("free_space.clearance_radius", "> 0", free_space.clearance_radius);
+    }
 
     const OutlineParams& o = s.outline;
+    if (!(o.band_lo >= 0 && o.band_lo < s.wall_height - c.band_top_margin)) {
+        return problem("outline.band_lo", ">= 0 and below wall_height - candidates.band_top_margin",
+                       o.band_lo);
+    }
     // a strip narrower than a cell holds no whole cell
     if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     // one missing cell must not end the walk

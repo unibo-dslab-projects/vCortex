@@ -130,8 +130,8 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("min_area", s.rooms.min_area);
         o.number("wall_touch_distance", s.rooms.wall_touch_distance);
     });
-    f.object("room_space", [&](Fields& o) {
-        RoomSpaceParams& r = s.room_space;
+    f.object("free_space", [&](Fields& o) {
+        FreeSpaceParams& r = s.free_space;
         o.number("floor_band", r.floor_band);
         o.number("low_lo", r.low_lo);
         o.number("low_hi", r.low_hi);
@@ -140,6 +140,7 @@ void read_settings(Fields& f, ModelSettings& s) {
     });
     f.object("outline", [&](Fields& o) {
         OutlineParams& l = s.outline;
+        o.number("band_lo", l.band_lo);
         o.number("strip", l.strip);
         o.number("max_reach", l.max_reach);
         o.number("max_gap", l.max_gap);

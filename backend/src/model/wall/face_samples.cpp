@@ -11,7 +11,7 @@
 
 namespace vcortex {
 
-std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
+std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid& grid,
                                               const std::vector<LidarPoint>& aligned_points,
                                               const Plane& floor, double band_bottom_metres,
                                               double band_top_metres, Direction direction,

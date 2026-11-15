@@ -14,7 +14,7 @@
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/wall/outline.hpp"
-#include "vcortex/model/floor/room_space.hpp"
+#include "vcortex/model/floor/free_space.hpp"
 #include "vcortex/model/rooms.hpp"
 #include "vcortex/model/wall/face_samples.hpp"
 #include "vcortex/model/wall/walls.hpp"
@@ -72,21 +72,21 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     aligned_floor.a = aligned_slope.x();
     aligned_floor.b = aligned_slope.y();
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
-    const RoomSpace space =
-        compute_room_space(aligned, aligned_floor, grid, aligned_traj, settings.room_space);
-    rep.room_space_area = space.area;
-    rep.room_space_leaked = space.leaked;
+    const FreeSpace space =
+        compute_free_space(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
+    rep.free_space_area = space.area;
+    rep.free_space_leaked = space.leaked;
     std::vector<WallFaceSample> samples[4];
     for (int k = 0; k < 4; ++k) {
         samples[k] = sample_wall_faces(space, grid, aligned, aligned_floor,
-                                       settings.room_space.low_lo, band_hi, kOut[k],
+                                       settings.outline.band_lo, band_hi, kOut[k],
                                        settings.outline);
         for (const WallFaceSample& sample : samples[k]) {
             rep.wall_faces_found += sample.face ? 1 : 0;
         }
     }
 
-    // a leaked room space ran into another room, so its outermost cells are not our walls
+    // a leaked free space ran into another room, so its outermost cells are not our walls
     std::vector<OutlineSide> outline;
     if (!space.leaked) {
         for (int k = 0; k < 4; ++k) {
@@ -95,7 +95,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
             }
         }
         join_outline_corners(outline, settings.outline);
-        measure_outline_coverage(outline, aligned, aligned_floor, settings.room_space.low_lo,
+        measure_outline_coverage(outline, aligned, aligned_floor, settings.outline.band_lo,
                                  band_hi, cp.cell, settings.outline.coverage_tolerance);
     }
     rep.outline_sides = outline.size();

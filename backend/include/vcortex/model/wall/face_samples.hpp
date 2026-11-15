@@ -8,7 +8,7 @@
 #include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/floor/room_space.hpp"
+#include "vcortex/model/floor/free_space.hpp"
 
 namespace vcortex {
 
@@ -29,7 +29,7 @@ struct WallFaceSample {
 /// Cuts the room into strips across the walls met in direction and finds the wall face in
 /// each one, walking out from the outermost room cell. Furniture in the middle of the room
 /// is never taken for a wall. Samples come back in order of from.
-std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
+std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid& grid,
                                               const std::vector<LidarPoint>& aligned_points,
                                               const Plane& floor, double band_bottom_metres,
                                               double band_top_metres, Direction direction,

@@ -1,4 +1,4 @@
-#include "vcortex/model/floor/room_space.hpp"
+#include "vcortex/model/floor/free_space.hpp"
 #include "vcortex/geometry/grids.hpp"
 
 #include <cmath>
@@ -25,7 +25,7 @@ struct Flood {
 /// Marks each cell as blocked (enough points in the low band, meaning an object is in)
 /// and as floor hit (a point on the floor).
 ClassifiedCells classify_cells(const std::vector<LidarPoint>& aligned, const Plane& floor,
-                               const Grid& grid, const RoomSpaceParams& params) {
+                               const Grid& grid, const FreeSpaceParams& params) {
     const std::size_t cell_count = grid.column.size();
     std::vector<std::uint16_t> low_point_counts(cell_count, 0);
     ClassifiedCells cells;
@@ -101,9 +101,9 @@ Flood flood_from_poses(const Trajectory& trajectory,
 }
 
 /// Grows the reached centers back by the clearance radius, without blocked cells, and measures the area.
-RoomSpace grow_room_space(const Flood& flood, const std::vector<std::uint8_t>& blocked,
+FreeSpace grow_free_space(const Flood& flood, const std::vector<std::uint8_t>& blocked,
                           const Grid& grid, const std::vector<Eigen::Vector2i>& clearance_disk) {
-    RoomSpace space;
+    FreeSpace space;
     space.leaked = flood.reached_grid_edge;
     // growing back returns the radius, so straight walls lose nothing; corners lose r^2 (1 - pi/4)
     space.inside = grow(flood.centers, grid, clearance_disk);
@@ -118,10 +118,10 @@ RoomSpace grow_room_space(const Flood& flood, const std::vector<std::uint8_t>& b
 
 }  // namespace
 
-RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane& floor,
+FreeSpace compute_free_space(const std::vector<LidarPoint>& aligned, const Plane& floor,
                              const Grid& grid, const Trajectory& trajectory,
-                             const RoomSpaceParams& params) {
-    RoomSpace space;
+                             const FreeSpaceParams& params) {
+    FreeSpace space;
     if (grid.width <= 0 || grid.height <= 0) return space;
     space.inside.assign(grid.column.size(), 0);
     if (trajectory.empty()) return space;
@@ -131,7 +131,7 @@ RoomSpace compute_room_space(const std::vector<LidarPoint>& aligned, const Plane
     const std::vector<std::uint8_t> blocked_centers =
         find_blocked_centers(cells, grid, clearance_disk);
     const Flood flood = flood_from_poses(trajectory, blocked_centers, grid);
-    return grow_room_space(flood, cells.blocked, grid, clearance_disk);
+    return grow_free_space(flood, cells.blocked, grid, clearance_disk);
 }
 
 }  // namespace vcortex

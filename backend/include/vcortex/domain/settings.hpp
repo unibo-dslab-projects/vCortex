@@ -51,7 +51,7 @@ struct RoomParams {
     double wall_touch_distance = 0.15;   // wall faces this close to the outline belong to the room
 };
 
-struct RoomSpaceParams {
+struct FreeSpaceParams {
     double floor_band = 0.08;      // metres around the floor plane; the floor layer is this thick
     double low_lo = 0.10;          // wall and glass bases, seen under desks by a low lidar
     double low_hi = 0.30;
@@ -60,8 +60,9 @@ struct RoomSpaceParams {
 };
 
 struct OutlineParams {
-    double strip = 0.25;               // strip width along the wall; one face per strip
-    double max_reach = 1.5;            // walk past the room space at most this far
+    double band_lo = 0.10;             // metres above the floor; wall and glass bases show under desks
+    double strip = 0.25;              // strip width along the wall; one face per strip
+    double max_reach = 1.5;            // walk past the free space at most this far
     double max_gap = 0.30;             // this much empty floor ends the walk: what lies past is outside
     double face_depth = 0.10;          // points this deep in the last occupied cell give the face
     double segment_jump = 0.15;        // a face this far from its segment starts a new segment
@@ -84,7 +85,7 @@ struct ModelSettings {
     ObjectParams objects;
     WallParams walls;
     RoomParams rooms;
-    RoomSpaceParams room_space;
+    FreeSpaceParams free_space;
     OutlineParams outline;
 };
 

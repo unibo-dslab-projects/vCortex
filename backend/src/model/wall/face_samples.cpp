@@ -12,24 +12,25 @@
 namespace vcortex {
 
 std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
-                                        const std::vector<LidarPoint>& aligned, const Plane& floor,
-                                        double low_lo, double band_hi, Direction d,
-                                        const OutlineParams& p) {
+                                              const std::vector<LidarPoint>& aligned_points,
+                                              const Plane& floor, double band_bottom_metres,
+                                              double band_top_metres, Direction direction,
+                                              const OutlineParams& parameters) {
     std::vector<WallFaceSample> out;
     if (grid.width <= 0 || grid.height <= 0 || space.inside.size() != grid.column.size()) {
         return out;
     }
 
     // across: the walk's axis; along: the wall's axis, cut into strips
-    const bool search_axis_is_x = d.axis == Axis::X;
+    const bool search_axis_is_x = direction.axis == Axis::X;
     const int across_len = search_axis_is_x ? grid.width : grid.height;
     const int along_len = search_axis_is_x ? grid.height : grid.width;
     const double across_start = search_axis_is_x ? grid.origin.x() : grid.origin.y(); // grid border starting coordinates
     const double along_start = search_axis_is_x ? grid.origin.y() : grid.origin.x();  // grid base starting coordinates
-    const int cells_per_strip = num_cells_in_len(p.strip, grid.cell);
+    const int cells_per_strip = num_cells_in_len(parameters.strip, grid.cell);
     const int num_strips = along_len / cells_per_strip;
-    const int max_gap = num_cells_in_len(p.max_gap, grid.cell);
-    const int max_reach = num_cells_in_len(p.max_reach, grid.cell);
+    const int max_gap = num_cells_in_len(parameters.max_gap, grid.cell);
+    const int max_reach = num_cells_in_len(parameters.max_reach, grid.cell);
     const auto get_index = [&](int y, int x) {
         return static_cast<std::size_t>(y) * static_cast<std::size_t>(across_len) +
                static_cast<std::size_t>(x);
@@ -39,9 +40,9 @@ std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid
     std::vector<std::uint8_t> room(get_index(num_strips, 0), 0);
     // vector to keep track of occupied cells per strip -> calculate walls by median position
     std::vector<std::vector<double>> coords(static_cast<std::size_t>(num_strips));
-    for (const LidarPoint& pt : aligned) {
+    for (const LidarPoint& pt : aligned_points) {
         const double h = height_above(floor, pt);
-        if (h < low_lo || h >= band_hi) continue;
+        if (h < band_bottom_metres || h >= band_top_metres) continue;
         const double across = search_axis_is_x ? pt.position.x() : pt.position.y();
         const double along = search_axis_is_x ? pt.position.y() : pt.position.x();
         const int i = static_cast<int>(std::floor((across - across_start) / grid.cell));
@@ -64,7 +65,7 @@ std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid
         int start = -1;
         for (int i = 0; i < across_len; ++i) {
             if (room[get_index(s, i)] == 0) continue;
-            if (d.outward > 0 || start < 0) start = i;
+            if (direction.outward > 0 || start < 0) start = i;
         }
         if (start < 0) continue;
 
@@ -77,7 +78,7 @@ std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid
         int last = 0, empty = 0;
         bool gap = false;
         for (int step = 1; step <= max_reach; ++step) {
-            const int i = start + d.outward * step;
+            const int i = start + direction.outward * step;
             if (i >= 0 && i < across_len && occupied[get_index(s, i)] != 0) {
                 last = step;
                 empty = 0;
@@ -88,11 +89,11 @@ std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid
         }
 
         if (gap && last > 0) {
-            const int i = start + d.outward * last;
+            const int i = start + direction.outward * last;
             // from the outer side of the last occupied cell, face_depth back towards the room
-            const double outer = across_start + (d.outward > 0 ? i + 1 : i) * grid.cell;
-            const double lo = d.outward > 0 ? outer - p.face_depth : outer;
-            const double hi = d.outward > 0 ? outer : outer + p.face_depth;
+            const double outer = across_start + (direction.outward > 0 ? i + 1 : i) * grid.cell;
+            const double lo = direction.outward > 0 ? outer - parameters.face_depth : outer;
+            const double hi = direction.outward > 0 ? outer : outer + parameters.face_depth;
             std::vector<double> window;
             for (double c : coords[static_cast<std::size_t>(s)]) {
                 if (c >= lo && c < hi) window.push_back(c);

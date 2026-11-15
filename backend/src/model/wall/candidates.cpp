@@ -13,7 +13,7 @@ namespace {
 // metre limits become whole cells; the slack keeps 0.30 / 0.05 from rounding down to 5
 constexpr double kSlack = 1e-9;
 
-struct Run {
+struct OccupiedSpan {
     int line = 0;             // grid row (Axis::Y) or column (Axis::X)
     int start = 0, last = 0;  // first and last occupied cell along the line
     std::size_t occupied = 0;
@@ -40,36 +40,37 @@ struct View {
     }
 };
 
-// short runs are cross-sections of perpendicular walls; kept, they would glue every line they
+// short spans are cross-sections of perpendicular walls; kept, they would glue every line they
 // touch into one candidate
-std::vector<Run> find_runs(const View& v, int max_gap_cells, int min_piece_cells) {
-    std::vector<Run> runs;
+std::vector<OccupiedSpan> find_occupied_spans(const View& v, int max_gap_cells,
+                                              int min_piece_cells) {
+    std::vector<OccupiedSpan> spans;
     for (int line = 0; line < v.lines(); ++line) {
-        Run run;
+        OccupiedSpan span;
         bool open = false;
         auto keep = [&] {
-            if (run.last - run.start + 1 >= min_piece_cells) runs.push_back(run);
+            if (span.last - span.start + 1 >= min_piece_cells) spans.push_back(span);
         };
         for (int k = 0; k < v.along(); ++k) {
             if (!v.occupied(line, k)) {
                 continue;
             }
-            if (open && k - run.last - 1 > max_gap_cells) {
+            if (open && k - span.last - 1 > max_gap_cells) {
                 keep();
                 open = false;
             }
             if (!open) {
-                run = Run{line, k, k, 0};
+                span = OccupiedSpan{line, k, k, 0};
                 open = true;
             }
-            run.last = k;
-            ++run.occupied;
+            span.last = k;
+            ++span.occupied;
         }
         if (open) {
             keep();
         }
     }
-    return runs;
+    return spans;
 }
 
 int find_root(std::vector<int>& parent, int i) {
@@ -81,29 +82,29 @@ int find_root(std::vector<int>& parent, int i) {
 
 // neighbouring lines only, so a front one empty row away stays apart; spans may touch across
 // a bridgeable gap, so a wall still slightly tilted, stepping between rows, stays whole
-std::vector<Candidate> merge(const View& v, std::vector<Run> runs, int merge_lines,
+std::vector<Candidate> merge(const View& v, std::vector<OccupiedSpan> spans, int merge_lines,
                              int max_gap_cells, int min_cells) {
-    std::sort(runs.begin(), runs.end(), [](const Run& a, const Run& b) {
+    std::sort(spans.begin(), spans.end(), [](const OccupiedSpan& a, const OccupiedSpan& b) {
         return std::tie(a.line, a.start) < std::tie(b.line, b.start);
     });
-    std::vector<int> parent(runs.size());
+    std::vector<int> parent(spans.size());
     std::iota(parent.begin(), parent.end(), 0);
-    for (std::size_t i = 0; i < runs.size(); ++i) {
+    for (std::size_t i = 0; i < spans.size(); ++i) {
         for (std::size_t j = i + 1;
-             j < runs.size() && runs[j].line - runs[i].line <= merge_lines; ++j) {
-            if (runs[j].line != runs[i].line &&
-                runs[j].start <= runs[i].last + max_gap_cells + 1 &&
-                runs[i].start <= runs[j].last + max_gap_cells + 1) {
+             j < spans.size() && spans[j].line - spans[i].line <= merge_lines; ++j) {
+            if (spans[j].line != spans[i].line &&
+                spans[j].start <= spans[i].last + max_gap_cells + 1 &&
+                spans[i].start <= spans[j].last + max_gap_cells + 1) {
                 parent[static_cast<std::size_t>(find_root(parent, static_cast<int>(j)))] =
                     find_root(parent, static_cast<int>(i));
             }
         }
     }
 
-    std::vector<std::vector<const Run*>> groups(runs.size());
-    for (std::size_t i = 0; i < runs.size(); ++i) {
+    std::vector<std::vector<const OccupiedSpan*>> groups(spans.size());
+    for (std::size_t i = 0; i < spans.size(); ++i) {
         groups[static_cast<std::size_t>(find_root(parent, static_cast<int>(i)))].push_back(
-            &runs[i]);
+            &spans[i]);
     }
     std::vector<Candidate> out;
     for (const auto& group : groups) {
@@ -113,11 +114,11 @@ std::vector<Candidate> merge(const View& v, std::vector<Run> runs, int merge_lin
         int start = group.front()->start, last = group.front()->last;
         double weighted = 0.0;
         std::size_t total = 0;
-        for (const Run* r : group) {
-            start = std::min(start, r->start);
-            last = std::max(last, r->last);
-            weighted += v.position(r->line) * static_cast<double>(r->occupied);
-            total += r->occupied;
+        for (const OccupiedSpan* span : group) {
+            start = std::min(start, span->start);
+            last = std::max(last, span->last);
+            weighted += v.position(span->line) * static_cast<double>(span->occupied);
+            total += span->occupied;
         }
         // length after merging: each row piece of a stepping wall can be under min_length
         if (last - start + 1 < min_cells) {
@@ -125,9 +126,9 @@ std::vector<Candidate> merge(const View& v, std::vector<Run> runs, int merge_lin
         }
         // union over lines, so a wall seen on two rows counts each cell along it once
         std::vector<bool> seen(static_cast<std::size_t>(last - start + 1), false);
-        for (const Run* r : group) {
-            for (int k = r->start; k <= r->last; ++k) {
-                if (v.occupied(r->line, k)) {
+        for (const OccupiedSpan* span : group) {
+            for (int k = span->start; k <= span->last; ++k) {
+                if (v.occupied(span->line, k)) {
                     seen[static_cast<std::size_t>(k - start)] = true;
                 }
             }
@@ -154,8 +155,9 @@ std::vector<Candidate> find_candidates(const Grid& grid, const CandidateParams& 
     std::vector<Candidate> out;
     for (const Axis axis : {Axis::X, Axis::Y}) {
         const View v{grid, axis, p.min_column};
-        std::vector<Candidate> part = merge(v, find_runs(v, max_gap_cells, (min_cells + 1) / 2),
-                                           merge_lines, max_gap_cells, min_cells);
+        std::vector<Candidate> part =
+            merge(v, find_occupied_spans(v, max_gap_cells, (min_cells + 1) / 2), merge_lines,
+                  max_gap_cells, min_cells);
         std::sort(part.begin(), part.end(), [](const Candidate& a, const Candidate& b) {
             return std::tie(a.position, a.from) < std::tie(b.position, b.from);
         });

@@ -15,64 +15,66 @@ namespace {
 constexpr double kEpsilon = 1e-9;
 
 // neighbouring strips that agree on one position
-struct Run {
+struct Segment {
     double from = 0.0, to = 0.0;
     std::vector<double> faces;
 };
 
-double run_length(const Run& run) { return run.to - run.from; }
+double segment_length(const Segment& segment) { return segment.to - segment.from; }
 
 // strips without a face neither split nor join: a door still belongs to the same wall line
-// the reference is the run median, so one odd strip does not drag it
-std::vector<Run> merge_walls_and_split_into_runs(const std::vector<WallFaceSample>& samples, double run_jump) {
-    std::vector<Run> runs;
+// the reference is the segment median, so one odd strip does not drag it
+std::vector<Segment> split_into_segments(const std::vector<WallFaceSample>& samples,
+                                         double segment_jump) {
+    std::vector<Segment> segments;
     for (const WallFaceSample& sample : samples) {
         if (!sample.face) continue;
-        if (!runs.empty() && std::abs(*sample.face - median(runs.back().faces)) <= run_jump) {
-            runs.back().faces.push_back(*sample.face);
-            runs.back().to = sample.to;
+        if (!segments.empty() &&
+            std::abs(*sample.face - median(segments.back().faces)) <= segment_jump) {
+            segments.back().faces.push_back(*sample.face);
+            segments.back().to = sample.to;
         } else {
-            runs.push_back({sample.from, sample.to, {*sample.face}});
+            segments.push_back({sample.from, sample.to, {*sample.face}});
         }
     }
-    return runs;
+    return segments;
 }
 
-/// Merges close runs by extending them to cover the gap, so they are treated as a single run.
-void merge_close_runs(std::vector<Run>& runs, double merge_distance) {
-    std::vector<Run> merged;
-    for (Run& run : runs) {
+/// Merges close segments by extending them to cover the gap, so they are treated as a single segment.
+void merge_close_segments(std::vector<Segment>& segments, double merge_distance) {
+    std::vector<Segment> merged;
+    for (Segment& segment : segments) {
         if (!merged.empty() &&
-            std::abs(median(merged.back().faces) - median(run.faces)) <= merge_distance) {
-            Run& previous = merged.back();
-            previous.faces.insert(previous.faces.end(), run.faces.begin(), run.faces.end());
-            previous.from = std::min(previous.from, run.from);
-            previous.to = std::max(previous.to, run.to);
+            std::abs(median(merged.back().faces) - median(segment.faces)) <= merge_distance) {
+            Segment& previous = merged.back();
+            previous.faces.insert(previous.faces.end(), segment.faces.begin(), segment.faces.end());
+            previous.from = std::min(previous.from, segment.from);
+            previous.to = std::max(previous.to, segment.to);
         } else {
-            merged.push_back(std::move(run));
+            merged.push_back(std::move(segment));
         }
     }
-    runs = std::move(merged);
+    segments = std::move(merged);
 }
 
-// a short run lying a little inward of a neighbour is furniture against the wall: the neighbour
+// a short segment lying a little inward of a neighbour is furniture against the wall: the neighbour
 // grows over it and the strips of the dent do not vote
 // repeated until nothing changes, because removing one dent can expose the next
-void bridge_dents(std::vector<Run>& runs, int outward, const OutlineParams& parameters) {
+void bridge_dents(std::vector<Segment>& segments, int outward, const OutlineParams& parameters) {
     bool bridged_one = true;
     while (bridged_one) {
         bridged_one = false;
-        const int run_count = static_cast<int>(runs.size());
-        for (int dent_index = 0; dent_index < run_count && !bridged_one; ++dent_index) {
-            const Run& dent = runs[static_cast<std::size_t>(dent_index)];
-            if (run_length(dent) > parameters.dent_length + kEpsilon) continue;
+        const int segment_count = static_cast<int>(segments.size());
+        for (int dent_index = 0; dent_index < segment_count && !bridged_one; ++dent_index) {
+            const Segment& dent = segments[static_cast<std::size_t>(dent_index)];
+            if (segment_length(dent) > parameters.dent_length + kEpsilon) continue;
 
             // closer to the real-possible value
             const double dent_face = median(dent.faces);
             int host_index = -1;
             for (const int neighbour_index : {dent_index - 1, dent_index + 1}) {
-                if (neighbour_index < 0 || neighbour_index >= run_count) continue;
-                const Run& neighbour = runs[static_cast<std::size_t>(neighbour_index)];
+                if (neighbour_index < 0 || neighbour_index >= segment_count) continue;
+                const Segment& neighbour = segments[static_cast<std::size_t>(neighbour_index)];
                 const double outward_offset = (median(neighbour.faces) - dent_face) * outward;
                 // the dent is already part of the allignment || the dent is too deep
                 if (outward_offset <= parameters.merge_distance ||
@@ -80,16 +82,16 @@ void bridge_dents(std::vector<Run>& runs, int outward, const OutlineParams& para
                     continue;
                 }
                 if (host_index < 0 ||
-                    run_length(neighbour) > run_length(runs[static_cast<std::size_t>(host_index)])) {
+                    segment_length(neighbour) > segment_length(segments[static_cast<std::size_t>(host_index)])) {
                     host_index = neighbour_index;
                 }
             }
             if (host_index < 0) continue;
 
-            Run& host = runs[static_cast<std::size_t>(host_index)];
+            Segment& host = segments[static_cast<std::size_t>(host_index)];
             host.from = std::min(host.from, dent.from);
             host.to = std::max(host.to, dent.to);
-            runs.erase(runs.begin() + dent_index);
+            segments.erase(segments.begin() + dent_index);
             bridged_one = true;
         }
     }
@@ -99,24 +101,24 @@ void bridge_dents(std::vector<Run>& runs, int outward, const OutlineParams& para
 
 std::vector<OutlineSide> find_outline_sides(const std::vector<WallFaceSample>& samples,
                                             Direction direction, const OutlineParams& parameters) {
-    std::vector<Run> runs = merge_walls_and_split_into_runs(samples, parameters.run_jump);
+    std::vector<Segment> segments = split_into_segments(samples, parameters.segment_jump);
 
-    runs.erase(std::remove_if(runs.begin(), runs.end(),
-                              [&](const Run& run) {
-                                  return static_cast<int>(run.faces.size()) <
-                                         parameters.min_strips_per_run;
+    segments.erase(std::remove_if(segments.begin(), segments.end(),
+                              [&](const Segment& segment) {
+                                  return static_cast<int>(segment.faces.size()) <
+                                         parameters.min_strips_per_segment;
                               }),
-               runs.end());
+               segments.end());
 
-    merge_close_runs(runs, parameters.merge_distance);
-    bridge_dents(runs, direction.outward, parameters);
-    // a bridge can bring two outer runs next to each other
-    merge_close_runs(runs, parameters.merge_distance);
+    merge_close_segments(segments, parameters.merge_distance);
+    bridge_dents(segments, direction.outward, parameters);
+    // a bridge can bring two outer segments next to each other
+    merge_close_segments(segments, parameters.merge_distance);
 
     std::vector<OutlineSide> sides;
-    sides.reserve(runs.size());
-    for (const Run& run : runs) {
-        sides.push_back({direction, median(run.faces), run.from, run.to, run.faces.size()});
+    sides.reserve(segments.size());
+    for (const Segment& segment : segments) {
+        sides.push_back({direction, median(segment.faces), segment.from, segment.to, segment.faces.size()});
     }
     return sides;
 }

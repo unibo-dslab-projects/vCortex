@@ -117,13 +117,13 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(o.face_depth >= c.cell)) {
         return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
     }
-    if (!(o.run_jump > 0)) return problem("outline.run_jump", "> 0", o.run_jump);
-    if (o.min_strips_per_run < 1) {
-        return problem("outline.min_strips_per_run", ">= 1", o.min_strips_per_run);
+    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
+    if (o.min_strips_per_segment < 1) {
+        return problem("outline.min_strips_per_segment", ">= 1", o.min_strips_per_segment);
     }
-    // else merging undoes every split made by run_jump
-    if (!(o.merge_distance >= 0 && o.merge_distance < o.run_jump)) {
-        return problem("outline.merge_distance", ">= 0 and < outline.run_jump", o.merge_distance);
+    // else merging undoes every split made by segment_jump
+    if (!(o.merge_distance >= 0 && o.merge_distance < o.segment_jump)) {
+        return problem("outline.merge_distance", ">= 0 and < outline.segment_jump", o.merge_distance);
     }
     // a dent must be deeper than a merge, or it would already be one line
     if (!(o.dent_depth > o.merge_distance)) {

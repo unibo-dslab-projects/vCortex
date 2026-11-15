@@ -5,31 +5,34 @@
 
 #include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
-#include "vcortex/model/wall/candidates.hpp"
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/floor/room_space.hpp"
 
 namespace vcortex {
 
-// one way out of the room: axis of the walls met, and +1 / -1 for walking towards larger /
-// smaller coordinates
+/// One way out of the room: walk along axis, towards larger (outward = +1) or smaller (-1)
+/// coordinates. The walls met this way have a constant axis coordinate.
 struct Direction {
-    Axis axis = Axis::X;  // X: walk along x, meet walls of constant x
+    Axis axis = Axis::X;
     int outward = 1;
 };
 
-// aligned frame, metres
+/// Where the wall face sits in one strip, a thin slice of the room across the wall
+/// (aligned frame, metres).
 struct WallFaceSample {
-    double from = 0.0, to = 0.0;  // span of the strip along the wall
-    std::optional<double> face;   // empty: furniture past max_reach, or nothing seen
+    double from = 0.0, to = 0.0;  // where the strip starts and ends along the wall
+    std::optional<double> face;   // empty: nothing seen, or furniture hides it past max_reach
 };
 
-// one sample per strip, in order of from; walks out from the outermost room cell of each strip, so furniture
-// in the middle of the room is never asked
+/// Cuts the room into strips across the walls met in direction and finds the wall face in
+/// each one, walking out from the outermost room cell. Furniture in the middle of the room
+/// is never taken for a wall. Samples come back in order of from.
 std::vector<WallFaceSample> sample_wall_faces(const RoomSpace& space, const Grid& grid,
-                                        const std::vector<LidarPoint>& aligned, const Plane& floor,
-                                        double low_lo, double band_hi, Direction d,
-                                        const OutlineParams& p);
+                                              const std::vector<LidarPoint>& aligned_points,
+                                              const Plane& floor, double band_bottom_metres,
+                                              double band_top_metres, Direction direction,
+                                              const OutlineParams& parameters);
 
 }  // namespace vcortex

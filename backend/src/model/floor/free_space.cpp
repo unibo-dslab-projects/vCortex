@@ -12,11 +12,13 @@ namespace vcortex {
 
 namespace {
 
+/// Struct for storing the results of cell classification, including blocked and floor hit cells.
 struct ClassifiedCells {
     std::vector<std::uint8_t> blocked;    // enough points in the low band: furniture or wall
     std::vector<std::uint8_t> floor_hit;  // at least one point on the floor
 };
 
+/// Struct for the flood fill result, including the centers and whether the flood reached the grid edge.
 struct Flood {
     std::vector<std::uint8_t> centers;  // cells the disk's center can reach from the poses
     bool reached_grid_edge = false;
@@ -30,6 +32,7 @@ ClassifiedCells classify_cells(const std::vector<LidarPoint>& aligned, const Pla
     std::vector<std::uint16_t> low_point_counts(cell_count, 0);
     ClassifiedCells cells;
     cells.floor_hit.assign(cell_count, 0);
+    // count low band points and mark floor hit cells
     for (const LidarPoint& point : aligned) {
         int cell_x = 0, cell_y = 0;
         if (!cell_of(grid, point.position.x(), point.position.y(), cell_x, cell_y)) continue;
@@ -42,6 +45,7 @@ ClassifiedCells classify_cells(const std::vector<LidarPoint>& aligned, const Pla
         if (std::abs(height) < params.floor_band) cells.floor_hit[cell] = 1;
     }
 
+    // mark blocked cells based on low band point count
     cells.blocked.assign(cell_count, 0);
     for (std::size_t i = 0; i < cell_count; ++i) {
         cells.blocked[i] = low_point_counts[i] >= params.min_points;
@@ -69,6 +73,7 @@ Flood flood_from_poses(const Trajectory& trajectory,
     Flood flood;
     flood.centers.assign(blocked_centers.size(), 0);
     std::queue<std::pair<int, int>> cells_to_visit;
+    // visit each pose and mark it reachable
     for (const Pose& pose : trajectory) {
         int cell_x = 0, cell_y = 0;
         if (!cell_of(grid, pose.position.x(), pose.position.y(), cell_x, cell_y)) continue;
@@ -77,7 +82,7 @@ Flood flood_from_poses(const Trajectory& trajectory,
         flood.centers[cell] = 1;
         cells_to_visit.push({cell_x, cell_y});
     }
-
+    // flood fill from the reachable cells through bfs algorithm
     const Eigen::Vector2i directions[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     while (!cells_to_visit.empty()) {
         const auto [cell_x, cell_y] = cells_to_visit.front();
@@ -93,15 +98,13 @@ Flood flood_from_poses(const Trajectory& trajectory,
             flood.centers[neighbour] = 1;
             cells_to_visit.push({neighbour_x, neighbour_y});
         }
-
-
-
     }
     return flood;
 }
 
-/// Grows the reached centers back by the clearance radius, without blocked cells, and measures the area.
-FreeSpace grow_free_space(const Flood& flood, const std::vector<std::uint8_t>& blocked,
+/// Grows the reached space of the missing cells, missing due to being blocked by not enough space to
+/// make the clearance disk fit.
+FreeSpace expand_unreached_space(const Flood& flood, const std::vector<std::uint8_t>& blocked,
                           const Grid& grid, const std::vector<Eigen::Vector2i>& clearance_disk) {
     FreeSpace space;
     space.leaked = flood.reached_grid_edge;
@@ -131,7 +134,7 @@ FreeSpace compute_free_space(const std::vector<LidarPoint>& aligned, const Plane
     const std::vector<std::uint8_t> blocked_centers =
         find_blocked_centers(cells, grid, clearance_disk);
     const Flood flood = flood_from_poses(trajectory, blocked_centers, grid);
-    return grow_free_space(flood, cells.blocked, grid, clearance_disk);
+    return expand_unreached_space(flood, cells.blocked, grid, clearance_disk);
 }
 
 }  // namespace vcortex

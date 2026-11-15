@@ -15,7 +15,8 @@ namespace {
 
 constexpr double kEps = 1e-9;
 
-// walls leave split_walls_objects parallel to x or y, so each is a box
+/// A wall as the box it fills on the floor.
+// walls leave find_walls parallel to x or y, so each is a box
 struct Body {
     bool vertical = false;  // runs along y, constant x
     double center = 0.0, half = 0.0;
@@ -32,7 +33,7 @@ Body body_of(const Wall& w) {
     return b;
 }
 
-// 2d occupation matrix
+/// Room label per grid cell: walls and closed doors are drawn in, then each room is flooded.
 struct Mask {
     const Grid& grid;
     std::vector<int> label;  // -1 blocked, 0 free and unseen, k room k
@@ -92,10 +93,11 @@ void close_doors(const std::vector<Body>& bodies, double door_max, Mask& m) {
     }
 }
 
+/// What one flood reached.
 struct Fill {
     std::size_t cells = 0;
     Eigen::AlignedBox2i cell_box;  // first and last cell reached in x and y
-    bool leaked = false;
+    bool leaked = false;  // reached the grid edge: a wall is missing, so the room is open
 };
 
 // 4 neighbours, not 8: diagonal steps slip between two wall cells that meet at a corner

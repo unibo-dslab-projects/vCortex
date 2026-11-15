@@ -26,7 +26,8 @@ namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
 
-constexpr Direction kOut[4] = {{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
+// the four ways out of a room, one per wall direction once the map is squared
+constexpr Direction kOut[4] ={{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
 
 }  // namespace
 
@@ -45,6 +46,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.floor = floor;
     rep.tilt_deg = std::atan(std::hypot(floor.a, floor.b)) * kRadToDeg;
     const CandidateParams& cp = settings.candidates;
+    // walls are read in a band above the floor and below the ceiling, where neither shows up
     const double band_lo = cp.band_lo;
     const double band_hi = settings.wall_height - cp.band_top_margin;
 
@@ -71,6 +73,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const Eigen::Vector2d aligned_slope = to_aligned * Eigen::Vector2d(floor.a, floor.b);
     aligned_floor.a = aligned_slope.x();
     aligned_floor.b = aligned_slope.y();
+    // room shell: free floor around the poses, then the wall face met walking out of it
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
     const FreeSpace space =
         compute_free_space(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
@@ -99,6 +102,8 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
                                  band_hi, cp.cell, settings.outline.coverage_tolerance);
     }
     rep.outline_sides = outline.size();
+
+    // walls, then what is left in the band as objects, then the rooms the walls close
     const std::vector<Candidate> cands = find_candidates(grid, cp);
     WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
         band_hi, aligned_traj, settings.walls);

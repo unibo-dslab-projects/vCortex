@@ -15,6 +15,7 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kBin = 0.05;
 // angles in tenths of a degree: integer steps, so folding into [0, 90) is exact
 constexpr int kQuarter = 900;
+// every 0.5 degrees over the quarter, then every 0.1 around the best: 191 scores, not 900
 constexpr int kCoarseStep = 5;
 constexpr int kFineStep = 1;
 

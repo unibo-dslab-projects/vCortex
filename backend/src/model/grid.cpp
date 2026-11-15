@@ -2,7 +2,6 @@
 #include "vcortex/geometry/grids.hpp"
 #include "vcortex/geometry/points.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <limits>

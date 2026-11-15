@@ -1,6 +1,5 @@
 #include "vcortex/model/wall/face_samples.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>

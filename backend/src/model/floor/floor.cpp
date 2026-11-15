@@ -45,7 +45,7 @@ std::vector<Eigen::Vector3d> find_tiles_centroids(const std::vector<LidarPoint>&
         t.z.push_back(p.position.z());
     }
 
-    std::vector<Eigen::Vector3d> seeds;
+    std::vector<Eigen::Vector3d> coordinates;
 
     for (auto& tile : tiles) {
         Tile& t = tile.second;
@@ -55,10 +55,10 @@ std::vector<Eigen::Vector3d> find_tiles_centroids(const std::vector<LidarPoint>&
         const auto z_index_percentile = static_cast<size_t>(static_cast<double>(len - 1) * kSeedPercentile);
         // z is in arrival order; a percentile needs it partly sorted
         std::nth_element(t.z.begin(), t.z.begin() + static_cast<std::ptrdiff_t>(z_index_percentile), t.z.end());
-        seeds.emplace_back(average.x(), average.y(), t.z[z_index_percentile]);
+        coordinates.emplace_back(average.x(), average.y(), t.z[z_index_percentile]);
     }
 
-    return seeds;
+    return coordinates;
 }
 
 /// Fits a plane from the given coordinates.

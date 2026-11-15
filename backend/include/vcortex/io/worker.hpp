@@ -11,20 +11,20 @@
 #include <thread>
 
 #include "vcortex/domain/settings.hpp"
-#include "vcortex/io/map_store.hpp"
+#include "vcortex/io/store.hpp"
 #include "vcortex/model/model.hpp"
 
 namespace vcortex {
 
-// one model run, already written in every format
+/// Struct representing a single model run output, already written in every format
 struct ModelOutput {
     std::uint32_t run_id = 0, seq = 0;
     ModelReport report;
     std::map<std::string, std::string> by_format;  // connector id -> bytes
 };
 
-// one thread running run_model and every connector when the map store changed
-// wakes on period, not per delta: a burst costs one run; new settings wake it at once
+/// One thread running run_model and every connector when the map store changed
+/// wakes on period, not per delta: a burst costs one run; new settings wake it at once
 class ModelWorker {
 public:
     // called on the worker thread after each run; a slow listener delays the next run

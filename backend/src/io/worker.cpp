@@ -1,4 +1,4 @@
-#include "vcortex/io/model_worker.hpp"
+#include "vcortex/io/worker.hpp"
 
 #include <exception>
 #include <iostream>

@@ -97,10 +97,10 @@ target_link_libraries(vcortex_core
 
 add_library(vcortex_io STATIC
   src/io/config.cpp
-  src/io/pcd_input.cpp
-  src/io/map_store.cpp
-  src/io/model_worker.cpp
-  src/io/web_server.cpp
+  src/io/offline.cpp
+  src/io/store.cpp
+  src/io/worker.cpp
+  src/io/server.cpp
 )
 target_link_libraries(vcortex_io
   PUBLIC vcortex_core pcl_io Crow::Crow Threads::Threads

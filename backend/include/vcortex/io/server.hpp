@@ -11,8 +11,8 @@
 #include <string>
 
 #include "vcortex/io/config.hpp"
-#include "vcortex/io/map_store.hpp"
-#include "vcortex/io/model_worker.hpp"
+#include "vcortex/io/store.hpp"
+#include "vcortex/io/worker.hpp"
 
 namespace crow::websocket {
 struct connection;

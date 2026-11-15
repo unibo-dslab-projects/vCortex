@@ -24,12 +24,13 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
     const bool search_axis_is_x = direction.axis == Axis::X;
     const int across_len = search_axis_is_x ? grid.width : grid.height;
     const int along_len = search_axis_is_x ? grid.height : grid.width;
-    const double across_start = search_axis_is_x ? grid.origin.x() : grid.origin.y(); // grid border starting coordinates
-    const double along_start = search_axis_is_x ? grid.origin.y() : grid.origin.x();  // grid base starting coordinates
+    const double across_start = search_axis_is_x ? grid.origin.x() : grid.origin.y();  // metres
+    const double along_start = search_axis_is_x ? grid.origin.y() : grid.origin.x();   // metres
     const int cells_per_strip = num_cells_in_len(parameters.strip, grid.cell);
     const int num_strips = along_len / cells_per_strip;
     const int max_gap = num_cells_in_len(parameters.max_gap, grid.cell);
     const int max_reach = num_cells_in_len(parameters.max_reach, grid.cell);
+    // each strip is flattened into one row: index = strip * across_len + across cell
     const auto get_index = [&](int y, int x) {
         return static_cast<std::size_t>(y) * static_cast<std::size_t>(across_len) +
                static_cast<std::size_t>(x);
@@ -37,7 +38,8 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
 
     std::vector<std::uint8_t> occupied(get_index(num_strips, 0), 0);
     std::vector<std::uint8_t> room(get_index(num_strips, 0), 0);
-    // vector to keep track of occupied cells per strip -> calculate walls by median position
+    // exact across coordinates per strip: cells give only 5 cm steps, the median of these gives
+    // the face itself
     std::vector<std::vector<double>> coords(static_cast<std::size_t>(num_strips));
     for (const LidarPoint& pt : aligned_points) {
         const double h = height_above(floor, pt);
@@ -61,6 +63,8 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
     }
 
     for (int s = 0; s < num_strips; ++s) {
+        // start from the outermost free-space cell: furniture in the middle of the room lies
+        // before it and is never walked through
         int start = -1;
         for (int i = 0; i < across_len; ++i) {
             if (room[get_index(s, i)] == 0) continue;
@@ -72,8 +76,8 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
         sample.from = along_start + s * cells_per_strip * grid.cell;
         sample.to = sample.from + cells_per_strip * grid.cell;
 
-        // looking for the wall, resetting the counter while finding occupied cells
-        // freeing when there is a gap large enough to indicate that the wall ended
+        // keep the last occupied cell before max_gap empty cells: a desk against the wall has
+        // shorter gaps under it, so the walk goes through it to the wall behind
         int last = 0, empty = 0;
         bool gap = false;
         for (int step = 1; step <= max_reach; ++step) {
@@ -89,7 +93,8 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
 
         if (gap && last > 0) {
             const int i = start + direction.outward * last;
-            // from the outer side of the last occupied cell, face_depth back towards the room
+            // the lidar sees only the inner face, so the last occupied cell holds it; a window
+            // face_depth deep from that cell's outer side keeps furniture in front out
             const double outer = across_start + (direction.outward > 0 ? i + 1 : i) * grid.cell;
             const double lo = direction.outward > 0 ? outer - parameters.face_depth : outer;
             const double hi = direction.outward > 0 ? outer : outer + parameters.face_depth;

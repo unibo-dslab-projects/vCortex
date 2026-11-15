@@ -16,25 +16,29 @@ constexpr double kPairMin = 0.05;
 constexpr double kPairMax = 0.35;
 constexpr double kEps = 1e-9;
 
+/// A candidate and what the rules have found out about it.
 // interior: +1 room at larger normal coordinate, -1 at smaller, 0 both (wall seen from two rooms)
 struct Face {
     Candidate c;
-    std::size_t lo = 0, hi = 0;  // poses on each side
+    std::size_t lo = 0, hi = 0;  // poses near it on the smaller and on the larger normal side
     int interior = 0;
     bool inside = false;         // poses on both sides: stands in a room
-    bool paired = false;
-    bool object_front = false;
+    bool paired = false;         // already turned into a wall piece
+    bool object_front = false;   // front of furniture standing against a wall
 };
 
+/// A stretch of wall before joining: centerline, thickness and extent along it, metres.
 struct Piece {
     Axis axis = Axis::X;
     double center = 0.0, thickness = 0.0;
     double from = 0.0, to = 0.0;
-    int interior = 0;
-    std::size_t cells = 0;
+    int interior = 0;       // same meaning as Face::interior
+    std::size_t cells = 0;  // occupied cells seen along it, for coverage and as join weight
     bool is_shell = false;  // came from an outline side
 };
 
+/// Counts the poses on each side of the face, within its span widened by span_margin and
+/// within both_sides_range of it.
 void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
     for (const Pose& pose : traj) {
         const double u = along_of(f.c.axis, pose.position.x(), pose.position.y());
@@ -49,6 +53,7 @@ void count_poses(Face& f, const Trajectory& traj, const WallParams& p) {
     f.interior = f.hi > 0 ? 1 : f.lo > 0 ? -1 : 0;
 }
 
+/// Mean of the occupied cell centers: where the room is guessed to be when no pose helps.
 Eigen::Vector2d occupied_center(const Grid& g) {
     double sx = 0.0, sy = 0.0, n = 0.0;
     for (int iy = 0; iy < g.height; ++iy) {
@@ -64,6 +69,8 @@ Eigen::Vector2d occupied_center(const Grid& g) {
     return n > 0.0 ? Eigen::Vector2d{sx / n, sy / n} : Eigen::Vector2d::Zero();
 }
 
+/// Turns two parallel faces kPairMin to kPairMax apart, each with its room on the far side,
+/// into one wall piece: centerline in the middle, thickness their distance.
 // pairs first: each face of a wall between two walked rooms has poses on both sides, which
 // would otherwise read as furniture standing in a room
 void pair_faces(std::vector<Face>& faces, std::vector<Piece>& pieces) {
@@ -100,8 +107,8 @@ void pair_faces(std::vector<Face>& faces, std::vector<Piece>& pieces) {
     }
 }
 
-// a thin wall between two walked rooms shows both faces in neighbouring cells, which merge
-// into one face with poses on both sides; furniture walked around shows a second face deeper
+/// Check if a possible face pair has the faces too far between them, cause probably is a furniture which
+/// we saw from both sides but are too far apart to be a wall pair.
 bool has_far_side(const Face& f, const std::vector<Face>& faces, const WallParams& p) {
     for (const Face& b : faces) {
         const double d = std::abs(b.c.position - f.c.position);
@@ -128,8 +135,8 @@ bool has_wall_behind(const Face& f, const std::vector<Face>& faces, const WallPa
     return false;
 }
 
-// an object front standing in front of the wall across [g0, g1] hides that stretch
-bool gap_hidden(const Piece& w, double g0, double g1, const std::vector<Face>& faces,
+/// Returns if there is a gap hidden by furniture between g0 and g1 along the wall w.
+bool has_gap_hidden(const Piece& w, double g0, double g1, const std::vector<Face>& faces,
                 const WallParams& p) {
     for (const Face& f : faces) {
         if (!f.object_front || f.c.axis != w.axis) continue;
@@ -143,6 +150,8 @@ bool gap_hidden(const Piece& w, double g0, double g1, const std::vector<Face>& f
     return false;
 }
 
+/// Joins pieces on one line across short gaps, or gaps hidden by furniture, into one wall;
+/// center and thickness become the means weighted by seen cells.
 std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<Face>& faces,
                                   const WallParams& p) {
     std::sort(pieces.begin(), pieces.end(), [](const Piece& a, const Piece& b) {
@@ -176,7 +185,7 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
             const Piece& n = line[k];
             const double gap = n.from - cur.to;
             // longer gaps not hidden by furniture stay open: doors, or wall never seen
-            if (gap <= p.min_gap + kEps || gap_hidden(cur, cur.to, n.from, faces, p)) {
+            if (gap <= p.min_gap + kEps || has_gap_hidden(cur, cur.to, n.from, faces, p)) {
                 cur.to = std::max(cur.to, n.to);
                 cur.cells += n.cells;
                 cur.is_shell = cur.is_shell || n.is_shell;
@@ -198,7 +207,8 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const std::vector<F
     return out;
 }
 
-// ends snap to the centerline of a perpendicular wall within corner_gap, extending or trimming
+/// Closes corners of wall pieces by snapping their ends to the centerline of a perpendicular wall
+/// within corner_gap, extending or trimming them as needed.
 void close_corners(std::vector<Piece>& walls, const WallParams& p) {
     const std::vector<Piece> before = walls;
     for (Piece& w : walls) {
@@ -218,9 +228,10 @@ void close_corners(std::vector<Piece>& walls, const WallParams& p) {
     }
 }
 
-// true when a point lies beyond a side of this axis whose span holds its position along the wall,
-// past the face by more than margin; a negative margin also counts points in front of the face
-bool is_beyond_outline_side(Axis axis, double normal_coordinate, double along_coordinate,
+// true when a point lies beyond a side of this axis whose span holds its position along the wall;
+// a positive margin also counts points up to margin in front of the face, a negative one only
+// points more than -margin past it
+bool is_out_outline_side(Axis axis, double normal_coordinate, double along_coordinate,
                             const std::vector<OutlineSide>& outline, double margin) {
     for (const OutlineSide& side : outline) {
         if (side.direction.axis != axis || along_coordinate < side.from ||
@@ -233,7 +244,7 @@ bool is_beyond_outline_side(Axis axis, double normal_coordinate, double along_co
     return false;
 }
 
-// a candidate facing the room, within max_depth in front of a side: that side is the wall behind
+/// Returns if the candidate is right in front of the outline, within max_depth in front of a side.
 bool is_in_front_of_outline(const Face& candidate_face, const std::vector<OutlineSide>& outline,
                             const WallParams& p) {
     for (const OutlineSide& side : outline) {
@@ -250,6 +261,7 @@ bool is_in_front_of_outline(const Face& candidate_face, const std::vector<Outlin
     return false;
 }
 
+/// Distance from a point to the wall body, a box thickness wide; 0 inside it.
 double point_to_wall(double x, double y, const Piece& w) {
     const double dn =
         std::max(0.0, std::abs(normal_of(w.axis, x, y) - w.center) - w.thickness / 2.0);
@@ -258,8 +270,7 @@ double point_to_wall(double x, double y, const Piece& w) {
     return std::hypot(dn, du);
 }
 
-// a door may leave door_max open where a wall meets the shell or goes on in line; against
-// another inside wall the end must touch (corner_gap), or rows of desks chain to each other
+/// Returns if the ends of two elements meet, within the allowed gap for door or corner walls.
 bool ends_meet(const Piece& wall, const Piece& other, const WallParams& p) {
     const bool is_in_line = other.axis == wall.axis &&
                             std::abs(other.center - wall.center) <= p.collinear_tolerance + kEps;
@@ -272,10 +283,10 @@ bool ends_meet(const Piece& wall, const Piece& other, const WallParams& p) {
     return false;
 }
 
-// with a room shell, a wall inside it hangs from the shell, directly or through other walls;
-// desks walked around show faces on both sides but float free, so their points go to objects
-void keep_walls_hanging_from_shell(std::vector<Piece>& walls, const WallParams& p) {
+/// Attaches wall pieces to the perimeter by hanging them from the shell or other walls.
+void keep_walls_attached_to_perimeter(std::vector<Piece>& walls, const WallParams& p) {
     std::vector<bool> is_hanging(walls.size());
+    // every wall on the perimeter and every wall attached to them is marked as hanging
     for (std::size_t i = 0; i < walls.size(); ++i) is_hanging[i] = walls[i].is_shell;
     bool found_one = true;
     while (found_one) {
@@ -299,7 +310,7 @@ void keep_walls_hanging_from_shell(std::vector<Piece>& walls, const WallParams& 
 }
 
 // 95th percentile of band heights near the wall body, so one stray high point does not set it
-double seen_top(const Piece& wall, const std::vector<LidarPoint>& aligned, const Plane& floor,
+double get_seen_top(const Piece& wall, const std::vector<LidarPoint>& aligned, const Plane& floor,
                 double band_lo, double band_hi, const WallParams& p) {
     std::vector<double> heights;
     for (const LidarPoint& point : aligned) {
@@ -317,15 +328,14 @@ double seen_top(const Piece& wall, const std::vector<LidarPoint>& aligned, const
     return heights[static_cast<std::size_t>(top_index)];
 }
 
-// a desk walked around passes every rule by shape; only its height gives it away. the lidar
-// never sees the true top, so inside walls are compared with what it saw of the shell
+/// Drops low walls that are not attached to the shell, leaving only those that are part of the room outline.
 double drop_low_walls(std::vector<Piece>& walls, const std::vector<LidarPoint>& aligned,
                       const Plane& floor, double band_lo, double band_hi, const WallParams& p) {
     std::vector<double> tops(walls.size());
     double shell_top_sum = 0.0;
     int shell_walls_seen = 0;
     for (std::size_t i = 0; i < walls.size(); ++i) {
-        tops[i] = seen_top(walls[i], aligned, floor, band_lo, band_hi, p);
+        tops[i] = get_seen_top(walls[i], aligned, floor, band_lo, band_hi, p);
         if (walls[i].is_shell && tops[i] > 0.0) {
             shell_top_sum += tops[i];
             ++shell_walls_seen;
@@ -355,7 +365,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
     for (const Candidate& c : cands) {
         // on the shell or past it: the outline already is that wall
         const double middle_along = (c.from + c.to) / 2.0;
-        if (is_beyond_outline_side(c.axis, c.position, middle_along, outline, p.object_clearance)) {
+        if (is_out_outline_side(c.axis, c.position, middle_along, outline, p.object_clearance)) {
             continue;
         }
         Face f;
@@ -370,6 +380,8 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
 
     std::vector<Piece> pieces;
     pair_faces(faces, pieces);
+    // one face with poses on both sides and nothing deeper: a thin wall whose two faces fell
+    // into neighbouring cells and merged into one candidate
     for (Face& f : faces) {
         if (f.paired || !f.inside || has_far_side(f, faces, p)) continue;
         f.paired = true;
@@ -391,11 +403,13 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
             f.interior = normal_of(f.c.axis, middle.x(), middle.y()) >= f.c.position ? 1 : -1;
         }
     }
+    // fronts of furniture against a wall: the shell or another face lies close behind them
     for (Face& f : faces) {
         if (f.paired || f.inside) continue;
         f.object_front =
             is_in_front_of_outline(f, outline, p) || has_wall_behind(f, faces, p);
     }
+    // what is left, seen from one room only and with nothing behind it, is a wall
     for (const Face& f : faces) {
         if (f.paired || f.inside || f.object_front) continue;
         Piece w;
@@ -431,7 +445,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
     if (!outline.empty()) {
         // height first: a wall that hung only from a dropped desk then floats too
         out.shell_top_seen = drop_low_walls(walls, aligned, floor, band_lo, band_hi, p);
-        keep_walls_hanging_from_shell(walls, p);
+        keep_walls_attached_to_perimeter(walls, p);
     }
     std::sort(walls.begin(), walls.end(), [](const Piece& a, const Piece& b) {
         return std::tie(a.axis, a.center, a.from) < std::tie(b.axis, b.center, b.from);
@@ -447,6 +461,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
                                       : Eigen::Vector2d{w.to, w.center};
         wall.thickness = w.thickness;
         const double length = w.to - w.from;
+        // joined pieces can overlap along the line, so their cells may add up past the length
         wall.coverage = length > 0.0
                             ? std::min(1.0, static_cast<double>(w.cells) * grid.cell / length)
                             : 0.0;
@@ -469,9 +484,9 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         }
         if (nearest < walls.size()) {
             ++out.walls[nearest].num_points;
-        } else if (!is_beyond_outline_side(Axis::X, pt.position.x(), pt.position.y(), outline,
+        } else if (!is_out_outline_side(Axis::X, pt.position.x(), pt.position.y(), outline,
                                            -p.object_clearance) &&
-                   !is_beyond_outline_side(Axis::Y, pt.position.y(), pt.position.x(), outline,
+                   !is_out_outline_side(Axis::Y, pt.position.y(), pt.position.x(), outline,
                                            -p.object_clearance)) {
             // points past the room shell lie outside the room, so they are not furniture
             rest.push_back(pt);

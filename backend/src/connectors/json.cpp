@@ -63,7 +63,6 @@ void check(const Level& level) {
             throw std::invalid_argument("to_json: " + o.id + " footprint has fewer than 4 points");
         }
         must_exist(room_ids, o.room_id, o.id);
-        must_exist(wall_ids, o.against_wall_id, o.id);
     }
 }
 
@@ -94,7 +93,6 @@ Json level_json(const Level& level) {
         objects.push_back({{"id", o.id},
                            {"kind", o.kind},
                            {"room_id", text(o.room_id)},
-                           {"against_wall_id", text(o.against_wall_id)},
                            {"center", xy(o.center)},
                            {"size", xy(o.size)},
                            {"yaw", o.yaw},

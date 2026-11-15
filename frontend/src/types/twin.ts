@@ -94,7 +94,6 @@ export interface Object {
   id: Id
   kind: 'unknown'
   room_id: string | null
-  against_wall_id: string | null
   center: Xy1
   size: Xy2
   /**

@@ -83,9 +83,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (ob.cluster_min_points < 1) {
         return problem("objects.cluster_min_points", ">= 1", ob.cluster_min_points);
     }
-    if (!(ob.against_wall_distance >= 0)) {
-        return problem("objects.against_wall_distance", ">= 0", ob.against_wall_distance);
-    }
 
     const RoomParams& r = s.rooms;
     if (!(r.min_area >= 0)) return problem("rooms.min_area", ">= 0", r.min_area);

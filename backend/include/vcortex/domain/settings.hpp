@@ -29,7 +29,6 @@ struct ObjectParams {
     double min_step = 0.10;      // stair steps shorter than this straighten; 0 keeps every corner
     int min_piece_cells = 8;     // a smaller region of the height split joins a neighbour
     int cluster_min_points = 20;
-    double against_wall_distance = 0.15;
 };
 
 struct WallParams {

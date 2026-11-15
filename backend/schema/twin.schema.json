@@ -82,13 +82,12 @@
     },
     "object": {
       "type": "object",
-      "required": ["id", "kind", "room_id", "against_wall_id", "center", "size", "yaw", "footprint", "bottom_z", "top_z_seen", "points"],
+      "required": ["id", "kind", "room_id", "center", "size", "yaw", "footprint", "bottom_z", "top_z_seen", "points"],
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "kind": { "enum": ["unknown"] },
         "room_id": { "type": ["string", "null"] },
-        "against_wall_id": { "type": ["string", "null"] },
         "center": { "$ref": "#/$defs/xy" },
         "size": { "$ref": "#/$defs/xy", "description": "Box around the footprint, along the object's own axes after turning by yaw." },
         "yaw": { "type": "number", "description": "Radians, counter-clockwise from x." },

@@ -37,7 +37,7 @@ struct Room {
 struct Object {
     std::string id;
     std::string kind = "unknown";
-    std::optional<std::string> room_id, against_wall_id;
+    std::optional<std::string> room_id;
     Eigen::Vector2d center = Eigen::Vector2d::Zero();
     Eigen::Vector2d size = Eigen::Vector2d::Zero();
     double yaw = 0.0;

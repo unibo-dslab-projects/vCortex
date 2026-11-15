@@ -109,9 +109,7 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("height_step", ob.height_step);
         o.number("min_step", ob.min_step);
         o.integer("min_piece_cells", ob.min_piece_cells);
-        o.integer("cluster_min_points", ob.cluster_min_points);
-        o.number("against_wall_distance", ob.against_wall_distance);
-    });
+        o.integer("cluster_min_points", ob.cluster_min_points);    });
     f.object("walls", [&](Fields& o) {
         WallParams& w = s.walls;
         o.number("span_margin", w.span_margin);

@@ -11,6 +11,6 @@ namespace vcortex {
 
 /// Return a vector of objects found in the given points.
 std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points, const Plane& floor,
-                                 const std::vector<Wall>& walls, const ObjectParams& parameters);
+                                 const ObjectParams& parameters);
 
 }  // namespace vcortex

@@ -28,6 +28,9 @@ if(TARGET FLANN::FLANN)
     set_property(TARGET ${_flann} PROPERTY INTERFACE_LINK_LIBRARIES ${LZ4_STATIC_LIBRARY})
   endif()
 endif()
+# vectors, boxes and rotations for the domain and the model; no version asked: eigen 5 rejects
+# a 3.x request, and pcl already needs some eigen 3.3+
+find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(nlohmann_json 3.11 REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -48,24 +51,28 @@ add_library(vcortex_warnings INTERFACE)
 target_compile_options(vcortex_warnings INTERFACE
   $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic -Wshadow -Wconversion>)
 
-# --- vcortex_core: domain, model, connectors, protocol; c++ and pcl only, no crow, no files ---
+# --- vcortex_core: domain, model, connectors, protocol; c++, eigen and pcl only, no crow, no files ---
 
 add_library(vcortex_core STATIC
   src/geometry/points.cpp
+  src/geometry/vectors.cpp
+  src/geometry/grids.cpp
   src/domain/settings.cpp
   src/model/clean.cpp
-  src/model/floor.cpp
+  src/model/floor/floor.cpp
   src/model/align.cpp
   src/model/grid.cpp
-  src/model/candidates.cpp
-  src/model/walls.cpp
+  src/model/wall/candidates.cpp
+  src/model/wall/walls.cpp
   src/model/rooms.cpp
-  src/model/room_space.cpp
-  src/model/wall_face_samples.cpp
-  src/model/outline.cpp
+  src/model/floor/free_space.cpp
+  src/model/wall/face_samples.cpp
+  src/model/wall/outline.cpp
   src/model/model.cpp
-  src/model/objects.cpp
-  src/model/object_grid.cpp
+  src/model/object/objects.cpp
+  src/model/object/grid.cpp
+  src/model/object/labels.cpp
+  src/model/object/outline.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp
@@ -81,6 +88,7 @@ target_link_libraries(vcortex_core
   PUBLIC
     pcl_common pcl_kdtree pcl_search pcl_sample_consensus pcl_filters pcl_segmentation
     $<TARGET_NAME_IF_EXISTS:FLANN::FLANN>
+    Eigen3::Eigen
     nlohmann_json::nlohmann_json
   PRIVATE
     vcortex_warnings)
@@ -89,10 +97,10 @@ target_link_libraries(vcortex_core
 
 add_library(vcortex_io STATIC
   src/io/config.cpp
-  src/io/pcd_input.cpp
-  src/io/map_store.cpp
-  src/io/model_worker.cpp
-  src/io/web_server.cpp
+  src/io/offline.cpp
+  src/io/store.cpp
+  src/io/worker.cpp
+  src/io/server.cpp
 )
 target_link_libraries(vcortex_io
   PUBLIC vcortex_core pcl_io Crow::Crow Threads::Threads

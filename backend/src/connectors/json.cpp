@@ -23,7 +23,7 @@ constexpr const char* kSchemaVersion = "0.2.0";
 // + 0.0 turns -0.0 into 0.0
 double mm(double v) { return std::round(v * 1000.0) / 1000.0 + 0.0; }
 
-Json xy(const Vec2& v) { return Json::array({mm(v.x), mm(v.y)}); }
+Json xy(const Eigen::Vector2d& v) { return Json::array({mm(v.x()), mm(v.y())}); }
 
 // the schema wants null for unknown, never ""
 Json text(const std::optional<std::string>& s) { return s ? Json(*s) : Json(nullptr); }
@@ -63,7 +63,6 @@ void check(const Level& level) {
             throw std::invalid_argument("to_json: " + o.id + " footprint has fewer than 4 points");
         }
         must_exist(room_ids, o.room_id, o.id);
-        must_exist(wall_ids, o.against_wall_id, o.id);
     }
 }
 
@@ -74,13 +73,13 @@ Json level_json(const Level& level) {
                          {"start", xy(w.start)},
                          {"end", xy(w.end)},
                          {"thickness", mm(w.thickness)},
-                         {"points", w.points},
+                         {"points", w.num_points},
                          {"coverage", w.coverage}});
     }
     Json rooms = Json::array();
     for (const Room& r : level.rooms) {
         Json outline = Json::array();
-        for (const Vec2& v : r.outline) outline.push_back(xy(v));
+        for (const Eigen::Vector2d& v : r.outline) outline.push_back(xy(v));
         rooms.push_back({{"id", r.id},
                          {"name", text(r.name)},
                          {"closed", r.closed},
@@ -90,18 +89,17 @@ Json level_json(const Level& level) {
     Json objects = Json::array();
     for (const Object& o : level.objects) {
         Json footprint = Json::array();
-        for (const Vec2& vertex : o.footprint) footprint.push_back(xy(vertex));
+        for (const Eigen::Vector2d& vertex : o.footprint) footprint.push_back(xy(vertex));
         objects.push_back({{"id", o.id},
                            {"kind", o.kind},
                            {"room_id", text(o.room_id)},
-                           {"against_wall_id", text(o.against_wall_id)},
                            {"center", xy(o.center)},
                            {"size", xy(o.size)},
                            {"yaw", o.yaw},
                            {"footprint", std::move(footprint)},
                            {"bottom_z", mm(o.bottom_z)},
                            {"top_z_seen", mm(o.top_z_seen)},
-                           {"points", o.points}});
+                           {"points", o.num_points}});
     }
     return {{"id", level.id},
             {"floor_z", mm(level.floor_z)},
@@ -134,8 +132,8 @@ std::string to_json(const ModelResult& result) {
                        {{"points_in", rep.points_in},
                         {"after_outliers", rep.after_outliers},
                         {"floor_tilt_deg", rep.tilt_deg},
-                        {"room_space_area_m2", rep.room_space_area},
-                        {"room_space_leaked", rep.room_space_leaked},
+                        {"free_space_area_m2", rep.free_space_area},
+                        {"free_space_leaked", rep.free_space_leaked},
                         {"wall_faces_found", rep.wall_faces_found},
                         {"outline_sides", rep.outline_sides},
                         {"yaw_deg", rep.yaw_deg},

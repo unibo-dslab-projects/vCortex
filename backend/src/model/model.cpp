@@ -6,16 +6,19 @@
 #include <utility>
 #include <vector>
 
+#include <Eigen/Geometry>
+
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/align.hpp"
-#include "vcortex/model/candidates.hpp"
+#include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/model/outline.hpp"
-#include "vcortex/model/room_space.hpp"
+#include "vcortex/model/wall/outline.hpp"
+#include "vcortex/model/floor/free_space.hpp"
 #include "vcortex/model/rooms.hpp"
-#include "vcortex/model/wall_face_samples.hpp"
-#include "vcortex/model/walls.hpp"
-#include "vcortex/model/objects.hpp"
+#include "vcortex/model/wall/face_samples.hpp"
+#include "vcortex/model/wall/walls.hpp"
+#include "vcortex/model/object/objects.hpp"
 
 namespace vcortex {
 
@@ -23,18 +26,8 @@ namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
 
-constexpr Direction kOut[4] = {{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
-
-// turn about z by the angle whose cos and sin are given; z stays, so heights need no fix
-struct Turn {
-    double c = 1.0, s = 0.0;
-    Vec2 operator()(double x, double y) const { return {c * x - s * y, s * x + c * y}; }
-    Vec2 operator()(const Vec2& v) const { return (*this)(v.x, v.y); }
-};
-
-bool inside(const Vec2& p, const std::vector<Vec2>& box) {
-    return p.x >= box[0].x && p.x <= box[2].x && p.y >= box[0].y && p.y <= box[2].y;
-}
+// the four ways out of a room, one per wall direction once the map is squared
+constexpr Direction kOut[4] ={{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
 
 }  // namespace
 
@@ -45,7 +38,7 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.points_in = snap.points.size();
 
     // cleaning
-    std::vector<Point> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
+    std::vector<LidarPoint> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
     // floor; heights are taken above the plane, so the cloud is never levelled
@@ -53,50 +46,50 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.floor = floor;
     rep.tilt_deg = std::atan(std::hypot(floor.a, floor.b)) * kRadToDeg;
     const CandidateParams& cp = settings.candidates;
+    // walls are read in a band above the floor and below the ceiling, where neither shows up
     const double band_lo = cp.band_lo;
     const double band_hi = settings.wall_height - cp.band_top_margin;
 
     // alignment
     const Grid raw = build_grid(pts, floor, band_lo, band_hi, cp.cell);
-    const std::vector<Vec2> cells = band_cells(raw, cp.min_column);
+    const std::vector<Eigen::Vector2d> cells = band_cells(raw, cp.min_column);
     const double yaw = dominant_yaw(cells);
     rep.yaw_deg = yaw * kRadToDeg;
-    const Turn to_aligned{std::cos(yaw), -std::sin(yaw)};
-    const Turn to_map{std::cos(yaw), std::sin(yaw)};
+    // turns about z only, so heights need no fix
+    const Eigen::Rotation2Dd to_aligned(-yaw);
+    const Eigen::Rotation2Dd to_map(yaw);
 
-    std::vector<Point> aligned = pts;
-    for (Point& p : aligned) {
-        const Vec2 v = to_aligned(p.x, p.y);
-        p.x = static_cast<float>(v.x);
-        p.y = static_cast<float>(v.y);
+    std::vector<LidarPoint> aligned = pts;
+    for (LidarPoint& p : aligned) {
+        p.position.head<2>() = (to_aligned * p.position.head<2>().cast<double>()).cast<float>();
     }
     Trajectory aligned_traj = traj;
     for (Pose& p : aligned_traj) {
-        const Vec2 v = to_aligned(p.x, p.y);
-        p.x = v.x;
-        p.y = v.y;
+        p.position.head<2>() = to_aligned * p.position.head<2>();
         p.yaw -= yaw;
     }
     // z = a x + b y + c holds in both frames once (a, b) turns with the points
     Plane aligned_floor = floor;
-    aligned_floor.a = to_aligned.c * floor.a - to_aligned.s * floor.b;
-    aligned_floor.b = to_aligned.s * floor.a + to_aligned.c * floor.b;
+    const Eigen::Vector2d aligned_slope = to_aligned * Eigen::Vector2d(floor.a, floor.b);
+    aligned_floor.a = aligned_slope.x();
+    aligned_floor.b = aligned_slope.y();
+    // room shell: free floor around the poses, then the wall face met walking out of it
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
-    const RoomSpace space =
-        compute_room_space(aligned, aligned_floor, grid, aligned_traj, settings.room_space);
-    rep.room_space_area = space.area;
-    rep.room_space_leaked = space.leaked;
+    const FreeSpace space =
+        compute_free_space(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
+    rep.free_space_area = space.area;
+    rep.free_space_leaked = space.leaked;
     std::vector<WallFaceSample> samples[4];
     for (int k = 0; k < 4; ++k) {
         samples[k] = sample_wall_faces(space, grid, aligned, aligned_floor,
-                                       settings.room_space.low_lo, band_hi, kOut[k],
+                                       settings.outline.band_lo, band_hi, kOut[k],
                                        settings.outline);
         for (const WallFaceSample& sample : samples[k]) {
             rep.wall_faces_found += sample.face ? 1 : 0;
         }
     }
 
-    // a leaked room space ran into another room, so its outermost cells are not our walls
+    // a leaked free space ran into another room, so its outermost cells are not our walls
     std::vector<OutlineSide> outline;
     if (!space.leaked) {
         for (int k = 0; k < 4; ++k) {
@@ -105,15 +98,17 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
             }
         }
         join_outline_corners(outline, settings.outline);
-        measure_outline_coverage(outline, aligned, aligned_floor, settings.room_space.low_lo,
+        measure_outline_coverage(outline, aligned, aligned_floor, settings.outline.band_lo,
                                  band_hi, cp.cell, settings.outline.coverage_tolerance);
     }
     rep.outline_sides = outline.size();
+
+    // walls, then what is left in the band as objects, then the rooms the walls close
     const std::vector<Candidate> cands = find_candidates(grid, cp);
     WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
         band_hi, aligned_traj, settings.walls);
     std::vector<Object> objects =
-        find_objects(wo.furniture_points, aligned_floor, wo.walls, settings.objects);
+        find_objects(wo.furniture_points, aligned_floor, settings.objects);
     rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
@@ -130,15 +125,15 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
 
     // back to the map frame, so the building overlays the raw cloud as is
     for (Wall& w : wo.walls) {
-        w.start = to_map(w.start);
-        w.end = to_map(w.end);
+        w.start = to_map * w.start;
+        w.end = to_map * w.end;
     }
     for (Room& r : rooms) {
-        for (Vec2& v : r.outline) v = to_map(v);
+        for (Eigen::Vector2d& v : r.outline) v = to_map * v;
     }
     for (Object& o : objects) {
-        o.center = to_map(o.center);
-        for (Vec2& vertex : o.footprint) vertex = to_map(vertex);
+        o.center = to_map * o.center;
+        for (Eigen::Vector2d& vertex : o.footprint) vertex = to_map * vertex;
         o.yaw += yaw;
     }
 
@@ -146,16 +141,10 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     level.id = "level-1";
     // plane height under the middle of the walls, not c: c is the height at the map origin,
     // which may lie metres outside a tilted building
-    Vec2 mid;
-    for (const Vec2& v : cells) {
-        mid.x += v.x;
-        mid.y += v.y;
-    }
-    if (!cells.empty()) {
-        mid.x /= static_cast<double>(cells.size());
-        mid.y /= static_cast<double>(cells.size());
-    }
-    level.floor_z = floor.a * mid.x + floor.b * mid.y + floor.c;
+    Eigen::Vector2d mid = Eigen::Vector2d::Zero();
+    for (const Eigen::Vector2d& v : cells) mid += v;
+    if (!cells.empty()) mid /= static_cast<double>(cells.size());
+    level.floor_z = floor.a * mid.x() + floor.b * mid.y() + floor.c;
     level.wall_height = settings.wall_height;
     level.wall_height_source = settings.wall_height_source;
     level.walls = std::move(wo.walls);

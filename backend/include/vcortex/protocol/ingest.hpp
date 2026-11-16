@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "vcortex/domain/point.hpp"
+#include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/snapshot.hpp"
 
 namespace vcortex {
@@ -53,7 +53,7 @@ constexpr std::size_t record_size(FrameKind kind) {
 // points for map, delta; poses for poses
 struct IngestFrame {
     FrameHeader header;
-    std::vector<Point> points;
+    std::vector<LidarPoint> points;
     std::vector<Pose> poses;
 };
 

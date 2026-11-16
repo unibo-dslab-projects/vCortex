@@ -6,6 +6,7 @@
 
 namespace vcortex {
 
+/// Converts a ModelResult to a JSON string
 std::string to_json(const ModelResult& result);
 
 }  // namespace vcortex

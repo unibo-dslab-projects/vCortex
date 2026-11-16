@@ -83,9 +83,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (ob.cluster_min_points < 1) {
         return problem("objects.cluster_min_points", ">= 1", ob.cluster_min_points);
     }
-    if (!(ob.against_wall_distance >= 0)) {
-        return problem("objects.against_wall_distance", ">= 0", ob.against_wall_distance);
-    }
 
     const RoomParams& r = s.rooms;
     if (!(r.min_area >= 0)) return problem("rooms.min_area", ">= 0", r.min_area);
@@ -93,18 +90,28 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("rooms.wall_touch_distance", ">= 0", r.wall_touch_distance);
     }
 
-    const RoomSpaceParams& rs = s.room_space;
-    if (!(rs.floor_band > 0)) return problem("room_space.floor_band", "> 0", rs.floor_band);
-    if (!(rs.low_lo >= rs.floor_band)) {
-        return problem("room_space.low_lo", ">= room_space.floor_band", rs.low_lo);
+    const FreeSpaceParams& free_space = s.free_space;
+    if (!(free_space.floor_band > 0)) {
+        return problem("free_space.floor_band", "> 0", free_space.floor_band);
     }
-    if (!(rs.low_hi > rs.low_lo)) {
-        return problem("room_space.low_hi", "> room_space.low_lo", rs.low_hi);
+    if (!(free_space.low_lo >= free_space.floor_band)) {
+        return problem("free_space.low_lo", ">= free_space.floor_band", free_space.low_lo);
     }
-    if (rs.min_points < 1) return problem("room_space.min_points", ">= 1", rs.min_points);
-    if (!(rs.coin_radius > 0)) return problem("room_space.coin_radius", "> 0", rs.coin_radius);
+    if (!(free_space.low_hi > free_space.low_lo)) {
+        return problem("free_space.low_hi", "> free_space.low_lo", free_space.low_hi);
+    }
+    if (free_space.min_points < 1) {
+        return problem("free_space.min_points", ">= 1", free_space.min_points);
+    }
+    if (!(free_space.clearance_radius > 0)) {
+        return problem("free_space.clearance_radius", "> 0", free_space.clearance_radius);
+    }
 
     const OutlineParams& o = s.outline;
+    if (!(o.band_lo >= 0 && o.band_lo < s.wall_height - c.band_top_margin)) {
+        return problem("outline.band_lo", ">= 0 and below wall_height - candidates.band_top_margin",
+                       o.band_lo);
+    }
     // a strip narrower than a cell holds no whole cell
     if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     // one missing cell must not end the walk
@@ -117,13 +124,13 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(o.face_depth >= c.cell)) {
         return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
     }
-    if (!(o.run_jump > 0)) return problem("outline.run_jump", "> 0", o.run_jump);
-    if (o.min_strips_per_run < 1) {
-        return problem("outline.min_strips_per_run", ">= 1", o.min_strips_per_run);
+    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
+    if (o.min_strips_per_segment < 1) {
+        return problem("outline.min_strips_per_segment", ">= 1", o.min_strips_per_segment);
     }
-    // else merging undoes every split made by run_jump
-    if (!(o.merge_distance >= 0 && o.merge_distance < o.run_jump)) {
-        return problem("outline.merge_distance", ">= 0 and < outline.run_jump", o.merge_distance);
+    // else merging undoes every split made by segment_jump
+    if (!(o.merge_distance >= 0 && o.merge_distance < o.segment_jump)) {
+        return problem("outline.merge_distance", ">= 0 and < outline.segment_jump", o.merge_distance);
     }
     // a dent must be deeper than a merge, or it would already be one line
     if (!(o.dent_depth > o.merge_distance)) {

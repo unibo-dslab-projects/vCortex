@@ -9,9 +9,9 @@
 #include <utility>
 
 #include "vcortex/io/config.hpp"
-#include "vcortex/io/map_store.hpp"
-#include "vcortex/io/pcd_input.hpp"
-#include "vcortex/io/web_server.hpp"
+#include "vcortex/io/store.hpp"
+#include "vcortex/io/offline.hpp"
+#include "vcortex/io/server.hpp"
 
 namespace {
 

@@ -7,7 +7,7 @@
 
 export type Id = string
 /**
- * Centreline start, metres.
+ * Centerline start, metres.
  *
  * @minItems 2
  * @maxItems 2
@@ -45,8 +45,8 @@ export interface Twin {
     points_in: number
     after_outliers: number
     floor_tilt_deg: number
-    room_space_area_m2?: number
-    room_space_leaked?: boolean
+    free_space_area_m2?: number
+    free_space_leaked?: boolean
     wall_faces_found?: number
     outline_sides?: number
     yaw_deg: number
@@ -94,7 +94,6 @@ export interface Object {
   id: Id
   kind: 'unknown'
   room_id: string | null
-  against_wall_id: string | null
   center: Xy1
   size: Xy2
   /**

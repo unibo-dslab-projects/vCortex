@@ -56,6 +56,8 @@ struct FreeSpaceParams {
     double low_hi = 0.30;
     std::uint16_t min_points = 2;  // one voxel alone is noise
     double clearance_radius = 0.15;  // gaps narrower than twice this keep the disk in
+    double tall_from = 0.90;         // metres; desks stay below, walls and wardrobes reach it
+    double door_radius = 0.50;       // gaps between tall cells narrower than twice this are doors
 };
 
 struct OutlineParams {

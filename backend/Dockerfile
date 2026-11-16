@@ -80,6 +80,7 @@ RUN --mount=type=cache,target=/root/.cache/ccache \
       -DBoost_USE_STATIC_LIBS=ON \
       -DFETCHCONTENT_SOURCE_DIR_CROW=/opt/crow \
       -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+      -DBUILD_TESTING=OFF \
  && cmake --build /build \
  && cmake --install /build --prefix /out --strip
 

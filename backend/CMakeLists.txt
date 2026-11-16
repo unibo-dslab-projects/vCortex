@@ -111,5 +111,26 @@ target_link_libraries(vcortex_io
 add_executable(vcortex src/main.cpp)
 target_link_libraries(vcortex PRIVATE vcortex_io vcortex_warnings)
 
+# --- tests: off in docker, which builds offline and copies no tests/ ---
+
+include(CTest)
+if(BUILD_TESTING)
+  FetchContent_Declare(doctest
+    URL https://github.com/doctest/doctest/archive/refs/tags/v2.4.12.tar.gz
+    URL_HASH SHA256=73381c7aa4dee704bd935609668cf41880ea7f19fa0504a200e13b74999c2d70
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
+    SYSTEM)
+  set(DOCTEST_NO_INSTALL ON CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(doctest)
+
+  add_executable(vcortex_tests
+    tests/main.cpp
+    tests/model/floor/free_space_test.cpp
+  )
+  target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+  target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)
+  add_test(NAME vcortex_tests COMMAND vcortex_tests)
+endif()
+
 install(TARGETS vcortex RUNTIME DESTINATION bin)
 install(DIRECTORY config/ DESTINATION share/vcortex/config)

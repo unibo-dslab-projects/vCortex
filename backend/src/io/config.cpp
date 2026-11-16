@@ -134,7 +134,8 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("low_lo", r.low_lo);
         o.number("low_hi", r.low_hi);
         o.integer("min_points", r.min_points);
-        o.number("clearance_radius", r.clearance_radius);
+        o.number("tall_from", r.tall_from);
+        o.number("door_radius", r.door_radius);
     });
     f.object("outline", [&](Fields& o) {
         OutlineParams& l = s.outline;

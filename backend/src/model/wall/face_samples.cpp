@@ -16,7 +16,7 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
                                               double band_top_metres, Direction direction,
                                               const OutlineParams& parameters) {
     std::vector<WallFaceSample> out;
-    if (grid.width <= 0 || grid.height <= 0 || space.inside.size() != grid.column.size()) {
+    if (grid.width <= 0 || grid.height <= 0 || space.room_of_cell.size() != grid.column.size()) {
         return out;
     }
 
@@ -58,7 +58,7 @@ std::vector<WallFaceSample> sample_wall_faces(const FreeSpace& space, const Grid
             const std::size_t cell = static_cast<std::size_t>(iy) *
                                          static_cast<std::size_t>(grid.width) +
                                      static_cast<std::size_t>(ix);
-            if (space.inside[cell] != 0) room[get_index(j / cells_per_strip, i)] = 1;
+            if (space.room_of_cell[cell] != 0) room[get_index(j / cells_per_strip, i)] = 1;
         }
     }
 

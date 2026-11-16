@@ -76,9 +76,9 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     // room shell: free floor around the poses, then the wall face met walking out of it
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
     const FreeSpace space =
-        compute_free_space(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
+        find_floor_rooms(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
     rep.free_space_area = space.area;
-    rep.free_space_leaked = space.leaked;
+    rep.free_space_rooms = space.room_count;
     std::vector<WallFaceSample> samples[4];
     for (int k = 0; k < 4; ++k) {
         samples[k] = sample_wall_faces(space, grid, aligned, aligned_floor,
@@ -89,9 +89,9 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
         }
     }
 
-    // a leaked free space ran into another room, so its outermost cells are not our walls
+    // the outline is one shell; with several rooms the outermost faces span more than one
     std::vector<OutlineSide> outline;
-    if (!space.leaked) {
+    if (space.room_count == 1) {
         for (int k = 0; k < 4; ++k) {
             for (const OutlineSide& side : find_outline_sides(samples[k], kOut[k], settings.outline)) {
                 outline.push_back(side);

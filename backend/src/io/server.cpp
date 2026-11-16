@@ -46,7 +46,7 @@ Json report_json(const ModelReport& r) {
             {"after_outliers", r.after_outliers},
             {"tilt_deg", r.tilt_deg},
             {"free_space_area_m2", r.free_space_area},
-            {"free_space_leaked", r.free_space_leaked},
+            {"free_space_rooms", r.free_space_rooms},
             {"wall_faces_found", r.wall_faces_found},
             {"outline_sides", r.outline_sides},
             {"shell_top_seen_m", r.shell_top_seen},

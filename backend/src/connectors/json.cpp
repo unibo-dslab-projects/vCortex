@@ -133,7 +133,7 @@ std::string to_json(const ModelResult& result) {
                         {"after_outliers", rep.after_outliers},
                         {"floor_tilt_deg", rep.tilt_deg},
                         {"free_space_area_m2", rep.free_space_area},
-                        {"free_space_leaked", rep.free_space_leaked},
+                        {"free_space_rooms", rep.free_space_rooms},
                         {"wall_faces_found", rep.wall_faces_found},
                         {"outline_sides", rep.outline_sides},
                         {"yaw_deg", rep.yaw_deg},

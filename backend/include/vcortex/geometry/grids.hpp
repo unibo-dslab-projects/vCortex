@@ -20,13 +20,13 @@ bool cell_of(const Grid& g, double x, double y, int& ix, int& iy);
 /// Returns the coordinates covered by a disk of the given radius, centered at the origin
 std::vector<Eigen::Vector2i> disk(double radius_cells);
 /// Grow the marked cells by the given offsets, returning the new marked cells
-std::vector<std::uint8_t> grow(const std::vector<std::uint8_t>& marked_cells, const Grid& grid,
-                               const std::vector<Eigen::Vector2i>& offsets);
+std::vector<std::uint32_t> grow(const std::vector<std::uint32_t>& marked_cells, const Grid& grid,
+                                const std::vector<Eigen::Vector2i>& offsets);
 /// Invert the marked cells
-std::vector<std::uint8_t> invert(std::vector<std::uint8_t> marked_cells);
+std::vector<std::uint32_t> invert(std::vector<std::uint32_t> marked_cells);
 /// Close holes in the grid by a growing and shrinking process
-std::vector<std::uint8_t> close_holes(const std::vector<std::uint8_t>& marked_cells,
-                                      const Grid& grid);
+std::vector<std::uint32_t> close_holes(const std::vector<std::uint32_t>& marked_cells,
+                                       const Grid& grid);
 /// Cast a single coordinate to an index of the grid
 int cell_index(double v, double origin, double cell, int size);
 /// Returns the number of cells in a given length

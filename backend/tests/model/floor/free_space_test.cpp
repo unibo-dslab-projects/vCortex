@@ -11,8 +11,8 @@ using test::read_floor_drawing;
 
 // default settings, as model.json leaves them
 FreeSpace find_rooms(const FloorDrawing &drawing) {
-  return compute_free_space(drawing.points, test::kFlatFloor, drawing.grid,
-                            drawing.poses, FreeSpaceParams{});
+  return find_floor_rooms(drawing.points, test::kFlatFloor, drawing.grid,
+                          drawing.poses, FreeSpaceParams{});
 }
 
 std::uint32_t room_under(const FreeSpace &space, const FloorDrawing &drawing,
@@ -123,8 +123,8 @@ TEST_CASE("a small room behind a door is still a room") {
         room_under(space, drawing, 7, 29));
 }
 
-TEST_CASE("a room seen through a door but never walked is not a room") {
-  // as the two rooms above, with no pose in the right one
+TEST_CASE("a room seen through a door but never walked joins the walked room") {
+  // as the two rooms above, with no pose in the right one: it splits once walked
   std::vector<std::string> rows = kTwoRoomsWalkedBoth;
   rows[10] = "#........P........................#";
   const FloorDrawing drawing = read_floor_drawing(rows);
@@ -132,7 +132,8 @@ TEST_CASE("a room seen through a door but never walked is not a room") {
 
   CHECK(space.room_count == 1);
   CHECK(room_under(space, drawing, 10, 9) != 0);
-  CHECK(room_under(space, drawing, 10, 26) == 0);
+  CHECK(room_under(space, drawing, 10, 26) ==
+        room_under(space, drawing, 10, 9));
 }
 
 } // namespace

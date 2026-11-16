@@ -38,9 +38,9 @@ std::vector<Eigen::Vector2i> disk(double radius_cells) {
     return out;
 }
 
-std::vector<std::uint8_t> grow(const std::vector<std::uint8_t>& marked_cells, const Grid& grid,
-                               const std::vector<Eigen::Vector2i>& offsets) {
-    std::vector<std::uint8_t> grown_cells(marked_cells.size(), 0);
+std::vector<std::uint32_t> grow(const std::vector<std::uint32_t>& marked_cells, const Grid& grid,
+                                const std::vector<Eigen::Vector2i>& offsets) {
+    std::vector<std::uint32_t> grown_cells(marked_cells.size(), 0);
     for (int y = 0; y < grid.height; ++y) {
         for (int x = 0; x < grid.width; ++x) {
             if (marked_cells[at(grid, x, y)] == 0) continue;
@@ -55,13 +55,13 @@ std::vector<std::uint8_t> grow(const std::vector<std::uint8_t>& marked_cells, co
     return grown_cells;
 }
 
-std::vector<std::uint8_t> invert(std::vector<std::uint8_t> marked_cells) {
-    for (std::uint8_t& cell : marked_cells) cell = static_cast<std::uint8_t>(cell == 0);
+std::vector<std::uint32_t> invert(std::vector<std::uint32_t> marked_cells) {
+    for (std::uint32_t& cell : marked_cells) cell = static_cast<std::uint32_t>(cell == 0);
     return marked_cells;
 }
 
-std::vector<std::uint8_t> close_holes(const std::vector<std::uint8_t>& marked_cells,
-                                      const Grid& grid) {
+std::vector<std::uint32_t> close_holes(const std::vector<std::uint32_t>& marked_cells,
+                                       const Grid& grid) {
     const std::vector<Eigen::Vector2i> one_cell_disk = disk(1.0);
     return invert(grow(invert(grow(marked_cells, grid, one_cell_disk)), grid, one_cell_disk));
 }

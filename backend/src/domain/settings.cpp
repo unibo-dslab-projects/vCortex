@@ -103,8 +103,11 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (free_space.min_points < 1) {
         return problem("free_space.min_points", ">= 1", free_space.min_points);
     }
-    if (!(free_space.clearance_radius > 0)) {
-        return problem("free_space.clearance_radius", "> 0", free_space.clearance_radius);
+    if (!(free_space.tall_from >= free_space.low_hi)) {
+        return problem("free_space.tall_from", ">= free_space.low_hi", free_space.tall_from);
+    }
+    if (!(free_space.door_radius > 0)) {
+        return problem("free_space.door_radius", "> 0", free_space.door_radius);
     }
 
     const OutlineParams& o = s.outline;

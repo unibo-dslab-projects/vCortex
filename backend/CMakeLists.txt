@@ -62,7 +62,6 @@ add_library(vcortex_core STATIC
   src/model/floor/floor.cpp
   src/model/align.cpp
   src/model/grid.cpp
-  src/model/wall/candidates.cpp
   src/model/wall/walls.cpp
   src/model/rooms.cpp
   src/model/floor/free_space.cpp
@@ -127,6 +126,7 @@ if(BUILD_TESTING)
     tests/model/floor/free_space_test.cpp
     tests/model/wall/outline_test.cpp
     tests/model/wall/outline_steps_test.cpp
+    tests/model/wall/walls_test.cpp
   )
   target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)

@@ -10,7 +10,6 @@
 
 #include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/align.hpp"
-#include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/wall/outline.hpp"
@@ -80,17 +79,12 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     for (const std::vector<OutlineSide>& room_outline : room_outlines) {
         rep.outline_sides += room_outline.size();
     }
-    // TODO: find_walls reads the outline of one room; walls from several outlines are missing
-    const std::vector<OutlineSide> outline =
-        room_outlines.size() == 1 ? room_outlines.front() : std::vector<OutlineSide>{};
 
     // walls, then what is left in the band as objects, then the rooms the walls close
-    const std::vector<Candidate> cands = find_candidates(grid, cp);
-    WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
-        band_hi, aligned_traj, settings.walls);
+    WallsAndFurniture wo =
+        find_walls(room_outlines, aligned, aligned_floor, band_lo, band_hi, settings.walls);
     std::vector<Object> objects =
         find_objects(wo.furniture_points, aligned_floor, settings.objects);
-    rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 
@@ -133,7 +127,6 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     level.objects = std::move(objects);
 
     rep.poses = traj.size();
-    rep.candidates = cands.size();
     rep.walls = level.walls.size();
     rep.rooms = level.rooms.size();
     rep.objects = level.objects.size();

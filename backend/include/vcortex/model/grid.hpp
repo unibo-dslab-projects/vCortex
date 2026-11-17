@@ -26,7 +26,7 @@ Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, doub
                 double band_hi, double cell);
 
 /// Returns the mean point of every cell holding at least min_column points.
-// same min_column as find_candidates, so one-voxel specks do not vote in dominant_yaw
+// min_column keeps one-voxel specks from voting in dominant_yaw
 std::vector<Eigen::Vector2d> band_cells(const Grid& grid, std::uint16_t min_column);
 
 }  // namespace vcortex

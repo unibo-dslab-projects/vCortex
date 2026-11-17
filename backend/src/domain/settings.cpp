@@ -38,19 +38,8 @@ std::optional<std::string> validate(const ModelSettings& s) {
                        c.band_lo);
     }
     if (c.min_column < 1) return problem("candidates.min_column", ">= 1", c.min_column);
-    if (!(c.max_gap >= 0)) return problem("candidates.max_gap", ">= 0", c.max_gap);
-    if (!(c.min_length > 0)) return problem("candidates.min_length", "> 0", c.min_length);
-    if (!(c.merge_distance >= 0)) {
-        return problem("candidates.merge_distance", ">= 0", c.merge_distance);
-    }
 
     const WallParams& w = s.walls;
-    if (!(w.span_margin >= 0)) return problem("walls.span_margin", ">= 0", w.span_margin);
-    if (!(w.both_sides_range > 0)) {
-        return problem("walls.both_sides_range", "> 0", w.both_sides_range);
-    }
-    if (!(w.max_depth >= 0)) return problem("walls.max_depth", ">= 0", w.max_depth);
-    if (!(w.overlap_widen >= 0)) return problem("walls.overlap_widen", ">= 0", w.overlap_widen);
     if (!(w.collinear_tolerance >= 0)) {
         return problem("walls.collinear_tolerance", ">= 0", w.collinear_tolerance);
     }
@@ -63,9 +52,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(w.thickness > 0)) return problem("walls.thickness", "> 0", w.thickness);
     if (!(w.object_clearance >= 0)) {
         return problem("walls.object_clearance", ">= 0", w.object_clearance);
-    }
-    if (!(w.min_top_ratio >= 0 && w.min_top_ratio <= 1)) {
-        return problem("walls.min_top_ratio", "in [0, 1]", w.min_top_ratio);
     }
 
     const ObjectParams& ob = s.objects;

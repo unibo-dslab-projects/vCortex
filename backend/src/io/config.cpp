@@ -96,9 +96,6 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("band_top_margin", c.band_top_margin);
         o.number("cell", c.cell);
         o.integer("min_column", c.min_column);
-        o.number("max_gap", c.max_gap);
-        o.number("min_length", c.min_length);
-        o.number("merge_distance", c.merge_distance);
     });
     f.object("objects", [&](Fields& o) {
         ObjectParams& ob = s.objects;
@@ -112,17 +109,12 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.integer("cluster_min_points", ob.cluster_min_points);    });
     f.object("walls", [&](Fields& o) {
         WallParams& w = s.walls;
-        o.number("span_margin", w.span_margin);
-        o.number("both_sides_range", w.both_sides_range);
-        o.number("max_depth", w.max_depth);
-        o.number("overlap_widen", w.overlap_widen);
         o.number("collinear_tolerance", w.collinear_tolerance);
         o.number("min_gap", w.min_gap);
         o.number("door_max", w.door_max);
         o.number("corner_gap", w.corner_gap);
         o.number("thickness", w.thickness);
         o.number("object_clearance", w.object_clearance);
-        o.number("min_top_ratio", w.min_top_ratio);
     });
     f.object("rooms", [&](Fields& o) {
         o.number("min_area", s.rooms.min_area);

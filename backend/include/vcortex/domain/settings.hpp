@@ -15,9 +15,6 @@ struct CandidateParams {
     double band_top_margin = 0.10;  // band top = wall_height - this
     double cell = 0.05;             // grid cell size, metres
     std::uint16_t min_column = 2;   // voxels per cell to call it occupied (map_builder maps)
-    double max_gap = 0.30;          // gaps bridged inside one run
-    double min_length = 1.0;        // shorter runs are dropped
-    double merge_distance = 0.10;   // parallel runs closer than this become one
 };
 
 struct ObjectParams {
@@ -32,17 +29,12 @@ struct ObjectParams {
 };
 
 struct WallParams {
-    double span_margin = 0.5;        // poses within the span +- this count for the interior side
-    double both_sides_range = 5.0;   // poses farther than this are ignored
-    double max_depth = 1.5;          // wardrobe rule: how far behind a candidate to look
-    double overlap_widen = 1.0;      // wardrobe rule: span widening on each end
     double collinear_tolerance = 0.10;
     double min_gap = 0.30;           // shorter gaps are closed
     double door_max = 1.2;           // gaps up to this stay openings
     double corner_gap = 0.5;         // wall ends this close to a perpendicular wall are joined
     double thickness = 0.10;         // used when only one face was seen
     double object_clearance = 0.10;  // band points closer than this to a wall face are wall
-    double min_top_ratio = 0.0;
 };
 
 struct RoomParams {

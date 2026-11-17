@@ -22,8 +22,7 @@ struct ModelReport {
     // floor reached from the poses, under desks too; a jump between runs means a hole
     double free_space_area = 0.0;
     std::size_t free_space_rooms = 0;  // rooms the poses walked into
-    std::size_t wall_faces_found = 0;  // all 4 directions; low means the shell is barely seen
-    // 0: not exactly one room, or none seen; fewer than 4: a direction found no wall face
+    // all room outlines together; fewer than 4 per room: a direction found no wall face
     std::size_t outline_sides = 0;
     double shell_top_seen = 0.0;  // what walls.min_top_ratio is a share of; 0: no shell
     double duration_ms = 0.0;

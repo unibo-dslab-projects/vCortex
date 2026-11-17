@@ -116,7 +116,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
                        o.band_lo);
     }
     // a strip narrower than a cell holds no whole cell
-    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     // one missing cell must not end the walk
     if (!(o.max_gap >= c.cell)) return problem("outline.max_gap", ">= candidates.cell", o.max_gap);
     // else every walk ends at the reach, never at a gap
@@ -124,10 +123,11 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("outline.max_reach", "> outline.max_gap", o.max_reach);
     }
     // the window then covers the whole last occupied cell, so it is never empty
+    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
+    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     if (!(o.face_depth >= c.cell)) {
         return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
     }
-    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
     if (o.min_strips_per_segment < 1) {
         return problem("outline.min_strips_per_segment", ">= 1", o.min_strips_per_segment);
     }
@@ -145,9 +145,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     }
     if (!(o.corner_overshoot >= 0)) {
         return problem("outline.corner_overshoot", ">= 0", o.corner_overshoot);
-    }
-    if (!(o.coverage_tolerance >= 0)) {
-        return problem("outline.coverage_tolerance", ">= 0", o.coverage_tolerance);
     }
 
     return std::nullopt;

@@ -73,8 +73,7 @@ Json level_json(const Level& level) {
                          {"start", xy(w.start)},
                          {"end", xy(w.end)},
                          {"thickness", mm(w.thickness)},
-                         {"points", w.num_points},
-                         {"coverage", w.coverage}});
+                         {"points", w.num_points}});
     }
     Json rooms = Json::array();
     for (const Room& r : level.rooms) {
@@ -134,7 +133,6 @@ std::string to_json(const ModelResult& result) {
                         {"floor_tilt_deg", rep.tilt_deg},
                         {"free_space_area_m2", rep.free_space_area},
                         {"free_space_rooms", rep.free_space_rooms},
-                        {"wall_faces_found", rep.wall_faces_found},
                         {"outline_sides", rep.outline_sides},
                         {"yaw_deg", rep.yaw_deg},
                         {"duration_ms", rep.duration_ms}}},

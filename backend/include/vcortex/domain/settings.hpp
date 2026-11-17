@@ -61,10 +61,10 @@ struct FreeSpaceParams {
 
 struct OutlineParams {
     double band_lo = 0.10;             // metres above the floor; wall and glass bases show under desks
-    double strip = 0.25;              // strip width along the wall; one face per strip
+    double strip = 0.25;               // rows of cells walked together; they fill each other's holes
     double max_reach = 1.5;            // walk past the free space at most this far
     double max_gap = 0.30;             // this much empty floor ends the walk: what lies past is outside
-    double face_depth = 0.10;          // points this deep in the last occupied cell give the face
+    double face_depth = 0.10;          // band points this deep up to the last occupied cell give the face
     double segment_jump = 0.15;        // a face this far from its segment starts a new segment
     int min_strips_per_segment = 2;    // shorter segments are a leg or a bag, not a wall
     double merge_distance = 0.10;      // neighbour segments this close are one line
@@ -73,7 +73,6 @@ struct OutlineParams {
     // desks along the walls hide metres of wall: a 1.5 m reach left a furnished office open
     double corner_max_extension = 8.0;
     double corner_overshoot = 0.5;     // a side may poke this far past the corner; trimmed back
-    double coverage_tolerance = 0.10;  // points this close to a face line count as seeing it
 };
 
 struct ModelSettings {

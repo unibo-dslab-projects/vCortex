@@ -140,18 +140,17 @@ void read_settings(Fields& f, ModelSettings& s) {
     f.object("outline", [&](Fields& o) {
         OutlineParams& l = s.outline;
         o.number("band_lo", l.band_lo);
-        o.number("strip", l.strip);
         o.number("max_reach", l.max_reach);
         o.number("max_gap", l.max_gap);
-        o.number("face_depth", l.face_depth);
         o.number("segment_jump", l.segment_jump);
+        o.number("strip", l.strip);
+        o.number("face_depth", l.face_depth);
         o.integer("min_strips_per_segment", l.min_strips_per_segment);
         o.number("merge_distance", l.merge_distance);
         o.number("dent_depth", l.dent_depth);
         o.number("dent_length", l.dent_length);
         o.number("corner_max_extension", l.corner_max_extension);
         o.number("corner_overshoot", l.corner_overshoot);
-        o.number("coverage_tolerance", l.coverage_tolerance);
     });
 }
 

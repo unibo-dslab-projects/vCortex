@@ -66,7 +66,6 @@ add_library(vcortex_core STATIC
   src/model/wall/walls.cpp
   src/model/rooms.cpp
   src/model/floor/free_space.cpp
-  src/model/wall/face_samples.cpp
   src/model/wall/outline.cpp
   src/model/model.cpp
   src/model/object/objects.cpp
@@ -126,6 +125,8 @@ if(BUILD_TESTING)
   add_executable(vcortex_tests
     tests/main.cpp
     tests/model/floor/free_space_test.cpp
+    tests/model/wall/outline_test.cpp
+    tests/model/wall/outline_steps_test.cpp
   )
   target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)

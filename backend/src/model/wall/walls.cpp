@@ -33,7 +33,7 @@ struct Piece {
     double center = 0.0, thickness = 0.0;
     double from = 0.0, to = 0.0;
     int interior = 0;       // same meaning as Face::interior
-    std::size_t cells = 0;  // occupied cells seen along it, for coverage and as join weight
+    std::size_t cells = 0;  // occupied cells seen along it; weight when pieces join
     bool is_shell = false;  // came from an outline side
 };
 
@@ -424,7 +424,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         pieces.push_back(w);
     }
 
-    // each outline side is a wall; its seen cells say how much of it the robot saw
+    // each outline side is a wall, weighted by its length in cells
     for (const OutlineSide& side : outline) {
         Piece shell_wall;
         shell_wall.axis = side.direction.axis;
@@ -434,7 +434,7 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         shell_wall.from = side.from;
         shell_wall.to = side.to;
         shell_wall.interior = -side.direction.outward;
-        shell_wall.cells = side.seen_cell_count;
+        shell_wall.cells = static_cast<std::size_t>((side.to - side.from) / grid.cell);
         shell_wall.is_shell = true;
         pieces.push_back(shell_wall);
     }
@@ -460,11 +460,6 @@ WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
         wall.end = w.axis == Axis::X ? Eigen::Vector2d{w.center, w.to}
                                       : Eigen::Vector2d{w.to, w.center};
         wall.thickness = w.thickness;
-        const double length = w.to - w.from;
-        // joined pieces can overlap along the line, so their cells may add up past the length
-        wall.coverage = length > 0.0
-                            ? std::min(1.0, static_cast<double>(w.cells) * grid.cell / length)
-                            : 0.0;
         out.walls.push_back(wall);
     }
 

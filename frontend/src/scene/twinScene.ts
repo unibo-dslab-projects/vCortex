@@ -26,7 +26,6 @@ const WALL_FILL = new Color('#17323d')
 
 export interface TwinLook {
   wireframe: boolean
-  coverage: boolean
 }
 
 export interface Label {
@@ -78,14 +77,10 @@ function addWalls(level: Level, look: TwinLook, out: BuiltTwin) {
     const [x0, y0] = wall.start
     const [x1, y1] = wall.end
     const length = Math.hypot(x1 - x0, y1 - y0)
-    // coverage 1 = the whole length was seen; the rest was bridged by the model
-    const missing = 1 - wall.coverage
-    const edge = look.coverage ? ACCENT.clone().lerp(FILLED_IN, Math.min(1, missing * 2)) : ACCENT
-    const fill = look.coverage ? WALL_FILL.clone().lerp(FILLED_IN, missing) : WALL_FILL
     const box = outlined(
       new BoxGeometry(length, Math.max(wall.thickness, 0.02), height),
-      edge,
-      fill,
+      ACCENT,
+      WALL_FILL,
       look.wireframe ? 0 : 0.55,
     )
     box.position.set((x0 + x1) / 2, (y0 + y1) / 2, level.floor_z + height / 2)
@@ -95,9 +90,7 @@ function addWalls(level: Level, look: TwinLook, out: BuiltTwin) {
     out.labels.push({
       key: `${wall.id}-length`,
       at: [(x0 + x1) / 2, (y0 + y1) / 2, level.floor_z + height + 0.05],
-      text: look.coverage
-        ? `${wall.id} · ${Math.round(wall.coverage * 100)}% seen`
-        : `L ${fmt(length)} m`,
+      text: `L ${fmt(length)} m`,
       kind: 'dimension',
     })
     grow(out, x0, y0, level.floor_z)

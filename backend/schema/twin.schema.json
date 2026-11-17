@@ -30,7 +30,6 @@
         "floor_tilt_deg": { "type": "number" },
         "free_space_area_m2": { "type": "number", "minimum": 0 },
         "free_space_rooms": { "type": "integer", "minimum": 0 },
-        "wall_faces_found": { "type": "integer", "minimum": 0 },
         "outline_sides": { "type": "integer", "minimum": 0 },
         "yaw_deg": { "type": "number" },
         "duration_ms": { "type": "number", "minimum": 0 }
@@ -57,15 +56,14 @@
     },
     "wall": {
       "type": "object",
-      "required": ["id", "start", "end", "thickness", "points", "coverage"],
+      "required": ["id", "start", "end", "thickness", "points"],
       "additionalProperties": false,
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "start": { "$ref": "#/$defs/xy", "description": "Centerline start, metres." },
         "end": { "$ref": "#/$defs/xy" },
         "thickness": { "type": "number", "exclusiveMinimum": 0 },
-        "points": { "type": "integer", "minimum": 0 },
-        "coverage": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of the length where points were seen; the rest was filled in." }
+        "points": { "type": "integer", "minimum": 0 }
       }
     },
     "room": {

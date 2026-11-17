@@ -21,7 +21,6 @@ struct Wall {
     Eigen::Vector2d end = Eigen::Vector2d::Zero();
     double thickness = 0.0;
     std::size_t num_points = 0;
-    double coverage = 0.0;
 };
 
 // IfcSpace

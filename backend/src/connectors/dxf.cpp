@@ -1,12 +1,12 @@
 #include "vcortex/connectors/dxf.hpp"
 
 #include <cmath>
-#include <cstddef>
 #include <cstdio>
 #include <string>
 #include <vector>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 namespace vcortex {
 
@@ -41,8 +41,7 @@ std::string one_line(std::string s) {
 }
 
 // r2000 readers (ezdxf, cad programs) refuse entities without their 100 subclass markers
-void line(std::string& out, const char* layer, const Eigen::Vector2d& a,
-          const Eigen::Vector2d& b) {
+void line(std::string& out, const char* layer, const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
     pair(out, 0, "LINE");
     pair(out, 100, "AcDbEntity");
     pair(out, 8, layer);
@@ -69,8 +68,7 @@ void polyline(std::string& out, const char* layer, const std::vector<Eigen::Vect
 }
 
 // 72 = 1 and 73 = 2 center the text on 11/21; 10/20 must still be there
-void text(std::string& out, const char* layer, const Eigen::Vector2d& at,
-          const std::string& s) {
+void text(std::string& out, const char* layer, const Eigen::Vector2d& at, const std::string& s) {
     pair(out, 0, "TEXT");
     pair(out, 100, "AcDbEntity");
     pair(out, 8, layer);
@@ -103,13 +101,16 @@ void wall(std::string& out, const Wall& w) {
     line(out, kWalls, e1, e2);
 }
 
-// one line per footprint side, not a closed polyline: importers that ignore layers read every
+// one line per box side, not a closed polyline: importers that ignore layers read every
 // closed polyline as a room
 void object(std::string& out, const Object& o) {
-    const std::size_t count = o.footprint.size();
-    for (std::size_t i = 0; i < count; ++i) {
-        line(out, kObjects, o.footprint[i], o.footprint[(i + 1) % count]);
-    }
+    const Eigen::Rotation2Dd turn(o.yaw);
+    const Eigen::Vector2d half = o.size / 2.0;
+    const Eigen::Vector2d corners[4] = {o.center + turn * Eigen::Vector2d(-half.x(), -half.y()),
+                                        o.center + turn * Eigen::Vector2d(half.x(), -half.y()),
+                                        o.center + turn * Eigen::Vector2d(half.x(), half.y()),
+                                        o.center + turn * Eigen::Vector2d(-half.x(), half.y())};
+    for (int i = 0; i < 4; ++i) line(out, kObjects, corners[i], corners[(i + 1) % 4]);
 }
 
 void room(std::string& out, const Room& r) {

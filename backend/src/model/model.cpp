@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cmath>
-#include <cstddef>
 #include <utility>
 #include <vector>
 
@@ -11,12 +10,12 @@
 #include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/align.hpp"
 #include "vcortex/model/clean.hpp"
-#include "vcortex/model/grid.hpp"
-#include "vcortex/model/wall/outline.hpp"
 #include "vcortex/model/floor/free_space.hpp"
-#include "vcortex/model/rooms.hpp"
-#include "vcortex/model/wall/walls.hpp"
+#include "vcortex/model/grid.hpp"
 #include "vcortex/model/object/objects.hpp"
+#include "vcortex/model/rooms.hpp"
+#include "vcortex/model/wall/outline.hpp"
+#include "vcortex/model/wall/walls.hpp"
 
 namespace vcortex {
 
@@ -108,7 +107,6 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     }
     for (Object& o : objects) {
         o.center = to_map * o.center;
-        for (Eigen::Vector2d& vertex : o.footprint) vertex = to_map * vertex;
         o.yaw += yaw;
     }
 

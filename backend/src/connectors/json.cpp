@@ -58,12 +58,7 @@ void check(const Level& level) {
         }
         for (const std::string& w : r.wall_ids) must_exist(wall_ids, w, r.id);
     }
-    for (const Object& o : level.objects) {
-        if (o.footprint.size() < 4) {
-            throw std::invalid_argument("to_json: " + o.id + " footprint has fewer than 4 points");
-        }
-        must_exist(room_ids, o.room_id, o.id);
-    }
+    for (const Object& o : level.objects) must_exist(room_ids, o.room_id, o.id);
 }
 
 Json level_json(const Level& level) {
@@ -87,27 +82,24 @@ Json level_json(const Level& level) {
     }
     Json objects = Json::array();
     for (const Object& o : level.objects) {
-        Json footprint = Json::array();
-        for (const Eigen::Vector2d& vertex : o.footprint) footprint.push_back(xy(vertex));
         objects.push_back({{"id", o.id},
                            {"kind", o.kind},
                            {"room_id", text(o.room_id)},
                            {"center", xy(o.center)},
                            {"size", xy(o.size)},
                            {"yaw", o.yaw},
-                           {"footprint", std::move(footprint)},
                            {"bottom_z", mm(o.bottom_z)},
                            {"top_z_seen", mm(o.top_z_seen)},
                            {"points", o.num_points}});
     }
-    return {{"id", level.id},
-            {"floor_z", mm(level.floor_z)},
-            {"wall_height", mm(level.wall_height)},
-            {"wall_height_source",
-             level.wall_height_source == HeightSource::User ? "user" : "default"},
-            {"walls", std::move(walls)},
-            {"rooms", std::move(rooms)},
-            {"objects", std::move(objects)}};
+    return {
+        {"id", level.id},
+        {"floor_z", mm(level.floor_z)},
+        {"wall_height", mm(level.wall_height)},
+        {"wall_height_source", level.wall_height_source == HeightSource::User ? "user" : "default"},
+        {"walls", std::move(walls)},
+        {"rooms", std::move(rooms)},
+        {"objects", std::move(objects)}};
 }
 
 }  // namespace

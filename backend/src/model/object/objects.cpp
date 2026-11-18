@@ -68,8 +68,7 @@ std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points
         // points sit anywhere in their cell, so their box can be a cell short of what is drawn
         Eigen::AlignedBox2d box;
         for (const Eigen::Vector2i& corner : outline) {
-            object.footprint.push_back(grid.origin + corner.cast<double>() * grid.cell);
-            box.extend(object.footprint.back());
+            box.extend(grid.origin + corner.cast<double>() * grid.cell);
         }
         object.center = box.center();
         object.size = box.sizes();

@@ -19,7 +19,7 @@ export type Xy = [number, number]
  */
 export type Xy1 = [number, number]
 /**
- * Box around the footprint, along the object's own axes after turning by yaw.
+ * Box sides, metres, along the object's own axes after turning by yaw.
  *
  * @minItems 2
  * @maxItems 2
@@ -95,12 +95,6 @@ export interface Object {
    * Radians, counter-clockwise from x.
    */
   yaw: number
-  /**
-   * Outline seen from above, metres, map frame, counter-clockwise; the last vertex joins the first. Outer ring only: an object seen at its rim is drawn whole.
-   *
-   * @minItems 4
-   */
-  footprint: [Xy1, Xy1, Xy1, Xy1, ...Xy1[]]
   bottom_z: number
   /**
    * Highest point seen. A sensor may not see the top, so the real top may be higher.

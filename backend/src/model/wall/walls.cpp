@@ -188,7 +188,7 @@ bool is_inside_any_outline(double x, double y,
 }
 
 /// Distance from a point to the wall body, a box thickness wide; 0 inside it.
-double point_to_wall(double x, double y, const Piece& w) {
+double distance_from_point_to_wall(double x, double y, const Piece& w) {
     const double dn =
         std::max(0.0, std::abs(normal_of(w.axis, x, y) - w.center) - w.thickness / 2.0);
     const double u = along_of(w.axis, x, y);
@@ -230,7 +230,7 @@ WallsAndFurniture find_walls(const std::vector<std::vector<OutlineSide>>& room_o
         std::size_t nearest = walls.size();
         double nearest_d = p.object_clearance + kEps;
         for (std::size_t i = 0; i < walls.size(); ++i) {
-            const double d = point_to_wall(pt.position.x(), pt.position.y(), walls[i]);
+            const double d = distance_from_point_to_wall(pt.position.x(), pt.position.y(), walls[i]);
             if (d <= nearest_d) {
                 nearest = i;
                 nearest_d = d;

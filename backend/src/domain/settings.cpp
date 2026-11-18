@@ -62,7 +62,7 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(ob.close_radius >= 0)) return problem("objects.close_radius", ">= 0", ob.close_radius);
     if (!(ob.split_radius >= 0)) return problem("objects.split_radius", ">= 0", ob.split_radius);
     if (!(ob.height_step >= 0)) return problem("objects.height_step", ">= 0", ob.height_step);
-    if (!(ob.min_step >= 0)) return problem("objects.min_step", ">= 0", ob.min_step);
+    if (!(ob.min_box_side >= 0)) return problem("objects.min_box_side", ">= 0", ob.min_box_side);
     if (ob.min_piece_cells < 1) {
         return problem("objects.min_piece_cells", ">= 1", ob.min_piece_cells);
     }
@@ -119,7 +119,8 @@ std::optional<std::string> validate(const ModelSettings& s) {
     }
     // else merging undoes every split made by segment_jump
     if (!(o.merge_distance >= 0 && o.merge_distance < o.segment_jump)) {
-        return problem("outline.merge_distance", ">= 0 and < outline.segment_jump", o.merge_distance);
+        return problem("outline.merge_distance", ">= 0 and < outline.segment_jump",
+                       o.merge_distance);
     }
     // a dent must be deeper than a merge, or it would already be one line
     if (!(o.dent_depth > o.merge_distance)) {

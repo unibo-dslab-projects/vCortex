@@ -70,7 +70,6 @@ add_library(vcortex_core STATIC
   src/model/object/objects.cpp
   src/model/object/grid.cpp
   src/model/object/labels.cpp
-  src/model/object/outline.cpp
   src/model/object/boxes.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp

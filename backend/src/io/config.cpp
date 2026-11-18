@@ -104,9 +104,10 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("close_radius", ob.close_radius);
         o.number("split_radius", ob.split_radius);
         o.number("height_step", ob.height_step);
-        o.number("min_step", ob.min_step);
+        o.number("min_box_side", ob.min_box_side);
         o.integer("min_piece_cells", ob.min_piece_cells);
-        o.integer("cluster_min_points", ob.cluster_min_points);    });
+        o.integer("cluster_min_points", ob.cluster_min_points);
+    });
     f.object("walls", [&](Fields& o) {
         WallParams& w = s.walls;
         o.number("collinear_tolerance", w.collinear_tolerance);

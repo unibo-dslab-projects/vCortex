@@ -17,7 +17,7 @@ const twin = computed(() => JSON.parse(props.payload) as Twin)
 const built = shallowRef<BuiltTwin | null>(null)
 
 watch(
-  [twin, () => props.look.wireframe, () => props.look.coverage],
+  [twin, () => props.look.wireframe],
   ([next], [previous]) => {
     if (built.value) disposeTree(built.value.group)
     built.value = buildTwin(next, props.look)

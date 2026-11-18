@@ -3,28 +3,30 @@
 #include <vector>
 
 #include "vcortex/domain/building.hpp"
-#include "vcortex/domain/snapshot.hpp"
-#include "vcortex/model/wall/candidates.hpp"
-#include "vcortex/model/floor/floor.hpp"
-#include "vcortex/model/grid.hpp"
-#include "vcortex/model/wall/outline.hpp"
 #include "vcortex/domain/lidar_point.hpp"
+#include "vcortex/domain/settings.hpp"
+#include "vcortex/model/floor/floor.hpp"
+#include "vcortex/model/wall/outline.hpp"
 
 namespace vcortex {
 
 /// What find_walls returns: the walls, and the band points that belong to no wall.
 struct WallsAndFurniture {
     std::vector<Wall> walls;                   // ids "wall-1", "wall-2", ... in sorted order
-    std::vector<LidarPoint> furniture_points;  // inside the room shell, far from every wall
-    double shell_top_seen = 0.0;  // mean seen top of the shell walls, metres above the floor
+    std::vector<LidarPoint> furniture_points;  // inside a room outline, far from every wall
 };
 
-/// Tells walls from furniture fronts among the candidates and returns the walls, joined along
-/// their lines and closed at corners; aligned frame in and out, band limits above the floor.
-WallsAndFurniture find_walls(const std::vector<Candidate>& cands,
-                                    const std::vector<OutlineSide>& outline, const Grid& grid,
-                                    const std::vector<LidarPoint>& aligned, const Plane& floor,
-                                    double band_lo, double band_hi,
-                                    const Trajectory& aligned_traj, const WallParams& p);
+/// The walls of all rooms, from their outlines (aligned frame in and out, metres).
+/// Each outline side is the inner face of a wall. Two sides of different rooms facing each other
+/// 5 to 35 cm apart, and overlapping, are the two faces of one wall between the rooms: its
+/// centerline is halfway, its thickness their distance. A side with no partner is a wall seen
+/// from one room only: p.thickness thick, its centerline half of it behind the face.
+/// Walls on one line are joined across gaps up to p.min_gap, and wall ends are snapped to a
+/// perpendicular wall within p.corner_gap.
+/// Band points (band_lo to band_hi above floor) within p.object_clearance of a wall count for
+/// it; the others inside a room outline are furniture, those past every outline are dropped.
+WallsAndFurniture find_walls(const std::vector<std::vector<OutlineSide>>& room_outlines,
+                             const std::vector<LidarPoint>& aligned, const Plane& floor,
+                             double band_lo, double band_hi, const WallParams& p);
 
 }  // namespace vcortex

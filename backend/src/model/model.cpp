@@ -10,13 +10,11 @@
 
 #include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/align.hpp"
-#include "vcortex/model/wall/candidates.hpp"
 #include "vcortex/model/clean.hpp"
 #include "vcortex/model/grid.hpp"
 #include "vcortex/model/wall/outline.hpp"
 #include "vcortex/model/floor/free_space.hpp"
 #include "vcortex/model/rooms.hpp"
-#include "vcortex/model/wall/face_samples.hpp"
 #include "vcortex/model/wall/walls.hpp"
 #include "vcortex/model/object/objects.hpp"
 
@@ -25,9 +23,6 @@ namespace vcortex {
 namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
-
-// the four ways out of a room, one per wall direction once the map is squared
-constexpr Direction kOut[4] ={{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
 
 }  // namespace
 
@@ -73,43 +68,23 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     const Eigen::Vector2d aligned_slope = to_aligned * Eigen::Vector2d(floor.a, floor.b);
     aligned_floor.a = aligned_slope.x();
     aligned_floor.b = aligned_slope.y();
-    // room shell: free floor around the poses, then the wall face met walking out of it
+    // rooms on the floor, then the outline of each: the wall faces met walking out of it
     const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
     const FreeSpace space =
-        compute_free_space(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
+        find_floor_rooms(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
     rep.free_space_area = space.area;
-    rep.free_space_leaked = space.leaked;
-    std::vector<WallFaceSample> samples[4];
-    for (int k = 0; k < 4; ++k) {
-        samples[k] = sample_wall_faces(space, grid, aligned, aligned_floor,
-                                       settings.outline.band_lo, band_hi, kOut[k],
-                                       settings.outline);
-        for (const WallFaceSample& sample : samples[k]) {
-            rep.wall_faces_found += sample.face ? 1 : 0;
-        }
+    rep.free_space_rooms = space.room_count;
+    const std::vector<std::vector<OutlineSide>> room_outlines =
+        find_room_outlines(space, grid, aligned, aligned_floor, band_hi, settings.outline);
+    for (const std::vector<OutlineSide>& room_outline : room_outlines) {
+        rep.outline_sides += room_outline.size();
     }
-
-    // a leaked free space ran into another room, so its outermost cells are not our walls
-    std::vector<OutlineSide> outline;
-    if (!space.leaked) {
-        for (int k = 0; k < 4; ++k) {
-            for (const OutlineSide& side : find_outline_sides(samples[k], kOut[k], settings.outline)) {
-                outline.push_back(side);
-            }
-        }
-        join_outline_corners(outline, settings.outline);
-        measure_outline_coverage(outline, aligned, aligned_floor, settings.outline.band_lo,
-                                 band_hi, cp.cell, settings.outline.coverage_tolerance);
-    }
-    rep.outline_sides = outline.size();
 
     // walls, then what is left in the band as objects, then the rooms the walls close
-    const std::vector<Candidate> cands = find_candidates(grid, cp);
-    WallsAndFurniture wo = find_walls(cands, outline, grid, aligned, aligned_floor, band_lo,
-        band_hi, aligned_traj, settings.walls);
+    WallsAndFurniture wo =
+        find_walls(room_outlines, aligned, aligned_floor, band_lo, band_hi, settings.walls);
     std::vector<Object> objects =
         find_objects(wo.furniture_points, aligned_floor, settings.objects);
-    rep.shell_top_seen = wo.shell_top_seen;
     std::vector<Room> rooms =
         find_rooms(wo.walls, grid, aligned_traj, settings.walls.door_max, settings.rooms);
 
@@ -152,7 +127,6 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     level.objects = std::move(objects);
 
     rep.poses = traj.size();
-    rep.candidates = cands.size();
     rep.walls = level.walls.size();
     rep.rooms = level.rooms.size();
     rep.objects = level.objects.size();

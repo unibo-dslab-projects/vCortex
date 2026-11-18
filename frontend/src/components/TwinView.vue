@@ -17,7 +17,7 @@ const scene = useTemplateRef('scene')
 const payload = shallowRef<TwinPayload | null>(null)
 const floorZ = ref(0)
 const mode = ref<ViewMode>('iso')
-const look = reactive({ wireframe: false, coverage: false })
+const look = reactive({ wireframe: false })
 const dimensions = ref(true)
 const objectLabels = ref(false)
 
@@ -119,15 +119,6 @@ const current = computed(() => props.formats.find((f) => f.id === selected.value
             @click="look.wireframe = !look.wireframe"
           >
             Wireframe
-          </button>
-          <button
-            class="chip"
-            :class="{ active: look.coverage }"
-            :aria-pressed="look.coverage"
-            title="Orange where the model filled in a wall it did not see"
-            @click="look.coverage = !look.coverage"
-          >
-            Coverage
           </button>
         </template>
         <button

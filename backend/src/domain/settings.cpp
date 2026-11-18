@@ -38,19 +38,8 @@ std::optional<std::string> validate(const ModelSettings& s) {
                        c.band_lo);
     }
     if (c.min_column < 1) return problem("candidates.min_column", ">= 1", c.min_column);
-    if (!(c.max_gap >= 0)) return problem("candidates.max_gap", ">= 0", c.max_gap);
-    if (!(c.min_length > 0)) return problem("candidates.min_length", "> 0", c.min_length);
-    if (!(c.merge_distance >= 0)) {
-        return problem("candidates.merge_distance", ">= 0", c.merge_distance);
-    }
 
     const WallParams& w = s.walls;
-    if (!(w.span_margin >= 0)) return problem("walls.span_margin", ">= 0", w.span_margin);
-    if (!(w.both_sides_range > 0)) {
-        return problem("walls.both_sides_range", "> 0", w.both_sides_range);
-    }
-    if (!(w.max_depth >= 0)) return problem("walls.max_depth", ">= 0", w.max_depth);
-    if (!(w.overlap_widen >= 0)) return problem("walls.overlap_widen", ">= 0", w.overlap_widen);
     if (!(w.collinear_tolerance >= 0)) {
         return problem("walls.collinear_tolerance", ">= 0", w.collinear_tolerance);
     }
@@ -63,9 +52,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (!(w.thickness > 0)) return problem("walls.thickness", "> 0", w.thickness);
     if (!(w.object_clearance >= 0)) {
         return problem("walls.object_clearance", ">= 0", w.object_clearance);
-    }
-    if (!(w.min_top_ratio >= 0 && w.min_top_ratio <= 1)) {
-        return problem("walls.min_top_ratio", "in [0, 1]", w.min_top_ratio);
     }
 
     const ObjectParams& ob = s.objects;
@@ -103,8 +89,11 @@ std::optional<std::string> validate(const ModelSettings& s) {
     if (free_space.min_points < 1) {
         return problem("free_space.min_points", ">= 1", free_space.min_points);
     }
-    if (!(free_space.clearance_radius > 0)) {
-        return problem("free_space.clearance_radius", "> 0", free_space.clearance_radius);
+    if (!(free_space.tall_from >= free_space.low_hi)) {
+        return problem("free_space.tall_from", ">= free_space.low_hi", free_space.tall_from);
+    }
+    if (!(free_space.door_radius > 0)) {
+        return problem("free_space.door_radius", "> 0", free_space.door_radius);
     }
 
     const OutlineParams& o = s.outline;
@@ -113,7 +102,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
                        o.band_lo);
     }
     // a strip narrower than a cell holds no whole cell
-    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     // one missing cell must not end the walk
     if (!(o.max_gap >= c.cell)) return problem("outline.max_gap", ">= candidates.cell", o.max_gap);
     // else every walk ends at the reach, never at a gap
@@ -121,10 +109,11 @@ std::optional<std::string> validate(const ModelSettings& s) {
         return problem("outline.max_reach", "> outline.max_gap", o.max_reach);
     }
     // the window then covers the whole last occupied cell, so it is never empty
+    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
+    if (!(o.strip >= c.cell)) return problem("outline.strip", ">= candidates.cell", o.strip);
     if (!(o.face_depth >= c.cell)) {
         return problem("outline.face_depth", ">= candidates.cell", o.face_depth);
     }
-    if (!(o.segment_jump > 0)) return problem("outline.segment_jump", "> 0", o.segment_jump);
     if (o.min_strips_per_segment < 1) {
         return problem("outline.min_strips_per_segment", ">= 1", o.min_strips_per_segment);
     }
@@ -142,9 +131,6 @@ std::optional<std::string> validate(const ModelSettings& s) {
     }
     if (!(o.corner_overshoot >= 0)) {
         return problem("outline.corner_overshoot", ">= 0", o.corner_overshoot);
-    }
-    if (!(o.coverage_tolerance >= 0)) {
-        return problem("outline.coverage_tolerance", ">= 0", o.coverage_tolerance);
     }
 
     return std::nullopt;

@@ -46,8 +46,7 @@ export interface Twin {
     after_outliers: number
     floor_tilt_deg: number
     free_space_area_m2?: number
-    free_space_leaked?: boolean
-    wall_faces_found?: number
+    free_space_rooms?: number
     outline_sides?: number
     yaw_deg: number
     duration_ms: number
@@ -72,10 +71,6 @@ export interface Wall {
   end: Xy1
   thickness: number
   points: number
-  /**
-   * Share of the length where points were seen; the rest was filled in.
-   */
-  coverage: number
 }
 export interface Room {
   id: Id

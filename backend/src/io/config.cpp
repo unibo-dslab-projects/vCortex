@@ -96,9 +96,6 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("band_top_margin", c.band_top_margin);
         o.number("cell", c.cell);
         o.integer("min_column", c.min_column);
-        o.number("max_gap", c.max_gap);
-        o.number("min_length", c.min_length);
-        o.number("merge_distance", c.merge_distance);
     });
     f.object("objects", [&](Fields& o) {
         ObjectParams& ob = s.objects;
@@ -112,17 +109,12 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.integer("cluster_min_points", ob.cluster_min_points);    });
     f.object("walls", [&](Fields& o) {
         WallParams& w = s.walls;
-        o.number("span_margin", w.span_margin);
-        o.number("both_sides_range", w.both_sides_range);
-        o.number("max_depth", w.max_depth);
-        o.number("overlap_widen", w.overlap_widen);
         o.number("collinear_tolerance", w.collinear_tolerance);
         o.number("min_gap", w.min_gap);
         o.number("door_max", w.door_max);
         o.number("corner_gap", w.corner_gap);
         o.number("thickness", w.thickness);
         o.number("object_clearance", w.object_clearance);
-        o.number("min_top_ratio", w.min_top_ratio);
     });
     f.object("rooms", [&](Fields& o) {
         o.number("min_area", s.rooms.min_area);
@@ -134,23 +126,23 @@ void read_settings(Fields& f, ModelSettings& s) {
         o.number("low_lo", r.low_lo);
         o.number("low_hi", r.low_hi);
         o.integer("min_points", r.min_points);
-        o.number("clearance_radius", r.clearance_radius);
+        o.number("tall_from", r.tall_from);
+        o.number("door_radius", r.door_radius);
     });
     f.object("outline", [&](Fields& o) {
         OutlineParams& l = s.outline;
         o.number("band_lo", l.band_lo);
-        o.number("strip", l.strip);
         o.number("max_reach", l.max_reach);
         o.number("max_gap", l.max_gap);
-        o.number("face_depth", l.face_depth);
         o.number("segment_jump", l.segment_jump);
+        o.number("strip", l.strip);
+        o.number("face_depth", l.face_depth);
         o.integer("min_strips_per_segment", l.min_strips_per_segment);
         o.number("merge_distance", l.merge_distance);
         o.number("dent_depth", l.dent_depth);
         o.number("dent_length", l.dent_length);
         o.number("corner_max_extension", l.corner_max_extension);
         o.number("corner_overshoot", l.corner_overshoot);
-        o.number("coverage_tolerance", l.coverage_tolerance);
     });
 }
 

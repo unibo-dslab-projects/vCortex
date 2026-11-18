@@ -34,9 +34,9 @@ std::vector<std::uint32_t> label_objects(const ObjectGrid& grid,
     return labels;
 }
 
-std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid,
-                                                       const std::vector<std::uint32_t>& labels,
-                                                       const std::vector<std::uint8_t>& occupied) {
+std::vector<std::uint32_t> assign_non_labelled_objects(
+    const ObjectGrid& grid, const std::vector<std::uint32_t>& labels,
+    const std::vector<std::uint32_t>& region_of_cell) {
     std::vector<std::uint32_t> filled_labels = labels;
     if (labels.empty()) return filled_labels;
     std::uint32_t max_object_id = *std::max_element(labels.begin(), labels.end());
@@ -51,7 +51,7 @@ std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid,
     while (true) {
         if (to_visit.empty()) {
             while (next_leftover < labels.size() &&
-                   (!occupied[next_leftover] || filled_labels[next_leftover])) {
+                   (!region_of_cell[next_leftover] || filled_labels[next_leftover])) {
                 ++next_leftover;
             }
             if (next_leftover == labels.size()) break;
@@ -61,7 +61,10 @@ std::vector<std::uint32_t> assign_non_labelled_objects(const ObjectGrid& grid,
         const std::size_t cell_index = to_visit.front();
         to_visit.pop();
         for (const std::size_t neighbour_index : get_neighbour_indices(grid, cell_index)) {
-            if (filled_labels[neighbour_index] || !occupied[neighbour_index]) continue;
+            if (filled_labels[neighbour_index] || !region_of_cell[neighbour_index] ||
+                region_of_cell[neighbour_index] != region_of_cell[cell_index]) {
+                continue;
+            }
             filled_labels[neighbour_index] = filled_labels[cell_index];
             to_visit.push(neighbour_index);
         }
@@ -74,7 +77,7 @@ namespace {
 /// Struct to hold the regions of a height map, where each region is a connected group of cells
 /// whose tops step by at most height_step.
 struct HeightRegions {
-    std::vector<std::uint32_t> region_of_cell;              // cell to region mapper, 0 means no region
+    std::vector<std::uint32_t> region_of_cell;  // cell to region mapper, 0 means no region
     std::vector<std::vector<std::size_t>> cells_of_region;  // index 0 is the unused no-region slot
     std::vector<double> top_sum_of_region;
 
@@ -86,8 +89,7 @@ struct HeightRegions {
 
 bool is_top_jump_too_big(const ObjectGrid& grid, std::size_t cell_index,
                          std::size_t neighbour_index, double height_step) {
-    return std::abs(grid.top_metres[neighbour_index] - grid.top_metres[cell_index]) >
-           height_step;
+    return std::abs(grid.top_metres[neighbour_index] - grid.top_metres[cell_index]) > height_step;
 }
 
 /// Floods a new region from the seed through cells of the same piece whose tops step by at
@@ -147,8 +149,7 @@ HeightRegions grow_height_regions(const ObjectGrid& grid, const std::vector<std:
 /// or 0 when the region touches no other region of its piece.
 std::uint32_t find_closest_neighbour_region(const ObjectGrid& grid,
                                             const std::vector<std::uint32_t>& labels,
-                                            const HeightRegions& regions,
-                                            std::uint32_t region_id) {
+                                            const HeightRegions& regions, std::uint32_t region_id) {
     const double region_mean_top = regions.mean_top(region_id);
     std::uint32_t closest_region_id = 0;
     double closest_top_difference = std::numeric_limits<double>::infinity();
@@ -213,16 +214,6 @@ void merge_small_regions(const ObjectGrid& grid, const std::vector<std::uint32_t
     }
 }
 
-std::vector<std::uint8_t> mark_object_cells(const std::vector<std::uint32_t>& labels) {
-    std::vector<std::uint8_t> is_in_object(labels.size(), 0);
-
-    for (std::size_t index = 0; index < labels.size(); ++index) {
-        is_in_object[index] = labels[index] ? 1 : 0;
-    }
-
-    return is_in_object;
-}
-
 }  // namespace
 
 std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
@@ -232,7 +223,7 @@ std::vector<std::uint32_t> split_by_height(const ObjectGrid& grid,
     merge_small_regions(grid, labels, min_piece_cells, regions);
 
     // the cells closing filled in have no top, so they join the nearest region
-    return assign_non_labelled_objects(grid, regions.region_of_cell, mark_object_cells(labels));
+    return assign_non_labelled_objects(grid, regions.region_of_cell, labels);
 }
 
 }  // namespace vcortex

@@ -40,7 +40,6 @@ struct Object {
     Eigen::Vector2d center = Eigen::Vector2d::Zero();
     Eigen::Vector2d size = Eigen::Vector2d::Zero();
     double yaw = 0.0;
-    std::vector<Eigen::Vector2d> footprint;
     double bottom_z = 0.0;
     double top_z_seen = 0.0;
     std::size_t num_points = 0;

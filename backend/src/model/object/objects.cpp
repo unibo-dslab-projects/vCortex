@@ -17,8 +17,8 @@
 
 namespace vcortex {
 
-std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points, const Plane& floor,
-                                 const ObjectParams& parameters) {
+std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points,
+                                 const Plane& floor, const ObjectParams& parameters) {
     std::vector<Object> objects;
     if (furniture_points.empty()) return objects;
 
@@ -36,10 +36,10 @@ std::vector<Object> find_objects(const std::vector<LidarPoint>& furniture_points
     // the cut cells then go back to the nearest piece
     const std::vector<std::uint8_t> closed = shrink_by_cell(
         grid, grow_by_cell(grid, grid.is_occupied, close_radius_cells), close_radius_cells);
-    const std::vector<std::uint8_t> cores = grow_by_cell(
-        grid, shrink_by_cell(grid, closed, split_radius_cells), split_radius_cells);
-    std::vector<std::uint32_t> labels =
-        assign_non_labelled_objects(grid, label_objects(grid, cores), closed);
+    const std::vector<std::uint8_t> cores =
+        grow_by_cell(grid, shrink_by_cell(grid, closed, split_radius_cells), split_radius_cells);
+    std::vector<std::uint32_t> labels = assign_non_labelled_objects(
+        grid, label_objects(grid, cores), std::vector<std::uint32_t>(closed.begin(), closed.end()));
     if (parameters.height_step > 0) {
         labels = split_by_height(grid, labels, parameters.height_step, parameters.min_piece_cells);
     }

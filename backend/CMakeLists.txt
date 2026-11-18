@@ -71,6 +71,7 @@ add_library(vcortex_core STATIC
   src/model/object/grid.cpp
   src/model/object/labels.cpp
   src/model/object/outline.cpp
+  src/model/object/boxes.cpp
   src/connectors/connector.cpp
   src/connectors/json.cpp
   src/connectors/dxf.cpp
@@ -127,6 +128,7 @@ if(BUILD_TESTING)
     tests/model/wall/outline_test.cpp
     tests/model/wall/outline_steps_test.cpp
     tests/model/wall/walls_test.cpp
+    tests/model/object/boxes_test.cpp
   )
   target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)

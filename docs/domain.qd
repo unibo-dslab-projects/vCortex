@@ -1,0 +1,65 @@
+.docname {Domain}
+.include {docs}
+
+The domain is the part of the real world vCortex talks about: a building, walked through and
+measured. This page describes it without any software in mind.
+
+![The parts of a digital twin](images/domain-plan.svg "The parts of a digital twin, seen from above.")
+
+## The survey
+
+A **survey** is one walk through a building with a lidar.
+
+- The robot follows a **path**: the places it passed, in order.
+- Each **scan** is one turn of the laser, about 10 per second.
+- All scans together make the **map**: a point cloud of everything the laser touched.
+
+The map grows while the walk goes on. Places seen in many scans are solid; things seen in only a
+few scans, like a person passing by, are not part of the building.
+
+## The building
+
+What a survey describes, from the largest part to the smallest:
+
+.mermaid caption:{How the parts of a building fit together.}
+    flowchart TD
+        B[Building] --> L[Level]
+        L --> W[Wall]
+        L --> R[Room]
+        L --> O[Object]
+        R -. bounded by .-> W
+        O -. stands in .-> R
+
+| Part | What it is | What we know about it |
+|---|---|---|
+| **Building** | The whole place that was surveyed | Its levels |
+| **Level** | One floor of the building | How high its floor is, and how tall its walls are |
+| **Wall** | A straight, upright piece of wall | Where it starts and ends, and how thick it is |
+| **Room** | The floor space that walls enclose | Its outline, the walls around it, and whether it is fully closed |
+| **Object** | Anything that is not a wall or the floor: a desk, a wardrobe, a bin | Where it stands, its footprint, how it is turned, and how high it was seen |
+
+## Rules of the domain
+
+- **Heights start from the floor.** A floor is never perfectly level, so "1 metre high" means
+  1 metre above the floor at that spot.
+- **Walls are straight and upright.** A long wall with a bend is two walls.
+- **A wall height belongs to the level.** All walls of a level share it. It is either measured or
+  given by a person; a twin always says which.
+- **Furniture is not a wall.** A wardrobe against a wall is an object in front of a wall, even when
+  it hides the wall completely.
+- **A room may be open.** When part of its outline was never seen, or a doorway leaves a gap, the
+  room is still a room, marked as not closed.
+- **An object belongs to at most one room.** An object outside every room belongs to the level.
+- **What was not seen stays unknown.** An object's top is "the highest point seen", not its real
+  top. The twin never invents what the laser did not see.
+
+## Where the code differs today
+
+The domain above is the target. The software does not cover all of it yet:
+
+| Domain | Today |
+|---|---|
+| A building has many levels | One level per survey |
+| Wall height can be measured | Always typed in, or the default of 2.70 m |
+| Doors and windows are openings in walls | Not recorded; a gap only marks the room as open |
+| An object has a kind (desk, wardrobe…) | Every object is "unknown" |

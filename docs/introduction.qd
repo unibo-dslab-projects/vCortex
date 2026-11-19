@@ -1,2 +1,64 @@
 .docname {Introduction}
 .include {docs}
+
+vCortex turns a quick walk with a robot into a simple, measured model of a building's insides:
+its walls, its rooms and the things inside them.
+
+![From a walk to a digital twin](images/walk-to-twin.svg "From a walk to a digital twin, in three steps.")
+
+## The problem
+
+Many jobs need a model of the inside of a building: planning a renovation, simulating how
+people move, or telling a robot where it can go. Drawings are often old or missing, and making
+new ones by hand takes hours with a tape measure.
+
+A robot with a **lidar** (a laser that measures distances all around it) can measure a room in
+a few minutes. What it gives back is a **point cloud**: a huge set of dots, each one a spot the
+laser touched. One room of 8.5 × 6.6 m gave **192,149 dots**.
+
+The dots alone are not a model: nothing in them says "this is a wall" or "this is a desk".
+Turning them into one is harder than it looks; [Challenges](challenges.qd) explains why.
+
+## What vCortex is
+
+vCortex is an app that reads a point cloud and builds a **digital twin** from it: a light
+description of the building with walls, rooms and objects, all measured in metres.
+
+- **Live.** While the robot walks, the map streams in and the twin is rebuilt every 3 seconds.
+- **Offline.** It can also open a map saved earlier.
+- **Side by side.** The page shows the raw dots on the left and the twin on the right.
+
+![vCortex showing a real room](images/app-3d.png "A real room: the raw dots on the left, the digital twin on the right.")
+
+## What vCortex solves
+
+- **From dots to things.** It tells walls from furniture by their shape and position, not only
+  by their height.
+- **Clean input.** It drops stray dots that lie far from everything else.
+- **Square and level.** It finds the floor, measures heights from it, and turns the map so the
+  walls run straight along the axes.
+- **Any source.** vCortex is not tied to one robot. Anything that can send the map can feed it.
+- **Useful output.** It saves the twin in formats other tools read:
+
+| Format | What it is | Good for |
+|---|---|---|
+| Twin (JSON) | Walls, rooms and objects, with names from IFC, the open standard for building data | Other apps and simulations |
+| Floor plan (DXF) | A 2D drawing | CAD programs |
+| Cleaned cloud (PLY) | The dots, without the noise | 3D tools |
+
+![The same room from above](images/app-top.png "The same room from above. The twin is rotated to match the dots.")
+
+## What to expect
+
+On the room in the pictures, vCortex gave this result:
+
+| Measure | Value |
+|---|---|
+| Dots kept after cleaning | 186,427 of 192,149 (97%) |
+| Walls | 4 |
+| Rooms | 1, of 8.52 × 6.55 m |
+| Objects | 19 |
+| Time for one model run | about 1.5 s |
+
+It works well on rooms with straight walls that meet at right angles. Its limits today are listed
+at the end of [Challenges](challenges.qd).

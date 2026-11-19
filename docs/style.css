@@ -19,6 +19,10 @@
   --qd-callout-background-color: #eef2ff;
   --qd-callout-foreground-color: #3730a3;
   --qd-table-default-header-alignment: start;
+  --qd-mermaid-node-background-color: #eef2ff;
+  --qd-mermaid-node-border-color: #4f46e5;
+  --qd-mermaid-node-text-color: #0f172a;
+  --qd-mermaid-node-line-color: #64748b;
 
   --accent-soft-background: #eef2ff;
   --muted-text: #64748b;
@@ -31,6 +35,20 @@
 .quarkdown-docs .page-margin-right-top,
 .quarkdown-docs > header > aside:last-child {
   display: none;
+}
+
+/* text takes the space the right sidebar left free */
+@media screen and (min-width: 1201px) {
+  body.quarkdown.quarkdown-docs > :is(header, .content-wrapper) > main {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    padding-right: 48px;
+  }
+
+  .quarkdown-docs .search-wrapper {
+    max-width: 28rem;
+  }
 }
 
 .quarkdown-docs .page-margin-top-left .bi {
@@ -91,6 +109,12 @@
   margin-top: 2.2em;
 }
 
+.quarkdown-docs main h3 {
+  font-size: 1em;
+  font-weight: 600;
+  margin-top: 1.8em;
+}
+
 /* inline code */
 .quarkdown-docs :not(pre) > code {
   background: var(--accent-soft-background);
@@ -100,17 +124,17 @@
 }
 
 /* code blocks: dark panel */
-.quarkdown-docs pre,
-.quarkdown-docs pre code {
+.quarkdown-docs pre:not(.mermaid),
+.quarkdown-docs pre:not(.mermaid) code {
   background: var(--code-block-background);
   color: var(--code-block-text);
 }
 
-.quarkdown-docs pre {
+.quarkdown-docs pre:not(.mermaid) {
   border-radius: 8px;
 }
 
-.quarkdown-docs pre code {
+.quarkdown-docs pre:not(.mermaid) code {
   font-size: 0.85rem;
 }
 

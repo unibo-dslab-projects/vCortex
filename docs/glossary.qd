@@ -1,0 +1,29 @@
+.docname {Glossary}
+.include {docs}
+
+Every term this documentation uses, in plain words.
+
+| Term | Meaning |
+|---|---|
+| **Building** | The whole place that was surveyed. |
+| **Digital twin** | A light description of a real building: walls, rooms and objects, measured in metres. |
+| **DXF** | A file format for 2D drawings, read by CAD programs. |
+| **Floor** | The surface the robot walks on. Every height is measured from it. |
+| **IFC** | Industry Foundation Classes, the open standard for building data. vCortex borrows its names. |
+| **JSON** | A plain-text format for structured data, read by almost every program. |
+| **Level** | One floor of a building, with its own floor height and wall height. |
+| **Lidar** | A laser sensor that spins and measures the distance to everything around it. |
+| **Live mode** | vCortex receives the map while the robot walks, and rebuilds the twin every few seconds. |
+| **Manhattan world** | The idea that most indoor walls meet at right angles, like the streets of Manhattan. |
+| **Map** | All the scans of a survey put together, as one point cloud. |
+| **Object** | Anything in a room that is not a wall or the floor, shown as a box. |
+| **Offline mode** | vCortex opens a map saved earlier, with no robot connected. |
+| **Opening** | A gap in a wall, such as a doorway. |
+| **Path** | The places the robot passed during a survey, in order. |
+| **PLY** | A file format for point clouds, read by 3D tools. |
+| **Point cloud** | A set of dots in 3D, each one a spot the laser touched. |
+| **Room** | The floor space that walls enclose. It can be closed or open. |
+| **Scan** | One turn of the lidar, about 10 per second. |
+| **Survey** | One walk through a building with a lidar. |
+| **Wall** | A straight, upright piece of wall, with a start, an end and a thickness. |
+| **Wall height** | How tall the walls of a level are. Today it is typed in, because the lidar does not see the top. |

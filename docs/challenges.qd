@@ -1,0 +1,86 @@
+.docname {Challenges}
+.include {docs}
+
+Going from a walk to a clean model meets problems at every step: in the sensor, in the map it
+builds, in the room itself, and in moving the data around. This page lists them, with what each
+one costs and how vCortex lives with it.
+
+![What the lidar sees from the floor](images/side-view.svg "What the lidar sees, seen from the side.")
+
+## The sensor looks down
+
+The robot is a Unitree Go2, a four-legged robot dog. Its lidar sits in its head and was built for
+walking, not for mapping:
+
+- it is mounted **upside down**, about **32 cm** above the floor;
+- it is **tilted by about 15°**, so it looks mostly at the ground in front of the robot.
+
+That is good for not tripping over things, and bad for seeing a room.
+
+| Problem | Real numbers | What it costs |
+|---|---|---|
+| The ceiling is never seen | In one map, 99% of the dots lie less than 1.4 m above the floor | The room has no top |
+| The top of the walls is barely seen | Only 2,518 of 811,074 points (0.31%) lie more than 1.10 m above the floor | **The wall height cannot be measured: you type it in** (2.70 m by default) |
+| High things look short | A wardrobe is seen up to where the laser stops reaching | An object's top is "the highest point seen", not its real top |
+| Every distance reads a bit too long | +11.3 cm on every reading, before calibration | Fixed on the robot, before the map reaches vCortex |
+
+An old idea was to keep only the dots high up, where furniture ends and only walls remain. With
+this sensor it cannot work: between 1.1 m and 2.5 m above the floor a whole room left only 112
+small squares of 5 cm with any dot in them, and no straight line longer than 1.05 m.
+
+## The map is not straight
+
+| Problem | Real numbers | What it costs |
+|---|---|---|
+| The floor in the map is tilted | 0.86° in one map, 2.4° in the map shown in the Overview; 0.86° is already **11 cm** of height across a 7.6 m room | Every height is measured from the floor right under it, not from one fixed level |
+| The map is turned at a random angle | It follows the way the robot faced at the start: 16.8° in the map shown in the Overview | vCortex turns the map so the walls run along the axes, then turns the result back |
+| Stray dots float in the air | A few dots far from everything else | They are dropped before anything else happens |
+
+## People and moving things
+
+A person walking past the robot is measured like anything else. Because they keep moving, they
+leave a thin trail of dots across the room.
+
+- **Counting dots does not help.** The map keeps at most one dot per 5 cm cube, so a wall and a
+  passing person can look the same. In one test map, 57.3% of the cubes held fewer than 3 dots.
+- **What would help** is counting how many turns of the laser saw each spot: a wall is seen again
+  and again, a person only for a moment. vCortex does not do this yet, so a passer-by can show up
+  as a small object.
+
+## Walls and furniture look alike
+
+To the laser, a wall and a wardrobe are both "a flat, upright surface". Telling them apart is the
+hardest part of vCortex.
+
+- **Furniture hides walls.** A wardrobe against a wall covers it from top to bottom. A row of desks
+  along a wall can hide metres of it.
+- **The longest line is not always a wall.** In one room the longest, densest straight lines (3.0
+  to 3.5 m) were a row of furniture in the middle. The real walls were thinner and sparser,
+  because the laser saw them from far away.
+- **Some walls are barely there.** A wall seen only at a sharp angle, or a glass wall the laser
+  passes through, leaves very few dots, sometimes only at its base, under the desks.
+
+So vCortex cannot pick walls by height, length or density alone. It also looks at where the robot
+walked and at what lies behind each line. The [Algorithm](algorithm.qd) section explains how.
+
+## Getting the data off the robot
+
+| Problem | Why | What vCortex does |
+|---|---|---|
+| The robot's computer is busy | It is already building the map in real time | vCortex runs on a laptop, not on the robot |
+| The robot's own way of sharing data does not suit Wi-Fi | It finds peers by shouting to the whole network, which Wi-Fi often blocks, and it cuts big messages into many small pieces: a whole map is about 0.8 MB | A small program on the robot sends the map over one ordinary connection |
+| The robot runs old software | Its robot software stack reached end of life in 2023 | vCortex needs none of it, so anyone can run it |
+
+## Limits today
+
+What vCortex does not handle yet, as a result of the problems above:
+
+.box {Not handled yet} type:{warning}
+    - **Wall height is typed in.** The lidar never sees the top of the walls. The default is 2.70 m.
+    - **Right angles only.** Walls at other angles or curved walls are not found.
+    - **Objects are boxes.** Each object is a box around what was seen. It has no name yet, and its
+      top is the highest point the lidar reached, which may be lower than the real top.
+    - **One floor, one room tested.** The test maps are single rooms. Walls shared by two rooms
+      are not tested yet.
+    - **No doors or windows.** A gap in a wall only marks the room as open.
+    - **People leave traces.** Someone walking past the robot can show up as a small object.

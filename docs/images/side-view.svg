@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <marker id="tick" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,5 L10,5 M5,0 L5,10" stroke="#475569" stroke-width="1.5"/>
+    </marker>
+    <linearGradient id="seen" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#6366f1" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="330" rx="14" fill="#f8fafc"/>
+
+  <!-- ceiling (never seen) -->
+  <line x1="120" y1="40" x2="840" y2="40" stroke="#cbd5e1" stroke-width="3" stroke-dasharray="10 8"/>
+  <text x="480" y="30" text-anchor="middle" font-size="13" fill="#94a3b8">ceiling: never seen</text>
+
+  <!-- walls -->
+  <rect x="100" y="40" width="20" height="240" fill="#cbd5e1"/>
+  <rect x="840" y="40" width="20" height="240" fill="#cbd5e1"/>
+  <!-- the part of the walls the lidar sees -->
+  <rect x="100" y="160" width="20" height="120" fill="#4f46e5"/>
+  <rect x="840" y="160" width="20" height="120" fill="#4f46e5"/>
+  <rect x="120" y="140" width="720" height="140" fill="url(#seen)"/>
+
+  <!-- floor, slightly tilted -->
+  <line x1="60" y1="276" x2="900" y2="286" stroke="#0f172a" stroke-width="4"/>
+  <text x="900" y="310" text-anchor="end" font-size="13" fill="#64748b">floor: a little tilted, so heights are measured from it</text>
+
+  <!-- wardrobe against the right wall -->
+  <rect x="740" y="90" width="100" height="190" fill="#ffffff" stroke="#10b981" stroke-width="2.5"/>
+  <text x="790" y="190" text-anchor="middle" font-size="13" fill="#047857" font-weight="600">wardrobe</text>
+  <text x="790" y="208" text-anchor="middle" font-size="12" fill="#047857">hides the wall</text>
+
+  <!-- desk -->
+  <rect x="460" y="215" width="140" height="10" fill="#ffffff" stroke="#10b981" stroke-width="2.5"/>
+  <line x1="470" y1="225" x2="470" y2="281" stroke="#10b981" stroke-width="2.5"/>
+  <line x1="590" y1="225" x2="590" y2="282" stroke="#10b981" stroke-width="2.5"/>
+  <text x="530" y="205" text-anchor="middle" font-size="13" fill="#047857" font-weight="600">desk</text>
+
+  <!-- person walking by -->
+  <circle cx="380" cy="168" r="11" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 3"/>
+  <path d="M380 180 L380 235 M380 235 L366 278 M380 235 L394 278 M362 200 L398 200" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 3" fill="none"/>
+  <text x="380" y="150" text-anchor="middle" font-size="12" fill="#b45309">a person walking by</text>
+
+  <!-- robot with its lidar -->
+  <rect x="200" y="252" width="60" height="18" rx="6" fill="#4f46e5"/>
+  <rect x="244" y="240" width="14" height="12" rx="3" fill="#4f46e5"/>
+  <line x1="208" y1="270" x2="204" y2="280" stroke="#4f46e5" stroke-width="3"/>
+  <line x1="252" y1="270" x2="256" y2="280" stroke="#4f46e5" stroke-width="3"/>
+  <path d="M258 244 L840 140 M258 244 L840 200" stroke="#6366f1" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+  <text x="230" y="232" text-anchor="middle" font-size="13" fill="#4f46e5" font-weight="600">lidar</text>
+
+  <!-- wall height: typed by the user -->
+  <line x1="60" y1="270" x2="60" y2="44" stroke="#475569" stroke-width="1.5" marker-start="url(#tick)" marker-end="url(#tick)"/>
+  <text x="48" y="150" text-anchor="middle" font-size="12" fill="#475569" transform="rotate(-90 48 150)">wall height: typed by you</text>
+  <text x="110" y="132" text-anchor="middle" font-size="12" fill="#4f46e5">seen</text>
+</svg>

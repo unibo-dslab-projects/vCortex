@@ -10,3 +10,6 @@
 
 # brainstorming
 .plans
+
+# Quarkdown build output
+/docs/output

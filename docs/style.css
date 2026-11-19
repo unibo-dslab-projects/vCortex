@@ -1,0 +1,169 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+/* light, indigo accent; doubled selector beats the theme's :root blocks */
+:root:root {
+  --qd-color-scheme: light;
+  --qd-main-font: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --qd-code-font: "JetBrains Mono", ui-monospace, monospace;
+  --qd-line-height: 1.65;
+  --qd-primary-color: #4f46e5;
+  --qd-link-color: #4f46e5;
+  --qd-color-on-primary: #ffffff;
+  --qd-background-color: #ffffff;
+  --qd-main-color: #334155;
+  --qd-heading-color: #0f172a;
+  --qd-docs-header-background-color: #ffffff;
+  --qd-docs-separator-border-color: #e2e8f0;
+  --qd-docs-search-border-color: #e2e8f0;
+  --qd-docs-search-focused-border: #4f46e5;
+  --qd-callout-background-color: #eef2ff;
+  --qd-callout-foreground-color: #3730a3;
+  --qd-table-default-header-alignment: start;
+
+  --accent-soft-background: #eef2ff;
+  --muted-text: #64748b;
+  --code-block-background: #0f172a;
+  --code-block-text: #e2e8f0;
+}
+
+/* no "on this page" sidebar: pages are short and the left menu is enough */
+.quarkdown-docs #margin-area-right,
+.quarkdown-docs .page-margin-right-top,
+.quarkdown-docs > header > aside:last-child {
+  display: none;
+}
+
+.quarkdown-docs .page-margin-top-left .bi {
+  margin-right: 0.4em;
+}
+
+/* header bar */
+.quarkdown-docs > header {
+  border-bottom: 1px solid var(--qd-docs-separator-border-color);
+}
+
+.quarkdown-docs .search-field {
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+/* sidebar: section titles in small caps, active page highlighted */
+.quarkdown-docs nav[data-role="page-list"] h3 {
+  font-family: var(--qd-code-font);
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-text);
+  margin-top: 1.6em;
+}
+
+.quarkdown-docs nav[data-role="page-list"] a {
+  display: block;
+  padding: 0.3em 0.7em;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.quarkdown-docs nav[data-role="page-list"] a[aria-current] {
+  background: var(--accent-soft-background);
+  color: var(--qd-primary-color);
+  font-weight: 500;
+}
+
+.quarkdown-docs aside nav[data-role="page-list"]:has(a[aria-current]) a:not([aria-current]):not(:hover) {
+  color: var(--qd-main-color);
+  opacity: 1;
+}
+
+/* headings */
+.quarkdown.quarkdown-docs h1 {
+  border-bottom: none;
+  font-size: 2.2em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.quarkdown-docs main h2 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin-top: 2.2em;
+}
+
+/* inline code */
+.quarkdown-docs :not(pre) > code {
+  background: var(--accent-soft-background);
+  color: var(--qd-primary-color);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+/* code blocks: dark panel */
+.quarkdown-docs pre,
+.quarkdown-docs pre code {
+  background: var(--code-block-background);
+  color: var(--code-block-text);
+}
+
+.quarkdown-docs pre {
+  border-radius: 8px;
+}
+
+.quarkdown-docs pre code {
+  font-size: 0.85rem;
+}
+
+.quarkdown-docs pre .hljs-keyword,
+.quarkdown-docs pre .hljs-built_in { color: #c4b5fd; }
+.quarkdown-docs pre .hljs-string { color: #86efac; }
+.quarkdown-docs pre .hljs-number,
+.quarkdown-docs pre .hljs-literal { color: #fdba74; }
+.quarkdown-docs pre .hljs-comment { color: #64748b; font-style: italic; }
+.quarkdown-docs pre .hljs-title,
+.quarkdown-docs pre .hljs-attr { color: #93c5fd; }
+.quarkdown-docs pre .hljs-type { color: #67e8f9; }
+
+/* callouts: tinted panel with an accent bar */
+.quarkdown-docs :is(.box, blockquote) {
+  background: var(--accent-soft-background);
+  border: none;
+  border-left: 3px solid var(--qd-primary-color);
+  border-radius: 0 6px 6px 0;
+}
+
+/* tables: plain rows split by thin lines; code line numbers are tables too */
+.quarkdown.quarkdown-docs main table:not(pre table) {
+  border: none;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.quarkdown.quarkdown-docs main table:not(pre table) th {
+  font-family: var(--qd-code-font);
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-text);
+}
+
+.quarkdown.quarkdown-docs main table:not(pre table) :is(th, td) {
+  border: none;
+  background: none;
+  border-bottom: 1px solid var(--qd-docs-separator-border-color);
+  padding: 0.8em 1em 0.8em 0;
+}
+
+/* previous / next links */
+.quarkdown-docs #sibling-pages-button-area {
+  border-top: 1px solid var(--qd-docs-separator-border-color);
+  padding-top: 1.5em;
+}
+
+.quarkdown-docs #sibling-pages-button-area > a {
+  border: none;
+  background: none;
+  color: var(--qd-primary-color);
+  font-size: 0.9em;
+}

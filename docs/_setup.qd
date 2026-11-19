@@ -1,0 +1,15 @@
+.docdescription {vCortex technical documentation}
+.doclang {English}
+.theme {paperwhite} layout:{hyperlegible}
+.css {.read {style.css}}
+
+.docauthors
+  - Nicolò Ghignatti
+
+.htmloptions baseurl:{https://unibo-dslab-projects.github.io/vCortex}
+
+.ifnot {.docname::equals {vcortex}}
+    .htmloptions title:{.docname | vcortex}
+
+.pagemargin {topleft}
+    [.icon {github}](https://github.com/unibo-dslab-projects/vCortex)[vCortex](@)

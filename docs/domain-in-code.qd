@@ -181,6 +181,7 @@ Read it like this:
 | What | Where |
 |---|---|
 | The domain says an object outside every room belongs to the level. The code gives an object a `room_id` only when the room is **closed**; an object in an open room gets `null`, as if it were in no room | `model/model.cpp` |
+| The domain says heights start from the floor. An object's `bottom_z` and `top_z_seen` are the raw z of its lowest and highest dot in the map, not the height above the floor at that spot. On a tilted floor the two differ (see [Objects](objects.qd)) | `model/object/objects.cpp` |
 | A room's outline is the box around the free floor, so an L-shaped room gets an outline that is too big (a TODO in the code) | `model/rooms.cpp` |
 | The HTTP types `Status`, `Settings` and `ModelReport` of the frontend are written by hand, not built from a schema. The status report calls the floor slope `tilt_deg`; the twin file calls it `floor_tilt_deg` | `frontend/src/services/api.ts` |
 | The twin's `report` has no `poses`, `walls`, `rooms` or `objects` counts; only the status answer has them | `schema/twin.schema.json`, `io/server.cpp` |

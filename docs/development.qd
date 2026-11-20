@@ -94,7 +94,6 @@ One character is a 10 cm square.
 There is one pose `P` in each room.
 
 ```text
-const std::vector<std::string> kTwoRoomsWalkedBoth = {
 ###################################
 #................#................#
 #................#................#
@@ -114,6 +113,7 @@ const std::vector<std::string> kTwoRoomsWalkedBoth = {
 #................#................#
 #................#................#
 #................#................#
+###################################
 ```
 
 The test checks that the model finds **2 rooms**, and that the squares under the two `P` belong

@@ -1,0 +1,273 @@
+.docname {Rooms}
+.include {docs}
+
+How vCortex finds the rooms of a building. A room is found **twice**, on purpose:
+
+| When | Name | What it gives | Why |
+|---|---|---|---|
+| **Before** the walls | the free floor | Where the robot could stand, cut into rooms at doors | The wall step needs to know where to start walking from |
+| **After** the walls | the final rooms | Each room closed by its walls: outline, walls around it, closed or open | This is the room the twin holds |
+
+The walls need a room to start from, and the room needs walls to be closed. The free floor breaks
+that circle: it is a rough room, made only from the robot's path and the low dots.
+
+.mermaid caption:{Where the two room steps sit in one model run.}
+    flowchart LR
+        A[Clean, floor,<br/>square the map] --> B[Free floor<br/>rough rooms]
+        B --> C[Walls<br/>walk out of each room]
+        C --> D[Objects]
+        C --> E[Final rooms<br/>closed by the walls]
+
+## Words used on this page
+
+| Word | Meaning |
+|---|---|
+| **Grid** | A top view of the map cut into squares. One square, a **cell**, is 5 cm |
+| **Squared map** | The map turned so the walls run along the x and y axes (see the `yaw` in the report) |
+| **Floor plane** | The tilted plane the floor lies on. A **height** is always measured above it |
+| **Pose** | One place the robot stood. 260 of them in the real run below |
+| **Flood** | Start from a cell and spread to the 4 cells next to it (up, down, left, right), again and again, until a stop sign. The spread cells are labelled with one number |
+
+Cells are joined by their 4 sides, never by corners. Two areas that touch only at a corner stay
+apart.
+
+## Step A: the free floor
+
+**In:** every dot (squared), the floor plane, the grid, the poses. **Out:** a room number for each
+cell (0 = no room), how many rooms, their area. Code: `model/floor/free_space.cpp`.
+
+### A1. Sort the cells
+
+**Code:** [`free_space.cpp:25`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L25) `classify_cells` · [`free_space.cpp:37`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L37) `low band` · [`free_space.cpp:41`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L41) `floor_hit` · [`free_space.cpp:42`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L42) `tall` · [`free_space.cpp:46`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L46) `blocked`
+
+Each cell gets three flags, from the heights of the dots inside it.
+
+| Flag | True when | Means |
+|---|---|---|
+| `floor_hit` | A dot lies within 8 cm of the floor plane (`floor_band`) | The floor was seen here |
+| `blocked` | At least 2 dots (`min_points`) lie 10 to 30 cm above the floor (`low_lo`, `low_hi`) | Something stands here: a wall, a leg, a box |
+| `tall` | A dot lies at 90 cm or more above the floor (`tall_from`) | A wall or a wardrobe. Desks stay below this height |
+
+**Example, five cells.** Heights are in metres above the floor. (Made-up numbers.)
+
+| Cell | Dots at | `floor_hit` | `blocked` | `tall` | What it is |
+|---|---|---|---|---|---|
+| 1 | 0.01, 0.03, 0.02 | yes | no | no | Open floor |
+| 2 | 0.02, 0.15, 0.22, 0.28 | yes | yes (3 low dots) | no | A desk leg |
+| 3 | 0.03, 0.12, 0.25, 1.00, 1.80 | yes | yes | yes | A wall |
+| 4 | 0.04, 0.75 | yes | no | no | Floor **under a desk**: the top (0.75 m) is in no layer |
+| 5 | none | no | no | no | Never seen |
+
+Cell 4 is why the layers are chosen like this: a desk does not block the floor under it, only its
+legs do.
+
+![Five cells sorted by the height of their dots](images/rooms-cell-classes.svg "One column of dots per cell, with the three layers behind them.")
+
+### A2. Fill one-cell holes in the seen floor
+
+**Code:** [`grids.cpp:63`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/geometry/grids.cpp#L63) `close_holes` · [`free_space.cpp:137`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L137) `call`
+
+The lidar misses a cell here and there. The step grows the `floor_hit` cells by one cell, then
+shrinks them by one cell. A hole of one cell is filled; the outside edge stays where it was. The
+result is called `seen`.
+
+### A3. The floor the robot could reach
+
+**Code:** [`free_space.cpp:93`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L93) `label_area_reached` · [`free_space.cpp:67`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L67) `spread_labels` · [`free_space.cpp:53`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L53) `disk_fits` · [`free_space.cpp:140`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L140) `call`
+
+Flood from each pose over cells that are `seen` and **not** `blocked`.
+
+- A pose starts a flood only if its own cell is `seen`, not blocked, and not reached yet.
+- Each flood gets the next number: 1, 2, …
+- Cells the robot could not stand on, or never saw, are left out.
+
+The result is `floor_areas`.
+
+### A4. The room cores: cut at doors
+
+**Code:** [`free_space.cpp:138`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L138) `door disk` · [`free_space.cpp:141`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L141) `call`
+
+Flood again from each pose, but now with a **disk** (a round stamp) of radius `door_radius` =
+0.5 m = 10 cells. A cell is allowed only when the whole disk, centred on it, covers no `tall`
+cell.
+
+- The disk is 317 cells; it needs a clear space **1.0 m wide**.
+- A door narrower than 1.0 m cannot hold the disk: the flood cannot pass, so the two sides get
+  **two numbers**.
+- A desk is not `tall`, so an aisle between desks never cuts a room.
+
+![A stamp of 1.0 m in a door, an aisle and a closet](images/rooms-door-disk.svg "The stamp needs 1.0 m of floor with no tall cell.")
+
+**Examples from the tests** (real drawings in `backend/tests/model/floor/free_space_test.cpp`;
+one character is 10 cm):
+
+| Test | Drawing | Result |
+|---|---|---|
+| Two rooms of 1.6 × 1.8 m, door of **0.9 m** | wall with a gap, a pose in each room | **2 rooms**: 0.9 < 1.0 |
+| A room of 3.6 × 2.0 m, two desks leave an aisle of **0.8 m** | desks are not `tall` | **1 room** |
+| A closet of 1.2 × 1.2 m behind a 0.8 m door | 1.2 m is wide enough for the disk | **2 rooms** |
+| The same two rooms, but the robot never entered the right one | no pose there | **1 room**: it opens only from a pose |
+
+The last row matters: a room seen through a door but never walked belongs to the room next to it,
+until the robot walks in.
+
+### A5. Grow the rooms
+
+**Code:** [`free_space.cpp:116`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L116) `expand_rooms_labels` · [`free_space.cpp:143`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L143) `call`
+
+The cores are smaller than the rooms: the disk keeps them away from walls and door frames. So all
+cores grow together, one cell at a time, over `floor_areas` that are not `blocked`. Two rooms meet
+**halfway through the door** between them.
+
+![Floor reached, room cores and grown rooms on the two-room test drawing](images/rooms-free-floor-steps.svg "Steps A3 to A5, run on the test drawing.")
+
+### A6. Area
+
+**Code:** [`free_space.cpp:148`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L148) `area` · [`free_space.cpp:129`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L129) `find_floor_rooms`
+
+Area = (cells with a room number) × 0.05 × 0.05.
+
+.mermaid caption:{Step A in one picture.}
+    flowchart TD
+        P[Poses] --> F
+        D[Dots] --> S[A1 sort cells:<br/>floor_hit, blocked, tall]
+        S --> H[A2 fill one-cell holes<br/>seen]
+        H --> F[A3 flood from poses over<br/>seen and not blocked<br/>floor_areas]
+        F --> C[A4 flood with a 1.0 m disk<br/>avoiding tall cells<br/>room cores]
+        C --> G[A5 grow cores<br/>over floor_areas]
+        G --> O[Room per cell, area]
+
+### Real numbers
+
+The room of the [Overview](introduction.qd), 260 poses:
+
+| | Value |
+|---|---|
+| Rooms found | 1 |
+| Free floor | 24.03 m² (9,610 cells) |
+| The room, walls to walls | about 8.4 × 6.4 m = 53 m² |
+
+The free floor is **less than half** of the room: furniture is left out, and so is floor the lidar
+never saw. That is enough for what comes next: the wall step only needs a place **inside** the room
+to walk out from.
+
+## Step B: the final rooms
+
+**In:** the walls, the grid, the poses, `door_max`, the room settings. **Out:** the list of rooms.
+Code: `model/rooms.cpp`. It runs after the [walls](walls.qd) are found.
+
+### B1. Draw the walls on the grid
+
+**Code:** [`rooms.cpp:26`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L26) `body_of` · [`rooms.cpp:51`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L51) `Mask::block` · [`rooms.cpp:151`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L151) `call`
+
+Each wall is a box: its centre line, plus half its thickness on each side. Every cell the box
+**touches** is marked blocked, not only the cells whose centre it covers. So a thin wall cannot
+slip between two cells and leave a hole.
+
+### B2. Close the doors
+
+**Code:** [`rooms.cpp:77`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L77) `close_doors` · [`rooms.cpp:81`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L81) `gap rule`
+
+Two wall pieces on one line, with a gap between them, can be the two sides of a door. If the gap
+is **longer than 0 and at most `door_max` = 1.2 m**, a closing box is drawn in the gap, as thick as
+the thinner wall.
+
+| Gap between two pieces of one wall | Result |
+|---|---|
+| 0.9 m | Closed: it is a door, and the room stays shut |
+| 1.2 m | Closed (the limit counts) |
+| 1.5 m | Left open: the flood goes through |
+
+### B3. Flood from each pose
+
+**Code:** [`rooms.cpp:104`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L104) `flood` · [`rooms.cpp:116`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L116) `leak` · [`rooms.cpp:166`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L166) `min_area`
+
+For each pose whose cell is free and not labelled yet:
+
+1. Flood from it, over cells that are not blocked, 4 sides only (a diagonal step would slip
+   between two wall cells that meet at a corner).
+2. Count the cells. Under `min_area` = 1.0 m² (400 cells) it is a pocket, not a room: skip it.
+3. If the flood **reached the edge of the grid**, a wall is missing: the room is **open**
+   (`closed` is false). Otherwise it is closed.
+
+Cells never seen are not blocked, so a flood that gets through a gap runs on over unseen space to
+the edge. That is how a missing wall shows up.
+
+![A closed room and an open room after the flood](images/rooms-final-flood.svg "Same room, two gaps: 0.9 m is closed, 1.5 m leaks.")
+
+### B4. The room
+
+**Code:** [`rooms.cpp:174`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L174) `outline box` · [`rooms.cpp:130`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L130) `touches` · [`rooms.cpp:185`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L185) `ids by corner`
+
+- **Outline:** the **box** around the cells the flood reached. It is turned back to the map's own
+  angle later, with everything else.
+- **Walls around it:** a wall belongs to the room when its inner face is within
+  `wall_touch_distance` = 15 cm of one side of the box and runs along that side.
+- **Id:** the rooms are sorted by their lower-left corner (x first, then y), then numbered
+  `room-1`, `room-2`, … So the same map gives the same ids, however the robot walked.
+
+### B5. Objects join a room
+
+**Code:** [`model.cpp:93`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/model.cpp#L93) `room_id`
+
+Back in the model, an object gets a `room_id` when its centre lies inside the outline of a
+**closed** room. The first closed room that holds it wins.
+
+### Real numbers
+
+| | Value |
+|---|---|
+| Poses | 260 |
+| Rooms | 1 (`room-1`), closed |
+| Outline, squared map | x from −6.60 to 1.75, y from −3.35 to 3.05: **8.35 × 6.40 m** |
+| Walls around it | all 4: `wall-1` to `wall-4` |
+| Objects in it | 19 of 19 |
+
+## The settings of this chapter
+
+| Setting | Default | Used in |
+|---|---|---|
+| `free_space.floor_band` | 0.08 m | A1 |
+| `free_space.low_lo`, `low_hi` | 0.10 m, 0.30 m | A1 |
+| `free_space.min_points` | 2 | A1 |
+| `free_space.tall_from` | 0.90 m | A1 |
+| `free_space.door_radius` | 0.50 m | A4 |
+| `walls.door_max` | 1.2 m | B2 |
+| `rooms.min_area` | 1.0 m² | B3 |
+| `rooms.wall_touch_distance` | 0.15 m | B4 |
+
+All of them are explained in [Settings](settings.qd).
+
+## Where it is in the code
+
+Every link goes to the line in the repository.
+
+| Step | Code |
+|---|---|
+| A1 sort the cells | [`free_space.cpp:25`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L25) `classify_cells` · [`free_space.cpp:37`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L37) `low band` · [`free_space.cpp:41`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L41) `floor_hit` · [`free_space.cpp:42`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L42) `tall` · [`free_space.cpp:46`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L46) `blocked` |
+| A2 fill one-cell holes | [`grids.cpp:63`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/geometry/grids.cpp#L63) `close_holes` · [`free_space.cpp:137`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L137) `call` |
+| A3 floor reached | [`free_space.cpp:93`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L93) `label_area_reached` · [`free_space.cpp:67`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L67) `spread_labels` · [`free_space.cpp:53`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L53) `disk_fits` · [`free_space.cpp:140`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L140) `call` |
+| A4 room cores | [`free_space.cpp:138`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L138) `door disk` · [`free_space.cpp:141`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L141) `call` |
+| A5 grow the rooms | [`free_space.cpp:116`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L116) `expand_rooms_labels` · [`free_space.cpp:143`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L143) `call` |
+| A6 area | [`free_space.cpp:148`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L148) `area` · [`free_space.cpp:129`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/floor/free_space.cpp#L129) `find_floor_rooms` |
+| B1 draw the walls | [`rooms.cpp:26`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L26) `body_of` · [`rooms.cpp:51`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L51) `Mask::block` · [`rooms.cpp:151`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L151) `call` |
+| B2 close the doors | [`rooms.cpp:77`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L77) `close_doors` · [`rooms.cpp:81`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L81) `gap rule` |
+| B3 flood | [`rooms.cpp:104`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L104) `flood` · [`rooms.cpp:116`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L116) `leak` · [`rooms.cpp:166`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L166) `min_area` |
+| B4 the room | [`rooms.cpp:174`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L174) `outline box` · [`rooms.cpp:130`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L130) `touches` · [`rooms.cpp:185`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L185) `ids by corner` |
+| B5 objects join a room | [`model.cpp:93`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/model.cpp#L93) `room_id` |
+
+## What the tests check
+
+Four cases in `free_space_test`, listed in step A4. Step B has **no test of its own**.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| **Two door sizes.** Step A cuts a room at a gap narrower than 1.0 m (twice `door_radius`). Step B closes a gap up to 1.2 m (`door_max`). The two settings are not linked: a door of 1.1 m is not a cut in step A, but is closed in step B | `free_space.cpp`, `rooms.cpp` |
+| The [Domain](domain.qd) says a doorway can leave a room open. In the code a gap up to `door_max` is **closed**, so a door never makes a room open | `rooms.cpp` |
+| The room outline is the **box** around the flood, so an L-shaped room gets an outline that is too big (a TODO) | `rooms.cpp` |
+| Step A has a TODO: it cannot tell a closed room from one still open toward floor not seen yet | `free_space.cpp` |
+| Step A starts over on every run, so the room numbers of the free floor can change between two runs on a growing map | `free_space.hpp` |
+| **No path, no room.** With no poses, step A returns nothing, so there are no walls either | `free_space.cpp` |
+| Step B has no test | `backend/tests/` |

@@ -1,0 +1,192 @@
+.docname {Development}
+.include {docs}
+
+How to build, test and ship vCortex. To only **run** it, see [Usage](usage.qd).
+
+## The tools
+
+| For | Needs |
+|---|---|
+| Backend | A C++17 compiler, CMake 3.25+, Ninja, PCL, Eigen, nlohmann/json, Asio |
+| Frontend | Node 22.18+ or 24.12+ |
+| Docs | Quarkdown 2.7.0 |
+| Containers | Docker or Podman |
+
+PCL is the heavy one. On Fedora the packaged PCL pulls in VTK and Qt (about 2 GiB), so the
+README builds the few PCL modules needed, once, into `~/.local/opt/pcl`. The backend's
+`Dockerfile` does the same, with the same options.
+
+## Build and run the backend
+
+```sh
+cd backend
+cmake --preset dev              # Debug, Ninja, PCL from ~/.local/opt/pcl
+cmake --build --preset dev
+build/vcortex --port 9002
+```
+
+| Option | Meaning |
+|---|---|
+| `--port <n>` | Port for every route. Default 9002 |
+| `--config <file>` | Start values for the model, for example `config/model.json` |
+| `--map <file.pcd>` | Offline mode: open a saved map, accept no robot |
+
+**Offline example.** `build/vcortex --map map.pcd --config config/model.json`. If a file
+`trajectory.tum` sits next to `map.pcd`, it is read as the robot's path.
+
+The preset also writes `build/compile_commands.json`, for editors that use clangd.
+
+## What gets built
+
+| Target | Holds | Needs |
+|---|---|---|
+| `vcortex_core` | domain, model, connectors, protocol | PCL, Eigen, nlohmann/json. No web server, no files |
+| `vcortex_io` | server, store, worker, config, offline | `vcortex_core`, PCL's file reader, Crow, threads |
+| `vcortex` | `main.cpp` | `vcortex_io` |
+| `vcortex_tests` | the tests | `vcortex_core`, doctest |
+
+The split is the same as the layers in [Folders](project-structure.qd). The tests link only
+`vcortex_core`, so a test never touches the network or a file.
+
+| Library | Version | Used for |
+|---|---|---|
+| PCL | 1.14+ (the images build 1.15.1) | Point cloud maths: dropping strays, floor plane, search |
+| Eigen | any that PCL accepts | Vectors, boxes, rotations |
+| nlohmann/json | 3.11+ | JSON in and out |
+| Crow | 1.3.4, pinned by hash | HTTP and WebSocket server |
+| doctest | 2.4.12, pinned by hash | Tests |
+
+Crow is pinned to 1.3.4, which fixed a bypass of the login check in the WebSocket upgrade.
+All warnings are on (`-Wall -Wextra -Wpedantic -Wshadow -Wconversion`) for our own code.
+
+## Tests
+
+```sh
+cd backend
+ctest --test-dir build          # or run build/vcortex_tests
+```
+
+**Real result on this machine:** 20 test cases, 54 checks, all passed.
+
+| File | Cases | What it checks |
+|---|---|---|
+| `floor/free_space_test` | 4 | Doors split rooms; an aisle between desks does not |
+| `wall/outline_test` | 1 | Each room has its own outline; a shared wall is in both |
+| `wall/outline_steps_test` | 7 | L-shaped rooms, doors, furniture against a wall, corners |
+| `wall/walls_test` | 2 | Two faces make one wall as thick as their distance; one face makes a default-thickness wall |
+| `object/boxes_test` | 6 | A step, an L, a U, a ring: how many boxes each shape gives |
+
+### Rooms drawn as text
+
+A test draws its room in the file, and the helper turns the drawing into dots, as a lidar would.
+One character is a 10 cm square.
+
+| Character | Means |
+|---|---|
+| `.` | Floor seen |
+| `#` | Wall: floor, low dots (10–30 cm) and tall dots (1.0 and 1.8 m) |
+| `d` | Desk: floor, low dots and its top at 0.75 m; nothing tall |
+| `P` | Floor, with a robot pose in the middle |
+| (space) | Not seen |
+
+**Example,** the real drawing of `a door between walls splits two rooms`: two rooms of
+1.6 × 1.8 m, a wall between them, and a **0.9 m door** (the 9 rows with no `#` in the middle wall).
+There is one pose `P` in each room.
+
+```text
+const std::vector<std::string> kTwoRoomsWalkedBoth = {
+###################################
+#................#................#
+#................#................#
+#................#................#
+#................#................#
+#................#................#
+#.................................#
+#.................................#
+#.................................#
+#.................................#
+#........P................P.......#
+#.................................#
+#.................................#
+#.................................#
+#.................................#
+#................#................#
+#................#................#
+#................#................#
+#................#................#
+```
+
+The test checks that the model finds **2 rooms**, and that the squares under the two `P` belong
+to different ones.
+
+Each character becomes 4 × 4 dots, 2.5 cm apart, so each 5 cm square of the grid holds 2 × 2.
+No square reads as unseen floor.
+
+There are no tests yet for the server, the store, the worker, the connectors or the frontend.
+
+## Build and run the frontend
+
+See [Frontend](frontend.qd) for the commands. In short: `npm install`, then `npm run dev` for hot
+reload; it sends `/api` and `/ws` to the backend on port 9002.
+
+After a change to `backend/schema/twin.schema.json`, run `npm run generate-types`.
+
+## Containers
+
+.mermaid caption:{How the backend image is built. Only the last stage ships.}
+    flowchart LR
+        T[toolchain<br/>compiler, CMake, libs] --> P[pcl<br/>built from source, static]
+        T --> C[crow<br/>source, checked by hash]
+        P --> B[build<br/>one static program]
+        C --> B
+        B --> R[runtime<br/>distroless image]
+
+| Image | Base | Holds |
+|---|---|---|
+| `vcortex-backend` | `distroless/static-debian13:nonroot` | One static program, plus `config/` |
+| `vcortex-frontend` | the same | The Caddy program and the built page |
+
+- **Distroless** means the image has no shell and no tools. There is little to attack.
+- PCL is built from source, static, and without VTK and Qt: the image stays small.
+- The program is linked as `-static-pie`: one file, with address randomisation kept.
+- The last build stage runs **offline**: Crow's source comes from an earlier stage, and tests
+  are off (`BUILD_TESTING=OFF`).
+
+### `compose.yaml`
+
+| Service | Port | Notes |
+|---|---|---|
+| `backend` | 9002 | The robot's bridge connects to `/ingest` here. `./data` is mounted read-only at `/data` |
+| `frontend` | 8081 (8080 inside) | Open this in the browser |
+
+Both run with a **read-only file system**, **no Linux capabilities**, `no-new-privileges` and
+`restart: unless-stopped`. The token comes from `.env` (copy `.env.example`):
+`VCORTEX_INGEST_TOKEN`. Empty means no check.
+
+```sh
+cp .env.example .env
+docker compose up --build       # or: podman compose up --build
+```
+
+## The documentation
+
+```sh
+cd docs
+quarkdown c main.qd -o output   # the output folder is not in git
+```
+
+| Job | When | Does |
+|---|---|---|
+| `build` | A push to `main`, or a pull request, that touches `docs/` | Builds the HTML |
+| `deploy` | A push to `main` only | Publishes it on GitHub Pages |
+
+Every action in the workflow is pinned to a **full commit hash**, with the version in a comment.
+A tag can be moved; a hash cannot.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| The only workflow builds the docs. Nothing builds or tests the backend or the frontend on a push | `.github/workflows/` |
+| `compose.yaml` has a stale TODO about `--map`. To use offline mode in a container, edit its `command` line by hand | `compose.yaml` |
+| No tests for `io/`, `connectors/`, `protocol/` and the frontend | `backend/tests/`, `frontend/` |

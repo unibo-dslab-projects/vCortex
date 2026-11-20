@@ -1,0 +1,142 @@
+.docname {Frontend}
+.include {docs}
+
+The frontend is one web page with two views side by side. It holds **no model logic**: it shows
+what the backend sends and sends back one setting.
+
+| | |
+|---|---|
+| Language | TypeScript, with Vue 3 for the page |
+| 3D | three.js, through TresJS (Vue components that make three.js objects) |
+| Build | Vite; it also makes the page installable (a PWA) |
+| Server | Caddy, in the container; Vite's own server while developing |
+
+## The page
+
+.mermaid caption:{The one page and what it holds.}
+    flowchart TD
+        H[HomeView<br/>the page] --> A[AppHeader]
+        H --> R[RawView<br/>left]
+        H --> T[TwinView<br/>right]
+        H --> S[StatusBar]
+        R --> SC1[SceneCanvas]
+        T --> SC2[SceneCanvas]
+        T --> RN[One renderer<br/>per format]
+
+| Piece | What it does |
+|---|---|
+| `views/HomeView` | The only page. Asks the backend for status every **2 s**, for formats and settings once it answers |
+| `AppHeader` | Name, the source ("Offline · map.pcd", "Live · waiting for the robot", or "Backend unreachable"), the run and `seq`, and the **Export** button: it downloads the twin in the format chosen on the right |
+| `RawView` | The raw dots, live, on the left |
+| `TwinView` | The twin on the right, with one tab per format and the display buttons |
+| `StatusBar` | What the last run found, and the wall height input |
+| `SceneCanvas` | A 3D canvas with a camera, mouse controls, light and a floor grid. Both views use it |
+| `ViewTools` | The buttons for the isometric and the top view |
+| `renderers/*` | One file per format; see below |
+
+## Where the data comes from
+
+| Service | Talks to | Gives |
+|---|---|---|
+| `services/api` | `/api/formats`, `/api/settings`, `/api/status`, `/api/twin/<id>` | Typed answers; an error carries the backend's message |
+| `services/rawSocket` | `/ws/raw` | Calls `full`, `delta` and `connection` handlers |
+| `services/twinSocket` | `/ws/twin?format=<id>` | The latest twin: text, bytes, or `null` |
+
+Both sockets **retry every second** when the link drops, and stop when the page is left.
+
+.mermaid caption:{From a WebSocket message to pixels.}
+    flowchart LR
+        WS1["/ws/raw"] --> RS[rawSocket] --> PC[PointCloud] --> RV[RawView]
+        WS2["/ws/twin"] --> TS[twinSocket] --> RD[renderer] --> TV[TwinView]
+        RD --> SB[scene/twinScene]
+        API["/api/status"] --> HV[HomeView] --> ST[StatusBar]
+
+## The raw view
+
+The backend's map frame is "z up"; three.js is "y up". The whole scene is turned once
+(`Z_UP_TO_Y_UP`), so every number stays as the backend sent it.
+
+- A **full map** arrives as 12-byte records. The page reads them **in place**, without copying,
+  as a `Float32Array` that starts after the 16-byte header (see [Protocol](protocol.qd)).
+- A **delta** has 16-byte records: `x y z` and the dot's place. A place below the dot count
+  replaces that dot; a place past the end adds one.
+- The cloud lives in typed arrays and is **updated in place**. Rebuilding the shapes of an
+  800,000-dot cloud for each delta would stall the page.
+- Colour goes by height: dark, then cyan, then near white. The ends are the **2nd and 98th
+  percentile** of the heights, so a few stray dots do not wash the gradient out.
+- The camera moves to the map **only for the first map of a survey**. A reconnect sends the same
+  map again; the camera stays where the person left it.
+
+## The twin view
+
+| Format | Renderer | How it draws |
+|---|---|---|
+| `twin-json` | `TwinJsonScene` | Reads the JSON, builds 3D shapes: a box per wall, an outlined floor per room, a box per object |
+| `dxf` | `DxfScene` | Reads the DXF with a small parser; draws lines per layer, with a colour per layer |
+| `ply` | `PlyScene` | Reads the binary file with three.js's PLY loader; draws it like the raw cloud |
+
+What `twin-json` shows, from the twin's own fields:
+
+| Part | Drawn as |
+|---|---|
+| Wall | A box: length from `start` to `end`, depth `thickness`, height `wall_height`, standing on `floor_z`. A label shows its length |
+| Room | A faint floor and its outline, in cyan if `closed`, in **orange** if not |
+| Object | A box from `bottom_z` to `top_z_seen`, turned by `yaw`. An optional label |
+| Wall height | One marker, on the longest wall: all walls share it |
+
+- Each message is the **whole twin**, so each one replaces the shapes of the last. The old shapes
+  are freed first.
+- Changing the format **closes** the old stream and opens a new one. The camera goes to the new
+  twin; a floor plan opens from above.
+- Later runs of the same format do **not** move the camera.
+- An empty message means "no twin yet": the view shows "Waiting for the first model run".
+
+## The status bar and the one setting
+
+- The bar shows the last report: walls, rooms, objects, time, how many dots were kept, the floor
+  tilt and the turn.
+- **Points kept** is `after_outliers / points_in`. The real room: 186,427 / 192,149 = **97.0%**.
+- The wall height input waits **half a second** after the last key, then sends one `PUT`. Each `PUT`
+  makes the backend run the model again; this stops one run per key.
+- If the backend refuses the value, the message appears beside the input.
+
+## Types
+
+| File | How it is made |
+|---|---|
+| `types/twin.ts` | **Generated** from `backend/schema/twin.schema.json` with `npm run generate-types` |
+| `services/api.ts` | Written by hand: formats, settings, status |
+
+## Building and serving
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Vite's server with hot reload; sends `/api` and `/ws` to `localhost:9002` (or `VCORTEX_BACKEND`) |
+| `npm run build` | Type check, then build into `dist/` |
+| `npm run type-check` | `vue-tsc`, a type checker that also reads `.vue` files |
+| `npm run lint` | oxlint, then ESLint |
+| `npm run format` | Prettier |
+| `npm run generate-types` | Rebuild `types/twin.ts` |
+
+**In the container**, Caddy serves the built page on port 8080 and passes `/api` and `/ws` to the
+backend. So the browser sees **one address**, and there is nothing to configure for cross-site
+requests.
+
+| Path | Cache |
+|---|---|
+| `/assets/*` | One year. Vite puts a hash in each name, so a changed file has a new name |
+| Everything else (`index.html`, the service worker, the manifest) | Checked on each load, or a new release would never reach the browser |
+
+### The installable app (PWA)
+
+- The page can be installed on a phone or a laptop. It updates itself.
+- Its files are kept for offline start. `/api` and `/ws` are **never** cached: they are live data.
+- The icons are made from `public/logo.svg`.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| `frontend/README.md` is still the text of the Vue project template; it says nothing about vCortex | `frontend/README.md` |
+| The HTTP types are written by hand, so a change in the backend's status answer is not caught by the type checker | `services/api.ts` |
+| The page sets only the wall height; the other settings need a `PUT` by hand | `StatusBar.vue` |

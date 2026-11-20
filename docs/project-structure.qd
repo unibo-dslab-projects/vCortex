@@ -91,6 +91,8 @@ The model follows the steps of the [Algorithm](algorithm.qd), and its folders fo
 | `CMakeLists.txt` | Builds two libraries and the program: `vcortex_core` (domain to protocol), `vcortex_io` (the outside world) and `vcortex`. |
 | `Dockerfile` | Builds the backend image: one program, no shell, run as a normal user. |
 
+For what each domain type is in the code, see [Domain in code](domain-in-code.qd).
+
 ## The frontend
 
 | Path | What it holds |

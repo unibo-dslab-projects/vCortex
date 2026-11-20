@@ -1,0 +1,186 @@
+.docname {Domain in code}
+.include {docs}
+
+The [Domain](domain.qd) page never mentions code. This page is the bridge: for each part of the
+domain, the type that holds it, the step that makes it, and the file the twin is written to.
+
+- Types live in `backend/include/vcortex/domain/`.
+- The twin file is described by `backend/schema/twin.schema.json`.
+
+## From the domain to the code
+
+| Domain | C++ type | File | Made by |
+|---|---|---|---|
+| Survey (one walk) | `Snapshot` plus a `Trajectory` | `snapshot.hpp` | `io/store`, filled by what the robot sends |
+| Map | `Snapshot::points`, a list of `LidarPoint` | `snapshot.hpp`, `lidar_point.hpp` | `io/store` |
+| Path | `Trajectory`, a list of `Pose` | `snapshot.hpp` | `io/store` (keeps one pose every 0.2 m) |
+| Building | `Building` | `building.hpp` | `model/model` |
+| Level | `Level` | `building.hpp` | `model/model` |
+| Wall | `Wall` | `building.hpp` | `model/wall/walls` |
+| Room | `Room` | `building.hpp` | `model/rooms` |
+| Object | `Object` | `building.hpp` | `model/object/objects` |
+| Wall height, and where it came from | `Level::wall_height` and `HeightSource` (`Default` or `User`) | `building.hpp`, `settings.hpp` | `model/model`, from the settings |
+
+## What the types keep
+
+| Type | Fields | Note |
+|---|---|---|
+| `LidarPoint` | position, intensity, `num_scan_seen` | `num_scan_seen` is how many scans saw this spot: the "seen in many scans is solid" rule |
+| `Pose` | time, position, `yaw` | Where the robot was, and which way it faced |
+| `Level` | `floor_z`, `wall_height`, `wall_height_source`, walls, rooms, objects | One level per building today |
+| `Wall` | `start`, `end`, `thickness`, `num_points` | A straight piece, seen from above |
+| `Room` | `outline`, `wall_ids`, `closed`, optional `name` | `closed` is false when the outline has a gap |
+| `Object` | `center`, `size`, `yaw`, `bottom_z`, `top_z_seen`, optional `room_id`, `kind` | `top_z_seen` says "seen", not "real top" |
+
+The names `Wall`, `Room` and `Object` follow IFC, the open standard for building data:
+
+| Ours | IFC name |
+|---|---|
+| `Wall` | `IfcWall` |
+| `Room` | `IfcSpace` |
+| `Object` | `IfcBuildingElementProxy` (a "thing" with no better class) |
+
+## Domain rules in the code
+
+| Rule | Where you see it |
+|---|---|
+| A wall height belongs to the level | It is a field of `Level`, not of `Wall` |
+| A twin says where the wall height came from | `wall_height_source` is always set |
+| A room may be open | `Room::closed` |
+| An object belongs to at most one room | `Object::room_id` is optional; empty means the level |
+| What was not seen stays unknown | `top_z_seen`, not `top_z` |
+| Furniture is not a wall | `find_objects` only receives the dots that are left after the walls and the floor |
+
+## Ids and references
+
+Parts point at each other by id, as text.
+
+| Part | Id | Points at |
+|---|---|---|
+| Level | `level-1` | nothing |
+| Wall | `wall-1`, `wall-2`, … | nothing |
+| Room | `room-1`, `room-2`, … | its walls, in `wall_ids` |
+| Object | `object-1`, `object-2`, … | its room, in `room_id` (or `null`) |
+
+- Ids are numbered in the order the step made them. Walls are numbered after sorting.
+- Ids are **only good inside one twin**. Run the model again and `wall-1` may be another wall.
+- The JSON writer refuses a twin where an id is empty or repeated, where a `wall_ids` or
+  `room_id` points at nothing, or where a room outline has fewer than 3 points. A reader can
+  follow every link without checking it.
+
+## Units and frames
+
+| What | Value |
+|---|---|
+| Length | metres |
+| Up | the z axis |
+| Plan (walls, rooms, objects) | x and y only, seen from above |
+| Height | `floor_z` of the level, plus `bottom_z` and `top_z_seen` on objects |
+| Frame | the map frame the robot named (`camera_init` in the example below) |
+| Rounding | millimetres, in the JSON and the DXF |
+| Angles | **radians** in an object's `yaw`, **degrees** in the report (`yaw_deg`, `floor_tilt_deg`) |
+
+- The building comes back in the robot's own map frame, **not turned square**. So it lines up
+  with the raw cloud with no extra step.
+- `floor_z` is the floor height under the middle of the walls. The floor may be tilted, so the
+  height at the map's origin could lie metres away from the building.
+- A wall is drawn by its **centre line**; `thickness` is added on both sides.
+
+## The twin file
+
+### A real example
+
+One real run: the room from the [Overview](introduction.qd), 192,149 dots, offline mode. The
+file is cut to one wall, the room and one object (the real file has 4 walls and 19 objects).
+
+```json
+{
+  "schema_version": "0.2.0",
+  "run_id": 0,
+  "seq": 0,
+  "frame": { "id": "camera_init", "up": "z", "unit": "m" },
+  "report": {
+    "points_in": 192149,
+    "after_outliers": 186427,
+    "floor_tilt_deg": 2.3575199762923114,
+    "free_space_area_m2": 24.025000000000002,
+    "free_space_rooms": 1,
+    "outline_sides": 4,
+    "yaw_deg": 16.8,
+    "duration_ms": 1570.293228
+  },
+  "levels": [
+    {
+      "id": "level-1",
+      "floor_z": -0.455,
+      "wall_height": 2.7,
+      "wall_height_source": "default",
+      "walls": [
+        { "id": "wall-1", "start": [-5.402, -5.208], "end": [-7.294, 1.058],
+          "thickness": 0.1, "points": 761 }
+      ],
+      "rooms": [
+        { "id": "room-1", "name": null, "closed": true,
+          "outline": [[-5.35, -5.115], [2.644, -2.701], [0.794, 3.426], [-7.2, 1.012]],
+          "wall_ids": ["wall-1", "wall-2", "wall-3", "wall-4"] }
+      ],
+      "objects": [
+        { "id": "object-1", "kind": "unknown", "room_id": "room-1",
+          "center": [-5.469, -2.565], "size": [0.5, 2.7], "yaw": 0.2932153143350474,
+          "bottom_z": -0.305, "top_z_seen": 1.217, "points": 5292 }
+      ]
+    }
+  ]
+}
+```
+
+Read it like this:
+
+- `wall-1` runs from (-5.402, -5.208) to (-7.294, 1.058): length
+  √(1.892² + 6.266²) = **6.55 m**. This matches the room's short side.
+- `room-1` is closed and lists all 4 walls.
+- `object-1` stands in `room-1`. Its box is 0.5 × 2.7 m, turned by 0.293 rad (16.8°, the same
+  turn the model used to square the map). The highest dot seen is 1.217 m above the map's zero, so
+  **1.217 − (−0.455) = 1.67 m** above the floor.
+
+### The top level
+
+| Field | Meaning |
+|---|---|
+| `schema_version` | Version of the file's shape, as `major.minor.patch` |
+| `run_id`, `seq` | Which survey, and how many map pieces it had when the model ran |
+| `frame` | Name of the map frame, `up` is always `"z"`, `unit` is always `"m"` |
+| `report` | What the model found, to judge a map without opening it |
+| `levels` | A list with at least one level |
+
+### The report
+
+| Field | Meaning |
+|---|---|
+| `points_in` | Dots in the map |
+| `after_outliers` | Dots left after dropping stray ones |
+| `floor_tilt_deg` | Slope of the floor. A few degrees means the sensor was tilted |
+| `free_space_area_m2` | Floor the robot could reach, counted from its path, also under desks |
+| `free_space_rooms` | Rooms the robot's path walked into |
+| `outline_sides` | Wall sides found, all rooms together. Fewer than 4 per room means a side had no wall face |
+| `yaw_deg` | The turn that squared the map |
+| `duration_ms` | Time of the run |
+
+## The schema is the contract
+
+- `twin.schema.json` says what a twin may hold. **No other field is allowed**
+  (`additionalProperties` is false everywhere), so a typo cannot slip in.
+- The version follows one rule: **major** when a field is renamed or removed, **minor** when an
+  optional field is added.
+- The frontend does not copy the shape by hand. `npm run generate-types` builds
+  `frontend/src/types/twin.ts` from the schema.
+- `kind` can only be `"unknown"` today. See [Domain](domain.qd) for what is missing.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| The domain says an object outside every room belongs to the level. The code gives an object a `room_id` only when the room is **closed**; an object in an open room gets `null`, as if it were in no room | `model/model.cpp` |
+| A room's outline is the box around the free floor, so an L-shaped room gets an outline that is too big (a TODO in the code) | `model/rooms.cpp` |
+| The HTTP types `Status`, `Settings` and `ModelReport` of the frontend are written by hand, not built from a schema. The status report calls the floor slope `tilt_deg`; the twin file calls it `floor_tilt_deg` | `frontend/src/services/api.ts` |
+| The twin's `report` has no `poses`, `walls`, `rooms` or `objects` counts; only the status answer has them | `schema/twin.schema.json`, `io/server.cpp` |

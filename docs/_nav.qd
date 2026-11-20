@@ -7,7 +7,15 @@
 
 ###! Project structure
 
+- [How it runs](how-it-runs.qd)
 - [Folders](project-structure.qd)
+- [Domain in code](domain-in-code.qd)
+- [Protocol](protocol.qd)
+- [Backend runtime](backend-runtime.qd)
+- [Settings](settings.qd)
+- [Output formats](output-formats.qd)
+- [Frontend](frontend.qd)
+- [Development](development.qd)
 
 ###! Algorithm
 

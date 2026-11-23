@@ -88,6 +88,9 @@ Parts point at each other by id, as text.
 
 ## The twin file
 
+The **twin** is what the **model** produces. The model is the method (the code in `model/`); the
+twin is its result, the building it found. One model run gives one twin.
+
 ### A real example
 
 One real run: the room from the [Overview](introduction.qd), 192,149 dots, offline mode. The

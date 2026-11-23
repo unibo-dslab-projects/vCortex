@@ -4,6 +4,24 @@
 How vCortex turns dots into straight walls. This is the hardest step of the model: to the laser a
 wall and a wardrobe both look like "a flat, upright surface" (see [Challenges](challenges.qd)).
 
+## In short
+
+1. **Start inside.** Take each rough room from the [Rooms](rooms.qd) step: floor the robot walked.
+2. **Walk out.** From the room's edge, walk outward in strips 25 cm wide, in the four directions.
+   Keep walking past furniture, because the gap behind it is short. Stop after 30 cm of nothing.
+   The last thing you met is the wall.
+3. **Straight sides.** Where many strips stop at the same distance, that is one straight side of
+   the room. A short bump inward (a cupboard against the wall) is ignored.
+4. **Make walls.** A wall between two rooms is seen from both: its two faces give its thickness. A
+   wall seen from one room only gets 10 cm. Pieces on one line join; corners meet.
+5. **Sort the dots.** Dots near a wall belong to it. Other dots inside the room are furniture, and
+   go to the [Objects](objects.qd) step.
+
+**Example, real:** the room of the [Overview](introduction.qd) gives **4 walls** around one room
+of about 8.4 × 6.4 m.
+
+The rest of this page gives each step in detail, with its numbers.
+
 ## The idea
 
 Do **not** look for lines in the cloud. Stand in the room, walk **outward**, and keep going until

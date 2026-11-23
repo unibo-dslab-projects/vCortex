@@ -4,6 +4,24 @@
 How vCortex turns the dots that are **not** wall into boxes: a desk, a wardrobe, a bin. Every
 object is a box seen from above, with a bottom and a top.
 
+## In short
+
+1. **Look from above.** Lay a grid of 5 cm squares over the furniture dots. A square with a dot in
+   it is **occupied**.
+2. **Clean the picture.** Fill small holes inside a thing (a glass top, a missed spot). Cut thin
+   links between two things that almost touch (two desks side by side).
+3. **Name the blobs.** Each group of occupied squares that touch becomes one **piece**: one
+   object, or a few objects so close that we take them as one.
+4. **Make boxes.** A piece is not always a rectangle. Cut it into rectangles, the biggest first:
+   an L-shaped desk gives two boxes.
+5. **Measure.** Each box gets its size from the squares, and its bottom and top from its lowest and
+   highest dot.
+
+**Example, real:** the room of the [Overview](introduction.qd) gives 71,262 furniture dots, and
+from them **19 boxes**. The biggest is 4.10 × 0.95 m, with its top seen 1.79 m above the floor.
+
+The rest of this page gives each step in detail, with its numbers.
+
 ## What comes in, what goes out
 
 | | |
@@ -31,11 +49,12 @@ the walls. It is turned back to the map's own angle at the end.
 | Word | Meaning | Default |
 |---|---|---|
 | **Cell** | A square of the top view | 5 cm |
-| **Occupied** | A cell with at least `cell_min_points` dots | 1 dot |
-| **Piece** | A group of occupied cells that belong to one thing | |
-| **Radius** | In cells: 10 cm ÷ 5 cm = **2 cells**. The window it makes is 5 cells wide | |
-| **Grow** | Mark every cell that has a marked cell within the radius | |
-| **Shrink** | Keep only the cells whose whole window is marked | |
+| **Occupied** | A cell that holds enough dots to count. The setting `cell_min_points` says how many | 1 dot |
+| **Piece** | A group of occupied cells taken as **one object**: they touch, so we assume they are the same thing | |
+| **Radius** | How far a step looks, in cells: 10 cm ÷ 5 cm = **2 cells** | |
+| **Window** | The square of cells around one cell, out to the radius on every side: 2 + 1 + 2 = **5 cells** wide | |
+| **Grow** | A cell becomes occupied when any cell of its window is occupied. Shapes get fatter | |
+| **Shrink** | A cell stays occupied only when its whole window is occupied. Shapes get thinner | |
 
 ## O1. The grid
 

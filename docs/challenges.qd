@@ -84,3 +84,16 @@ What vCortex does not handle yet, as a result of the problems above:
       are not tested yet.
     - **No doors or windows.** A gap in a wall only marks the room as open.
     - **People leave traces.** Someone walking past the robot can show up as a small object.
+    - **One robot at a time.** A second robot replaces the first; their maps are not merged.
+
+Possible ways forward, one per limit. None of them is built; they are ideas to try.
+
+| Limit | A possible way forward |
+|---|---|
+| Wall height is typed in | Tilt the lidar up for a short pass, or add a second sensor that looks up, and read the ceiling. Or take the height from a plan of the building |
+| Right angles only | Find the main directions of each room on its own, instead of one angle for the whole map. Curved walls would need curves, not straight sides |
+| Objects are boxes | Name each box by its size and height (a desk is about 0.75 m high, a wardrobe about 2 m), or with a trained classifier on its dots. Turn each box to fit its own dots, not the walls |
+| One room tested | Survey buildings with several rooms and corridors, and add them to the test maps with measured ground truth |
+| No doors or windows | A gap of 0.7 to 1.2 m in a wall, from floor up, is likely a door. A window is a hole in the wall dots at desk height and above |
+| People leave traces | Use `num_scan_seen`, the number of scans that saw each cube. Something seen in only a few scans, while the robot stood near it many times, was moving |
+| One robot at a time | Line the maps of the robots up in one frame first, then let them all feed one map store. The model already works on any set of dots and poses |

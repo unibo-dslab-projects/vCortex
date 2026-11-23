@@ -84,6 +84,16 @@ a file or the network. So the live robot, a saved map and the tests all run the 
 Only one source feeds the backend at a time. A newer source replaces the old one: a robot that
 lost Wi-Fi never says goodbye, and it must not lock everyone else out.
 
+**Two robots in the same building.** The project asks for one robot, so this case is not handled.
+If a second robot connects, it **replaces** the first: the map store is emptied and fills again
+with the second robot's map only. The two maps are not merged. When the first robot stops, nothing
+else changes: the second keeps feeding its own map.
+
+Merging would need one more step first. Each robot builds its map in its **own frame**, starting
+from where it stood, so the same wall has different coordinates in the two maps. Once the maps are
+lined up, the model itself would not care: it works on dots and poses, whatever robot they came
+from. See the limits in [Challenges](challenges.qd).
+
 ### 2. The map streams in
 
 .mermaid caption:{Map pieces arrive and go straight on to the left view.}

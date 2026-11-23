@@ -11,6 +11,25 @@ How vCortex finds the rooms of a building. A room is found **twice**, on purpose
 The walls need a room to start from, and the room needs walls to be closed. The free floor breaks
 that circle: it is a rough room, made only from the robot's path and the low dots.
 
+## In short
+
+1. **Look from above.** Lay a grid of 5 cm squares over the map. For each square, note whether the
+   floor was seen, whether something low stands there (a leg, a wall), and whether something tall
+   stands there (a wall, a wardrobe).
+2. **Free floor.** Start where the robot stood and spread over the floor it could walk on, like
+   water poured on the floor. This is the rough room.
+3. **Cut at doors.** Spread again, but with a 1 m wide coin that must fit between the tall things.
+   Most doors are narrower than the coin, so it cannot pass: the two sides become two rooms.
+4. **Walls next.** The [Walls](walls.qd) step walks out from these rough rooms and finds the walls.
+5. **Final rooms.** Draw the walls on the grid, close the doors, and pour the water again. Where it
+   stops is the room. If it runs off the edge of the map, a wall is missing: the room is **open**.
+
+**Example, real:** the room of the [Overview](introduction.qd), 260 robot positions. The free floor
+is 24 m², less than half of the 53 m² room, because furniture hides the rest. That is enough: the
+wall step only needs a place inside the room to start from.
+
+The rest of this page gives each step in detail, with its numbers.
+
 .mermaid caption:{Where the two room steps sit in one model run.}
     flowchart LR
         A[Clean, floor,<br/>square the map] --> B[Free floor<br/>rough rooms]
@@ -26,7 +45,7 @@ that circle: it is a rough room, made only from the robot's path and the low dot
 | **Squared map** | The map turned so the walls run along the x and y axes (see the `yaw` in the report) |
 | **Floor plane** | The tilted plane the floor lies on. A **height** is always measured above it |
 | **Pose** | One place the robot stood. 260 of them in the real run below |
-| **Flood** | Start from a cell and spread to the 4 cells next to it (up, down, left, right), again and again, until a stop sign. The spread cells are labelled with one number |
+| **Flood** (flood fill) | Like water poured on one cell: it spreads to the 4 cells next to it (up, down, left, right), again and again, until something stops it. Every cell it reaches gets the same number. The usual name of this method is **flood fill** |
 
 Cells are joined by their 4 sides, never by corners. Two areas that touch only at a corner stay
 apart.
@@ -161,7 +180,7 @@ Code: `model/rooms.cpp`. It runs after the [walls](walls.qd) are found.
 **Code:** [`rooms.cpp:26`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L26) `body_of` · [`rooms.cpp:51`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L51) `Mask::block` · [`rooms.cpp:151`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/rooms.cpp#L151) `call`
 
 Each wall is a box: its centre line, plus half its thickness on each side. Every cell the box
-**touches** is marked blocked, not only the cells whose centre it covers. So a thin wall cannot
+**touches** is set to blocked, not only the cells whose centre it covers. So a thin wall cannot
 slip between two cells and leave a hole.
 
 ### B2. Close the doors

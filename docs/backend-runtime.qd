@@ -3,7 +3,8 @@
 
 How the backend works as a program: what runs at the same time, who may touch what, and what
 happens when something goes wrong. [How it runs](how-it-runs.qd) shows the flow; this page gives
-the reasons.
+the reasons. Words like **map**, **path**, **model** and **twin** are defined in the
+[Glossary](glossary.qd).
 
 ## The parts
 
@@ -30,7 +31,9 @@ the reasons.
 1. `main` reads the options: `--port` (default 9002), `--config <file>`, `--map <file.pcd>`.
 2. It reads the config file, if any. A wrong file stops the program with a message.
 3. With `--map`, it loads the map into the store, once.
-4. It reads the token from the environment variable `VCORTEX_INGEST_TOKEN`. Empty means no check.
+4. It reads the **ingest token** from the environment variable `VCORTEX_INGEST_TOKEN`. The token
+   is a shared password: a robot must send the same value before the backend takes its map. Empty
+   means no check. See [Usage](usage.qd) for how to set it.
 5. The server starts the worker thread, then listens.
 6. `SIGINT` or `SIGTERM` stops the server cleanly; then the worker is stopped. So
    `docker stop` needs nothing special.
@@ -41,7 +44,15 @@ that is already gone.
 
 ## The map store
 
-It keeps one dot per **cube**, as the source does.
+**In short:** the map store holds the backend's copy of the map and the path. Each message from
+the robot updates it. Every few seconds the model worker takes a copy and works on that copy, so
+the robot never waits for the model.
+
+**Cube and dot.** Space is cut into small **cubes** (5 cm on the robot). A cube is a box of space;
+a **dot** is the one point kept for it, at the average position of everything the laser saw inside.
+So a cube holds exactly one dot: "a new cube" and "a new dot" mean the same thing.
+
+### How it works inside
 
 ```text
 cube key = floor(position / cube size)        for x, y and z
@@ -52,7 +63,8 @@ example, cube size 0.05 m, a dot at (1.23, -0.02, 0.51):
 
 - A **hash table** maps each key to a place in a **plain list** of dots.
 - A new cube goes at the end of the list. A cube seen again **replaces** its dot where it is.
-  So the place of a dot never changes, and the browser can address it by that place.
+  So a dot's position in the list never changes, and the browser can address the dot by that
+  position.
 - The dots sit in a list, not inside the table, because the worker copies them all: one block
   copies faster than many small ones.
 - A `dirty` flag says "the map changed since the last copy". `take()` gives a copy **and clears
@@ -73,7 +85,9 @@ example, cube size 0.05 m, a dot at (1.23, -0.02, 0.51):
 
 ## The model worker
 
-One thread. It runs the model and every output writer, one after the other.
+One thread. It holds the model and every **output writer**, one after the other. An output writer
+(a **connector** in the code) turns the building into one file format: twin JSON, DXF or PLY (see
+[Output formats](output-formats.qd)).
 
 .mermaid caption:{The worker's loop.}
     flowchart TD
@@ -87,9 +101,15 @@ One thread. It runs the model and every output writer, one after the other.
         D3 --> E[Sleep for the period<br/>or until new settings]
         E --> B
 
-- It sleeps **one period** (3 s, from `model_period_s`) after each run, then looks again. It does **not** run once per delta. A burst of 100 deltas in 3 seconds costs one run, not 100.
-- New settings wake it **at once**. Settings that arrive during a run set a flag, so the next run
-  follows right away. Never more than one run waits.
+- It sleeps **one period** (3 s, from `model_period_s`) after each run, then looks again. It does
+  **not** run once per delta. A **delta** is a small message from the robot with only the cubes that
+  are new or changed since the last one. A burst of 100 deltas within 3 seconds gets computed in a
+  single run, not 100 runs.
+- New settings wake it **at once**, so a sleeping worker does not wait out the 3 seconds.
+- A run is never stopped halfway. Settings that arrive **during** a run only raise a flag. When the
+  run ends, the worker sees the flag and starts the next run right away, without sleeping.
+  **Example:** three `PUT`s arrive while a run is going. They give **one** extra run, with the
+  values of the last one, not three runs.
 - It checks once **before** the first sleep. So in offline mode the twin is ready at start, not
   3 seconds later.
 - The output is one object with the bytes of **every format**, shared by pointer. A download and a
@@ -114,6 +134,10 @@ One thread. It runs the model and every output writer, one after the other.
 | The source | One connection, or none; plus its name |
 | Raw viewers | A map from connection to its byte budget and state (see [Protocol](protocol.qd)) |
 | Twin viewers | For each format id, the set of its connections |
+
+A **viewer** is one open browser view: a **raw viewer** shows the dots (`/ws/raw`), a **twin
+viewer** shows the twin in one format (`/ws/twin`). The **byte budget** is how much the backend
+may send one raw viewer each second. All three are in the [Glossary](glossary.qd).
 
 ### Where the locks are
 

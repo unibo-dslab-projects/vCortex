@@ -94,6 +94,10 @@ from where it stood, so the same wall has different coordinates in the two maps.
 lined up, the model itself would not care: it works on dots and poses, whatever robot they came
 from. See the limits in [Challenges](challenges.qd).
 
+.box {Planned: several robots} type:{tip}
+    Support for several robots mapping one building is planned. The missing piece is a step that
+    lines up their maps in one frame before they reach the map store. The model needs no change.
+
 ### 2. The map streams in
 
 .mermaid caption:{Map pieces arrive and go straight on to the left view.}

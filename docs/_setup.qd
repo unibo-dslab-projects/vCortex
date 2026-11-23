@@ -2,6 +2,7 @@
 .doclang {English}
 .theme {paperwhite} layout:{hyperlegible}
 .css {.read {style.css}}
+.html {.read {nav.html}}
 
 .docauthors
   - Nicolò Ghignatti

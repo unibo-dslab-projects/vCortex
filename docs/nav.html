@@ -1,0 +1,15 @@
+<script>
+  // quarkdown renders the page list flat (h3 + ul per chapter): fold each chapter,
+  // keep the one holding the current page open
+  document.addEventListener("DOMContentLoaded", () => {
+    for (const chapterTitle of document.querySelectorAll('nav[data-role="page-list"] > h3')) {
+      const chapterPages = chapterTitle.nextElementSibling;
+      const chapter = document.createElement("details");
+      const chapterToggle = document.createElement("summary");
+      chapter.open = chapterPages.querySelector("[aria-current]") !== null;
+      chapterTitle.before(chapter);
+      chapterToggle.append(chapterTitle);
+      chapter.append(chapterToggle, chapterPages);
+    }
+  });
+</script>

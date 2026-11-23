@@ -49,7 +49,7 @@ the walls. It is turned back to the map's own angle at the end.
 | Word | Meaning | Default |
 |---|---|---|
 | **Cell** | A square of the top view | 5 cm |
-| **Occupied** | A cell that holds enough dots to count. The setting `cell_min_points` says how many | 1 dot |
+| **Occupied** | A cell with enough dots in it to stand for something solid, not empty air. By default **one dot** is enough (the setting `cell_min_points`) | 1 dot |
 | **Piece** | A group of occupied cells taken as **one object**: they touch, so we assume they are the same thing | |
 | **Radius** | How far a step looks, in cells: 10 cm ÷ 5 cm = **2 cells** | |
 | **Window** | The square of cells around one cell, out to the radius on every side: 2 + 1 + 2 = **5 cells** wide | |
@@ -65,7 +65,8 @@ the walls. It is turned back to the map's own angle at the end.
   the edge.
 - For each cell: how many dots (`point_count`), and the **highest** one, as a height above the
   floor plane (`top_metres`).
-- A cell is **occupied** when it holds at least `cell_min_points` dots (default 1).
+- A cell is **occupied** when it holds at least one dot. The minimum can be raised with the setting
+  `cell_min_points`, to ignore cells with only a stray dot or two.
 - Each dot remembers its cell, so a piece can be mapped back to its dots later.
 
 ## O2. Closing: fill the gaps inside an object

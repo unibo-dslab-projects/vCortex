@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <marker id="in" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4f46e5"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1000" height="540" rx="14" fill="#f8fafc"/>
+
+  <!-- rings, outermost first -->
+  <circle cx="270" cy="270" r="245" fill="#e0e7ff" stroke="#a5b4fc"/>
+  <circle cx="270" cy="270" r="180" fill="#c7d2fe" stroke="#818cf8"/>
+  <circle cx="270" cy="270" r="115" fill="#a5b4fc" stroke="#6366f1"/>
+  <circle cx="270" cy="270" r="55" fill="#4f46e5"/>
+
+  <!-- ring names -->
+  <text x="270" y="265" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">domain</text>
+  <text x="270" y="283" text-anchor="middle" font-size="11" fill="#e0e7ff">the twin's parts</text>
+
+  <text x="270" y="183" text-anchor="middle" font-size="14" font-weight="700" fill="#1e1b4b">model</text>
+  <text x="270" y="199" text-anchor="middle" font-size="11" fill="#312e81">geometry</text>
+
+  <text x="270" y="118" text-anchor="middle" font-size="14" font-weight="700" fill="#1e1b4b">connectors · protocol</text>
+  <text x="270" y="134" text-anchor="middle" font-size="11" fill="#312e81">formats and messages</text>
+
+  <text x="270" y="55" text-anchor="middle" font-size="14" font-weight="700" fill="#1e1b4b">io · main</text>
+  <text x="270" y="71" text-anchor="middle" font-size="11" fill="#312e81">server, worker, files, threads</text>
+
+  <!-- dependency arrows pointing inwards -->
+  <line x1="470" y1="400" x2="395" y2="350" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#in)"/>
+  <line x1="395" y1="350" x2="345" y2="315" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#in)"/>
+  <line x1="345" y1="315" x2="318" y2="296" stroke="#4f46e5" stroke-width="2.5" marker-end="url(#in)"/>
+  <text x="430" y="430" font-size="12" fill="#4f46e5" font-weight="600">uses only what is inside</text>
+
+  <!-- outside world -->
+  <g font-size="12" fill="#475569">
+    <rect x="20" y="470" width="110" height="50" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="75" y="492" text-anchor="middle" font-weight="600" fill="#0f172a">robot bridge</text>
+    <text x="75" y="508" text-anchor="middle">sends the map</text>
+    <rect x="410" y="20" width="110" height="50" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+    <text x="465" y="42" text-anchor="middle" font-weight="600" fill="#0f172a">browser</text>
+    <text x="465" y="58" text-anchor="middle">shows it</text>
+  </g>
+
+  <!-- legend -->
+  <g font-size="14" fill="#0f172a">
+    <text x="560" y="60" font-size="13" font-weight="600" fill="#64748b">FROM THE MIDDLE OUT</text>
+
+    <circle cx="573" cy="98" r="12" fill="#4f46e5"/>
+    <text x="596" y="94" font-weight="600">Domain</text>
+    <text x="596" y="112" font-size="12" fill="#475569">Building, wall, room, object, settings. Plain data, no libraries.</text>
+
+    <circle cx="573" cy="168" r="12" fill="#a5b4fc" stroke="#6366f1"/>
+    <text x="596" y="164" font-weight="600">Model (use cases)</text>
+    <text x="596" y="182" font-size="12" fill="#475569">Turns dots into a twin. Pure: same input, same output.</text>
+    <text x="596" y="198" font-size="12" fill="#475569">Uses PCL and Eigen for math only.</text>
+
+    <circle cx="573" cy="252" r="12" fill="#c7d2fe" stroke="#818cf8"/>
+    <text x="596" y="248" font-weight="600">Adapters</text>
+    <text x="596" y="266" font-size="12" fill="#475569">Connectors write the twin as JSON, DXF, PLY.</text>
+    <text x="596" y="282" font-size="12" fill="#475569">Protocol reads and writes bytes on the wire.</text>
+
+    <circle cx="573" cy="336" r="12" fill="#e0e7ff" stroke="#a5b4fc"/>
+    <text x="596" y="332" font-weight="600">Frameworks and drivers</text>
+    <text x="596" y="350" font-size="12" fill="#475569">Web server (Crow), the model thread, the map store,</text>
+    <text x="596" y="366" font-size="12" fill="#475569">saved files. The only ring that knows about the outside.</text>
+
+    <rect x="560" y="410" width="410" height="90" rx="10" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="578" y="438" font-size="13" font-weight="600">Why</text>
+    <text x="578" y="460" font-size="12" fill="#475569">Live robot, saved map and tests all call the same model.</text>
+    <text x="578" y="478" font-size="12" fill="#475569">A new output format is one connector, nothing else moves.</text>
+  </g>
+</svg>

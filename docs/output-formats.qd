@@ -1,0 +1,133 @@
+.docname {Output formats}
+.include {docs}
+
+The model makes one **building**. A **connector** writes it as bytes in one format. This page
+covers the three formats, what each one holds, and how to add a fourth.
+
+## One building, three files
+
+.mermaid caption:{The worker hands the same result to every connector.}
+    flowchart LR
+        M[Model result<br/>building, cleaned dots, report] --> J[twin-json]
+        M --> D[dxf]
+        M --> P[ply]
+        J --> W1[text frame or JSON file]
+        D --> W2[text frame or DXF file]
+        P --> W3[binary frame or PLY file]
+
+| Id | Label | Holds | Sent as | File | Good for |
+|---|---|---|---|---|---|
+| `twin-json` | Digital twin (JSON) | Walls, rooms, objects, report | text | `.json` | Other apps, simulations |
+| `dxf` | Floor plan (DXF) | A 2D drawing of the same | text | `.dxf` | CAD programs |
+| `ply` | Cleaned cloud (PLY) | The dots, after dropping strays | binary | `.ply` | 3D tools |
+
+The worker writes **all three after every run**, and keeps all three. A viewer or a download asks
+for one by its id.
+
+## What a connector is
+
+One small record, in `connectors/connector.hpp`:
+
+| Field | Example | Used for |
+|---|---|---|
+| `id` | `"twin-json"` | In `/ws/twin?format=<id>` and `/api/twin/<id>` |
+| `label` | `"Digital twin (JSON)"` | The tab's name in the page |
+| `mime` | `"application/json"` | The `Content-Type` of a download |
+| `extension` | `".json"` | The name of a download: `twin-<seq>.json` |
+| `binary` | `false` | Text or binary frame on the WebSocket |
+| `write` | `to_json` | A function: the model's result in, bytes out |
+
+The list of connectors is one function, `connectors()`, in `connector.cpp`. The server, the
+worker and `/api/formats` all read that list. Nobody else names a format.
+
+A connector may **throw**. Then that format is missing from that run; the others are kept (see
+[Backend runtime](backend-runtime.qd)).
+
+## The JSON twin
+
+Covered in [Domain in code](domain-in-code.qd): the schema, a real file and every field.
+
+- Keys come out in schema order, so a person can read the file.
+- Numbers are rounded to millimetres. Angles are not.
+- The writer **checks** the building first: ids unique, links pointing somewhere, outlines of 3
+  points or more. A broken building throws rather than make a broken file.
+
+## The DXF floor plan
+
+DXF is a text format that CAD programs read. It is a list of pairs: a number on one line (a
+**group code**: what the next line means), the value on the next.
+
+```text
+0          <- "a new entity starts"
+LINE       <- it is a line
+8          <- "layer"
+WALLS      <- this layer
+10         <- "start x"
+-5.450
+20         <- "start y"
+-5.223
+...
+```
+
+(From a real run; some lines are left out.)
+
+| Layer | Drawn with | Of |
+|---|---|---|
+| `WALLS` | 4 lines per wall: both faces and both ends | Each wall, with its thickness |
+| `ROOMS` | One closed polyline, and a text with the room's name (or its id) at the middle | Each room |
+| `OBJECTS` | 4 lines per box, turned by `yaw` | Each object |
+
+- Version **AC1015** (AutoCAD R2000), the first with polylines. Units: **metres**.
+- Walls are drawn as an architect would, with both faces, not as one centre line.
+- Object boxes are four **lines**, not a closed polyline: an importer that ignores layers would
+  read every closed polyline as a room.
+- Heights are left out: it is a plan.
+- Numbers use a **dot** as decimal separator, on any computer's language setting.
+
+**Example.** A wall from (0, 0) to (4, 0), thickness 0.10: the half thickness is 0.05, so the
+faces are the lines (0, 0.05)–(4, 0.05) and (0, −0.05)–(4, −0.05), closed by two short ends: 4
+lines in all. (Made-up numbers.)
+
+## The PLY cloud
+
+PLY is a simple format for point clouds. Here it is **binary**, little-endian.
+
+```text
+ply
+format binary_little_endian 1.0
+comment frame_id camera_init
+element vertex 186427
+property float x
+property float y
+property float z
+end_header
+<186427 × 12 bytes: x y z as float32>
+```
+
+- Only `x`, `y`, `z`. Brightness is left out: it is too noisy to show, and leaving it out keeps
+  **12 bytes** per dot instead of 16.
+- The file holds the **cleaned** dots (after dropping strays), in the robot's map frame.
+- **Example, real.** The room of the [Overview](introduction.qd): 186,427 dots × 12 bytes =
+  2,237,124 bytes, plus the header.
+
+## Add a new format
+
+| Step | Where | What |
+|---|---|---|
+| 1 | `backend/src/connectors/<name>.cpp` and `include/.../<name>.hpp` | Write `std::string to_<name>(const ModelResult&)` |
+| 2 | `backend/CMakeLists.txt` | Add the `.cpp` to `vcortex_core` |
+| 3 | `connector.cpp` | Add one line to the list: id, label, type, extension, binary or text, the function |
+| 4 | `frontend/src/components/renderers/` | Write a `<Name>Scene.vue`: payload in, 3D shapes out, and a `bounds` event |
+| 5 | `frontend/src/components/TwinView.vue` | Add one `v-else-if` for the new id |
+
+After steps 1–3 the format already shows up in `/api/formats`, streams on `/ws/twin` and
+downloads from `/api/twin/<id>`; the page then lists it as a tab, and shows nothing until
+steps 4–5 are done.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| A comment in `connectors/ply.cpp` calls the brightness "the first reading per cube"; the protocol header (`protocol/ingest.hpp`) says it is the cube's average | `connectors/ply.cpp`, `protocol/ingest.hpp` |
+| The DXF writer has a TODO: no handles, and no `TABLES`, `BLOCKS` and `OBJECTS` sections. Open CAD programs and `ezdxf` read the file; AutoCAD may not | `connectors/dxf.cpp` |
+| The format id `twin-json` is written in the frontend too (it is the first choice, and `TwinView.vue` tests for each id), so a new format needs a frontend change, not only a backend one | `HomeView.vue`, `TwinView.vue` |

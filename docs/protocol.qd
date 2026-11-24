@@ -1,0 +1,244 @@
+.docname {Protocol}
+.include {docs}
+
+Everything that crosses the network, in one place. Anyone who wants to write a new **source**
+(a program that sends a map) or a new **viewer** (a program that shows it) needs only this page.
+
+All routes live on **one port**, 9002. In the Docker setup the browser reaches them through the
+frontend's web server on port 8081, which passes `/api` and `/ws` on.
+
+## The routes
+
+| Route | Kind | Who uses it | What it does |
+|---|---|---|---|
+| `/ingest` | WebSocket | the robot's bridge | The source sends its map and path |
+| `/ws/raw` | WebSocket | the browser | Streams the raw dots |
+| `/ws/twin?format=<id>` | WebSocket | the browser | Streams the twin in one format |
+| `GET /api/formats` | HTTP | the browser | Lists the output formats |
+| `GET /api/settings` | HTTP | the browser | Reads the wall height |
+| `PUT /api/settings` | HTTP | the browser | Changes settings; the model runs again |
+| `GET /api/status` | HTTP | the browser | Says what the backend is doing |
+| `GET /api/twin/<id>` | HTTP | the browser | Downloads the latest twin in one format |
+
+## Sending a map: `/ingest`
+
+A source talks in two kinds of message:
+
+- **Text** messages are JSON: the hello, and the answers.
+- **Binary** messages are map pieces and poses.
+
+.mermaid caption:{A source's life on /ingest.}
+    sequenceDiagram
+        participant S as Source
+        participant B as Backend
+        S->>B: hello (text)
+        B-->>S: welcome (text)
+        S->>B: map (binary): every cube
+        loop while it walks
+            S->>B: delta (binary): new and changed cubes
+            S->>B: poses (binary)
+        end
+        B-->>S: resync (text), if a delta went missing
+        S->>B: map (binary) again
+
+### The hello
+
+The first message must be a hello. Anything else closes the connection.
+
+```json
+{ "type": "hello", "protocol": 2, "token": "s3cret",
+  "frame_id": "camera_init", "voxel_size": 0.05, "source": "go2" }
+```
+
+| Field | Needed | Meaning |
+|---|---|---|
+| `type` | yes | Always `"hello"` |
+| `protocol` | yes | Must be `2`. Another number is refused |
+| `token` | only if the backend has one | Must equal `VCORTEX_INGEST_TOKEN` |
+| `frame_id` | yes | Name of the map frame. Not empty |
+| `voxel_size` | yes | Side of one cube, in metres. More than 0 |
+| `source` | no | A name, shown in the status answer |
+
+The backend answers `{"type":"welcome"}`. If the hello is wrong, it closes with code **1008**
+and the reason in words: `unsupported protocol`, `bad token`, `hello first`,
+`bad frame_id or voxel_size`.
+
+### One header for every binary message
+
+16 bytes, little-endian (the robot and the laptop are both little-endian, so nobody swaps bytes).
+
+| Bytes | Field | Type | Meaning |
+|---|---|---|---|
+| 0 | `kind` | u8 | 1 = map, 2 = delta, 3 = poses |
+| 1–3 | | | zero. They keep the next fields aligned |
+| 4–7 | `run_id` | u32 | One number per survey. A new number means a new map |
+| 8–11 | `seq` | u32 | Map: the last delta it holds. Delta: this delta's number. Poses: 0 |
+| 12–15 | `count` | u32 | How many records follow |
+
+The records follow the header, with no gap.
+
+### The three kinds
+
+| Kind | Record | Size | Fields |
+|---|---|---|---|
+| 1 map | a cube | 20 bytes | `x` `y` `z` `intensity` (float32 each), `num_scan_seen` (u32) |
+| 2 delta | a cube | 20 bytes | the same; new cubes, and cubes that changed |
+| 3 poses | a pose | 24 bytes | `time_ns` (i64, Unix nanoseconds), `x` `y` `z` `yaw` (float32 each) |
+
+A cube is one dot per small box of space (5 cm in the robot's case). Its position and brightness
+are the **average** of everything the laser saw there; that is why `intensity` is a float.
+
+**Example.** The room in the [Overview](introduction.qd) has 192,149 cubes (real). The delta of 400 cubes and the 10 poses are made-up sizes.
+
+| Message | Size |
+|---|---|
+| Whole map to `/ingest` | 16 + 192,149 × 20 = **3,842,996 bytes** (3.7 MB) |
+| A delta of 400 cubes | 16 + 400 × 20 = **8,016 bytes** |
+| 10 poses | 16 + 10 × 24 = **256 bytes** |
+
+### The rules
+
+| Rule | What happens if it breaks |
+|---|---|
+| The first message is a valid hello | The connection closes with 1008 |
+| A **delta** has the same `run_id` as the map, and `seq` is exactly the last `seq` + 1 | The backend ignores it and sends `{"type":"resync","reason":"seq gap"}`. Send the whole map again |
+| A **map** with a new `run_id` | The old cubes and poses are dropped |
+| A **map** with the same `run_id` | Each cube replaces the one in its box; cubes not sent stay |
+| **Poses** have the `run_id` of the map | Poses of another run, or sent before the first map, are dropped without a word |
+| A frame has a known kind and the right size | The connection closes with 1008 and the reason |
+| A frame is at most 256 MiB | The web server refuses a bigger one (a bad frame must not fill the memory) |
+
+**Send the map first, then deltas and poses.** The model needs poses: with none, it finds no room
+and so no walls.
+
+### Who may talk
+
+- **One source at a time.** A new valid hello replaces the old source: the old one is closed with
+  code **1013** ("try again later"). A robot that lost Wi-Fi never says goodbye, and it must not
+  lock everyone else out.
+- A new source clears the old twin: viewers get an empty message (see below).
+- **Offline mode:** every `/ingest` connection is closed with 1013 and the reason `offline mode`.
+
+## Showing the dots: `/ws/raw`
+
+The browser opens it and does not send anything. It gets binary messages with the **same 16-byte
+header**, but with simpler records.
+
+| Kind | Record | Size | Fields |
+|---|---|---|---|
+| 1 map | a dot | 12 bytes | `x` `y` `z` (float32) |
+| 2 delta | a dot | 16 bytes | `x` `y` `z` (float32), then the dot's `index` (u32) |
+
+- A map comes in the backend's own order. So the browser can hand the bytes straight to its 3D
+  library with no copy, and the *n*-th dot has index *n*.
+- A delta says **where** each dot goes: `index` below the dot count replaces that dot, an index
+  past the end adds one. A cube that changes twice is never added twice.
+- On connect, a viewer gets the whole map at once.
+
+**Example.** The same room: a map costs 16 + 192,149 × 12 = **2,305,804 bytes** (2.3 MB), less
+than the 3.7 MB the source sent, because brightness and scan count are left out.
+
+### A slow viewer
+
+The backend cannot see a viewer's queue. So it counts the bytes it sent.
+
+.mermaid caption:{What happens to one viewer that cannot keep up.}
+    stateDiagram-v2
+        [*] --> Following
+        Following --> Following: delta sent, bytes added to the budget
+        Following --> Behind: this delta would pass 8 MiB in one second
+        Behind --> Following: next delta after a quiet second: a whole map is sent
+        Following --> Following: a whole map from the source resets the viewer
+
+- The budget is **8 MiB per second per viewer**.
+- A viewer over budget **skips** deltas. It does not lose anything for good: its next catch-up is
+  a whole map.
+- A catch-up map is not counted against the budget, but it delays the next one by
+  size ÷ budget. The room above: 2,305,804 ÷ 8,388,608 = **0.27 s**.
+
+## Showing the twin: `/ws/twin?format=<id>`
+
+`<id>` comes from `/api/formats`. A wrong or missing `format` gets **404** before the
+connection opens.
+
+- Each message is the **whole twin** in that format, sent after each model run. The last message
+  is the current state.
+- A text message for JSON and DXF, a binary message for PLY.
+- On connect, the viewer gets the latest twin, if one exists.
+- An **empty text message** means "no twin": a new source has joined, so drop the old one.
+
+## The HTTP routes
+
+### `GET /api/formats`
+
+```json
+[{"id":"twin-json","label":"Digital twin (JSON)","binary":false},
+ {"id":"dxf","label":"Floor plan (DXF)","binary":false},
+ {"id":"ply","label":"Cleaned cloud (PLY)","binary":true}]
+```
+
+### `GET /api/settings` and `PUT /api/settings`
+
+```json
+{ "wall_height": 2.7, "wall_height_source": "default" }
+```
+
+`PUT` takes a JSON object with **any of the settings** (see [Settings](settings.qd)). Keys you
+leave out keep their value. The reply always has the two fields above.
+
+| Body | Answer |
+|---|---|
+| `{"wall_height":3.1}` | 200 `{"wall_height":3.1,"wall_height_source":"user"}` |
+| `{"wall_height":9}` | 400 `{"error":"wall_height must be in (1.5, 6) (got 9)"}` |
+| `{"walls":{"colour":1}}` | 400 `{"error":"walls.colour is not a setting"}` |
+| `{"walls":{"door_max":"wide"}}` | 400 `{"error":"walls.door_max must be a number"}` |
+| `{oops` | 400 `{"error":"not valid json: …"}` |
+
+(These answers are real: they come from a run of the backend.)
+
+Sending `wall_height` marks it as typed in by a person: `wall_height_source` becomes
+`"user"`. After a good `PUT`, the model runs again at once, without waiting for the next
+3-second turn.
+
+### `GET /api/status`
+
+Real answer, offline mode:
+
+```json
+{
+  "mode": "offline", "source": "map.pcd", "connected": false,
+  "run_id": 0, "seq": 0, "points": 192149,
+  "model": { "points_in": 192149, "after_outliers": 186427, "tilt_deg": 2.36,
+             "free_space_area_m2": 24.03, "free_space_rooms": 1, "outline_sides": 4,
+             "yaw_deg": 16.8, "poses": 260, "walls": 4, "rooms": 1, "objects": 19,
+             "duration_ms": 1570.3 },
+  "clients": { "raw": 0, "twin": 0 }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `mode` | `"live"` or `"offline"` |
+| `source`, `connected` | The source's name, and whether one is connected |
+| `run_id`, `seq` | The current survey and its last piece (`null` before the first map) |
+| `points` | Cubes in the map store |
+| `model` | The report of the last run, or `null` before the first |
+| `clients` | How many viewers are connected |
+
+### `GET /api/twin/<id>`
+
+Downloads the latest twin as a file.
+
+| Answer | When |
+|---|---|
+| 200 | The file, with `Content-Disposition: attachment; filename="twin-<seq><extension>"`, for example `twin-0.dxf` |
+| 404 `{"error":"unknown format: <id>"}` | Wrong id |
+| 503 `{"error":"no model output yet"}` | No run yet, or this format failed in the last run |
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| `GET /api/settings` shows only the wall height. The other settings can be sent but not read back | `io/server.cpp` |
+| `PUT /api/settings` answers with the wall height only, even when you changed another setting | `io/server.cpp` |
+| Poses sent before the first map are dropped silently | `io/store.cpp` |

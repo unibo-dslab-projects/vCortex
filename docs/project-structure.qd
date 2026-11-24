@@ -1,0 +1,107 @@
+.docname {Project structure}
+.include {docs}
+
+vCortex is one repository with two programs: a **backend** that builds the twin, and a
+**frontend** that shows it in the browser. This page walks through the folders, top to bottom.
+
+```text
+vCortex/
+├── backend/            the C++ program that turns a map into a twin
+│   ├── config/         start values for the model
+│   ├── include/vcortex/ what each part offers (headers)
+│   ├── src/            how each part does it (same folders as include/)
+│   ├── schema/         the shape of the twin file
+│   └── tests/          checks for the hardest steps
+├── frontend/           the web page with the two views
+│   ├── public/         the logo
+│   └── src/            the page itself
+├── docs/               this documentation
+├── data/               saved maps for offline mode (kept out of git)
+├── .github/workflows/  automatic jobs on GitHub
+└── compose.yaml        starts backend and frontend together
+```
+
+## The top level
+
+| Path | What it holds |
+|---|---|
+| `backend/` | The program that receives the map, runs the model and writes the outputs. Written in C++17, built with CMake, with no ROS inside. |
+| `frontend/` | The web page: raw dots on the left, the twin on the right. Written in Vue 3 and TypeScript, drawn in 3D with TresJS (a Vue wrapper around three.js). |
+| `docs/` | This documentation, written in Quarkdown. |
+| `data/` | Saved maps to open without a robot. Only the empty folder is in git. |
+| `.github/workflows/` | The job that builds this documentation and publishes it on GitHub Pages. |
+| `compose.yaml` | Runs both programs in containers with one command (see [Usage](usage.qd)). |
+| `.env.example` | A template for local secrets, such as the token a robot must show to send its map. |
+
+## The backend
+
+The backend is split into layers. Each layer may use the ones below it, never the ones above. So
+the model knows nothing about the network, files or threads, and can be tested on its own.
+
+.mermaid caption:{Backend layers: each one uses only the layers below it.}
+    flowchart TD
+        IO["io: server, worker, files"] --> C["connectors: output formats"]
+        IO --> P["protocol: messages on the wire"]
+        C --> M["model: from dots to a twin"]
+        IO --> M
+        M --> G["geometry: small shared helpers"]
+        M --> D["domain: the twin's parts"]
+        G --> D
+        C --> D
+        P --> D
+
+Every layer is a folder under `include/vcortex/` (what it offers) and the same folder under
+`src/` (how it does it).
+
+| Folder | Layer | What it holds |
+|---|---|---|
+| `domain/` | Domain | The parts of the [domain](domain.qd) as plain data: building, level, wall, room, object; a lidar point; the map and path received so far; the model settings. |
+| `geometry/` | Helpers | Small math shared by the model: bounding boxes, grid cells, distances to a wall. |
+| `model/` | Model | The core: everything that turns dots into a twin. See below. |
+| `connectors/` | Output | One file per output format: twin JSON, DXF floor plan, PLY cloud. |
+| `protocol/` | Messages | The byte layout of what a robot sends in, and of the dots sent to the browser. |
+| `io/` | Outside world | The web server, the thread that reruns the model every few seconds, the map store, reading settings and saved maps. |
+| `src/main.cpp` | Entry point | Reads the command line and starts the server. |
+
+### Inside `model/`
+
+The model follows the steps of the [Algorithm](algorithm.qd), and its folders follow them too.
+
+| Path | What it does |
+|---|---|
+| `clean` | Drops stray dots. |
+| `floor/floor` | Finds the floor plane, so heights are measured from it. |
+| `floor/free_space` | Finds the floor the robot could reach, and splits it into rooms at doors. |
+| `align` | Finds how the map is turned, so walls can run along the axes. |
+| `grid` | A top view of the dots, counted in small squares. |
+| `wall/outline` | Walks out from each room to find the inner face of its walls. |
+| `wall/walls` | Turns those faces into walls with a thickness. |
+| `rooms` | Builds each room and the walls around it. |
+| `object/` | Groups the leftover dots into objects and fits a box around each. |
+| `median` | A small helper: the middle value of a list. |
+| `model` | Runs all the steps in order and reports what each one found. |
+
+### The other backend folders
+
+| Path | What it holds |
+|---|---|
+| `config/model.json` | The start values of the model: wall height, grid size, distances. You can change them while it runs. |
+| `schema/twin.schema.json` | The exact shape of the twin JSON file. The frontend builds its types from it. |
+| `tests/` | Checks for the hardest model steps: free floor, wall outlines, walls, object boxes. Rooms are drawn as text, so a test reads like a small map. |
+| `CMakeLists.txt` | Builds two libraries and the program: `vcortex_core` (domain to protocol), `vcortex_io` (the outside world) and `vcortex`. |
+| `Dockerfile` | Builds the backend image: one program, no shell, run as a normal user. |
+
+For what each domain type is in the code, see [Domain in code](domain-in-code.qd).
+
+## The frontend
+
+| Path | What it holds |
+|---|---|
+| `src/views/` | The one page of the app. |
+| `src/components/` | The pieces of the page: header, raw view, twin view, status bar, camera buttons. |
+| `src/components/renderers/` | One 3D scene per output format: twin, floor plan, cleaned cloud. |
+| `src/scene/` | Building the 3D shapes: dots, walls, boxes, camera. |
+| `src/services/` | Talking to the backend: the settings API and the two live connections (raw dots and twin). |
+| `src/types/` | The twin types, generated from the backend's schema. |
+| `Caddyfile` | The small web server in the container: it serves the page and passes `/api` and `/ws` on to the backend. |
+| `Dockerfile` | Builds the frontend image. |

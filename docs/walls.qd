@@ -1,0 +1,333 @@
+.docname {Walls}
+.include {docs}
+
+How vCortex turns dots into straight walls. This is the hardest step of the model: to the laser a
+wall and a wardrobe both look like "a flat, upright surface" (see [Challenges](challenges.qd)).
+
+## In short
+
+1. **Start inside.** Take each rough room from the [Rooms](rooms.qd) step: floor the robot walked.
+2. **Walk out.** From the room's edge, walk outward in strips 25 cm wide, in the four directions.
+   Keep walking past furniture, because the gap behind it is short. Stop after 30 cm of nothing.
+   The last thing you met is the wall.
+3. **Straight sides.** Where many strips stop at the same distance, that is one straight side of
+   the room. A short bump inward (a cupboard against the wall) is ignored.
+4. **Make walls.** A wall between two rooms is seen from both: its two faces give its thickness. A
+   wall seen from one room only gets 10 cm. Pieces on one line join; corners meet.
+5. **Sort the dots.** Dots near a wall belong to it. Other dots inside the room are furniture, and
+   go to the [Objects](objects.qd) step.
+
+**Example, real:** the room of the [Overview](introduction.qd) gives **4 walls** around one room
+of about 8.4 × 6.4 m.
+
+The rest of this page gives each step in detail, with its numbers.
+
+## The idea
+
+Do **not** look for lines in the cloud. Stand in the room, walk **outward**, and keep going until
+there is nothing left. The last thing you meet is the wall.
+
+- The robot walked inside the room, so the room is known (the [free floor](rooms.qd)).
+- A desk or a wardrobe stands **in front** of the wall, so it is met first. The walk goes through
+  it, because the gaps around furniture are short.
+- Past the wall there is nothing: the laser does not see through it. A long empty stretch ends the
+  walk.
+
+.mermaid caption:{The two stages of the wall step.}
+    flowchart LR
+        FS[Free floor<br/>rooms as walked] --> A[Stage A<br/>outlines:<br/>walk out of each room]
+        A --> B[Stage B<br/>walls:<br/>pair, join, snap, count]
+        B --> W[Walls]
+        B --> F[Furniture dots<br/>for the object step]
+
+| Stage | In | Out | Code |
+|---|---|---|---|
+| **A. Outlines** | The free floor, the dots in a height band | For each room, the straight **inner faces** of the walls around it, called **sides** | `model/wall/outline.cpp` |
+| **B. Walls** | The sides of all rooms | Walls with a thickness; the dots that are furniture | `model/wall/walls.cpp` |
+
+Everything here happens on the **squared map**: the map turned so the walls run along the x and y
+axes. So a wall is either "constant x" or "constant y", and there are **four ways out** of a room:
+towards +x, −x, +y, −y.
+
+![The real room with its four ways out](images/walls-real-room.svg "The room of the Overview, squared. Real data.")
+
+## Words and sizes
+
+| Word | Meaning | Default size |
+|---|---|---|
+| **Cell** | A square of the top view | 5 cm |
+| **Band** | The heights the walk looks at: from `outline.band_lo` up to the wall height minus 10 cm | 0.10 m to 2.60 m |
+| **Strip** | A row of 5 cells, walked out together. Their holes fill each other | 25 cm wide |
+| **Walk cell** | A step of the walk, one cell | 5 cm |
+| **Face** | Where the inner surface of a wall lies on the walk axis | in metres |
+| **Side** | One straight wall of a room outline: its face, and where it starts and ends along it | |
+
+Sizes in cells, from the settings: strip = 5 cells, `max_gap` = 6 cells, `max_reach` = 30 cells,
+`face_depth` = 2 cells.
+
+## Stage A: the outline of one room
+
+**Code:** [`outline.cpp:318`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L318) `find_room_outlines` · [`outline.cpp:303`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L303) `find_room_outline`
+
+Done for each room, and for each of the four ways out.
+
+### A1. Cut the grid into strips
+
+**Code:** [`outline.cpp:115`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L115) `sample_wall_faces` · [`outline.cpp:123`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L123) `strip in cells`
+
+The grid is cut into strips across the walls, 25 cm wide. Each strip that touches the room gives
+**one sample**: where along the wall the strip lies, and the face it found (or none).
+
+### A2. Find the farthest room cell
+
+**Code:** [`outline.cpp:50`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L50) `find_outermost_room_cell`
+
+In a strip, look from the **outer edge of the grid inwards** for the first cell that belongs to the
+room. That is the farthest-out room cell. Looking from outside in means a hole in the floor (under
+a table) never stops the search early.
+
+### A3. Walk out until the wall
+
+**Code:** [`outline.cpp:73`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L73) `find_wall_cell` · [`outline.cpp:61`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L61) `has_band_point`
+
+From that cell, step outward one cell at a time, up to `max_reach` = 1.5 m. At each step, ask: does
+**any** of the 5 rows of the strip hold a dot of the band?
+
+- Yes: remember this step, and reset the count of empty cells.
+- No: add one to the count of empty cells in a row. At `max_gap` = 6 (30 cm) the walk stops.
+- The **wall cell** is the last step that had a dot. If there was none, or the reach ran out first:
+  no wall in this strip.
+
+**Example,** one strip, one way out. (Made-up numbers.)
+
+![One strip walked out cell by cell, and the face found at the end](images/walls-walk-out.svg "A made-up strip: walk, stop, face.")
+
+- The desk (cells 41–43) is met first. Then 3 empty cells: fewer than 6, so the walk goes on.
+- The wall (47–48) is met. Then 6 empty cells: the walk stops.
+- The wall cell is 48, the last one with dots.
+
+If the wall itself had not been seen, the walk would have stopped after the desk and taken the
+**desk** for the wall. Step A5 below is what catches most of those cases.
+
+### A4. Read the face
+
+**Code:** [`outline.cpp:94`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L94) `find_face`
+
+The face is the **median** of the mean positions of the dots, over the **last 2 cells** up to the
+wall cell (`face_depth` = 10 cm), over all 5 rows. The lidar sees only the **inner** surface of a
+wall, so those dots are the face. The narrow window keeps furniture in front of the wall out.
+
+**Example.** Cells 47 and 48, five rows, eight cells hold dots. Their mean positions, in metres,
+sorted: 2.37, 2.38, 2.38, 2.39, 2.40, 2.41, 2.41, 2.42. The median (the middle value, the upper
+one for an even count) is **2.40 m**. The face of this strip is x = 2.40.
+
+### A5. From samples to sides
+
+**Code:** [`outline.cpp:273`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L273) `find_outline_sides` · [`outline.cpp:154`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L154) `split_into_segments` · [`outline.cpp:230`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L230) `drop_short_segments` · [`outline.cpp:172`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L172) `merge_close_segments` · [`outline.cpp:191`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L191) `bridge_dents`
+
+A wall gives a whole row of strips with about the same face. The row of samples, in order along
+the wall, becomes sides in five steps:
+
+| # | Step | Rule (default) |
+|---|---|---|
+| 1 | **Split** | A new piece starts when a face is more than `segment_jump` = 15 cm from the median of the piece so far. A strip with **no face** (a door) neither splits nor joins |
+| 2 | **Drop short pieces** | Fewer than `min_strips_per_segment` = 2 strips: a chair leg, a bag |
+| 3 | **Merge** | Neighbour pieces with faces within `merge_distance` = 10 cm become one |
+| 4 | **Bridge dents** | A piece at most `dent_length` = 2.0 m long, lying 10 cm to `dent_depth` = 50 cm **inward** of a neighbour, is furniture against the wall. The neighbour grows over it. Repeated until nothing changes |
+| 5 | **Merge again** | A bridge can bring two outer pieces next to each other |
+
+A side is then: the **median face** of its strips, and its start and end along the wall.
+
+**Example, step by step.** Strips of 25 cm; the way out is +x. Faces, in metres: 4.0 for 4
+strips, 3.7 for 3 strips, 4.0 for 4 strips. A cupboard 0.75 m long, 30 cm in front of the wall.
+(This is a real test case.)
+
+| Step | Pieces after it |
+|---|---|
+| 1 Split | [0.00–1.00 at 4.0], [1.00–1.75 at 3.7], [1.75–2.75 at 4.0] |
+| 2 Drop | all three have at least 2 strips: no change |
+| 3 Merge | 4.0 and 3.7 are 0.30 apart: no change |
+| 4 Bridge | The middle piece is 0.75 m ≤ 2.0 m long, and 4.0 − 3.7 = 0.30 is between 0.10 and 0.50: it is a dent. The left neighbour grows over it: [0.00–1.75 at 4.0] |
+| 5 Merge | 4.0 and 4.0: one piece [0.00–2.75] |
+
+Result: **one side**, face 4.0, from 0.00 to 2.75. The cupboard did not move the wall.
+
+![Samples becoming one side](images/walls-sides-from-samples.svg "Steps 1 to 5 of A5 on the cupboard case.")
+
+**Other real test cases:**
+
+| Faces along the wall (strips of 25 cm) | Result |
+|---|---|
+| 4.0 for 6 strips, then 2.0 for 6 strips | **2 sides**: an L-shaped room: (4.0, 0–1.5) and (2.0, 1.5–3.0) |
+| 4.0 for 4, **no face** for 4, 4.0 for 4 | **1 side**: (4.0, 0–3.0). A door does not split a wall |
+| 4.0 for 4, 3.7 for **10**, 4.0 for 4 | **3 sides**: the thing is 2.5 m long, over `dent_length` = 2.0 m, so it counts as a wall of its own |
+
+### A6. Join the corners
+
+**Code:** [`outline.cpp:290`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L290) `join_outline_corners` · [`outline.cpp:248`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L248) `find_corner`
+
+The seen part of a wall often stops short of its corners, because the view was blocked there. Each
+end of a side is moved to the **face of the nearest perpendicular side** that faces out the way the
+end heads, when **both** reach the other's face:
+
+- short of it by up to `corner_max_extension` = 8 m (stretch), or
+- past it by up to `corner_overshoot` = 0.5 m (trim back).
+
+Otherwise the end stays where it was seen.
+
+**Examples, real test cases.** East side: face x = 4.0, seen from y = 0.3 to 2.7. North side: face
+y = 3.0, seen from x = 0.2 to 3.6.
+
+| Case | What happens |
+|---|---|
+| The east side stops 0.3 short of the north face, the north side 0.4 short of the east face | Both reach each other: east ends at y = **3.0**, north at x = **4.0** |
+| The east side pokes past: seen to y = 3.4 | 0.4 past is under 0.5: trimmed back to **3.0** |
+| East side seen from 0.3 to 1.7; the north wall runs on to x = 6.0, 2.0 past the east face | A **T**, not a corner: the east end stays at **1.7** |
+
+The result does not depend on the order of the sides.
+
+![Three corner cases](images/walls-corners.svg "Stretch, trim, and a T that is not a corner.")
+
+## Stage B: from sides to walls
+
+All sides of all rooms go in together.
+
+### B1. Pair the two faces of a wall
+
+**Code:** [`walls.cpp:35`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L35) `find_other_face` · [`walls.cpp:58`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L58) `make_pieces` · [`walls.cpp:17`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L17) `kPairMin` · [`walls.cpp:18`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L18) `kPairMax`
+
+A wall between two rooms is a side in **each** outline, facing back to back. Two sides make **one
+wall** when they:
+
+- are on the same axis, facing opposite ways;
+- overlap along the wall;
+- lie **5 to 35 cm** apart (fixed numbers in the code, not settings).
+
+Then the centre line is **halfway** and the thickness is **their distance**. If several fit, the
+nearest wins. A side with no partner is a wall seen from **one room only**: its thickness is the
+setting `walls.thickness` = 10 cm, and its centre line lies half of that **behind** the face.
+
+**Example, real test.** Left room: east face at x = 1.70. Right room: west face at x = 1.82.
+Distance 0.12, so one wall: centre **1.76**, thickness **0.12**. The same face seen alone: centre
+1.70 + 0.05 = **1.75**, thickness **0.10**.
+
+### B2. Join pieces on one line
+
+**Code:** [`walls.cpp:89`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L89) `join_collinear`
+
+Pieces on one line (same axis, same side of the room, centre lines within
+`collinear_tolerance` = 10 cm) are joined across gaps up to `min_gap` = 30 cm. The centre line and
+the thickness of the result are the averages, **weighted by length**. A longer gap stays open: a
+door, or wall never seen.
+
+**Example.** Piece 1: from 0 to 2.0 m, centre 3.00. Piece 2: from 2.2 to 4.0 m, centre 3.02. The gap
+is 0.2 m, so one wall from 0 to 4.0 m, centre (3.00 × 2.0 + 3.02 × 1.8) ÷ 3.8 = **3.009**. With a gap
+of 0.9 m they stay two walls. (Made-up numbers.)
+
+![Pairing two faces, one face, and joining pieces](images/walls-pair-faces.svg "Stage B: faces become walls.")
+
+### B3. Snap the corners
+
+**Code:** [`walls.cpp:143`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L143) `close_corners`
+
+Each end of a wall moves to the **centre line** of a perpendicular wall, if that one is within
+`corner_gap` = 50 cm. So the walls of a room meet exactly.
+
+### B4. Sort and name
+
+**Code:** [`walls.cpp:211`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L211) `sort` · [`walls.cpp:218`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L218) `id`
+
+Walls are sorted by axis (walls of constant x come first), then by centre line, then by start. They
+are numbered `wall-1`, `wall-2`, … in that order.
+
+### B5. Count the dots, and keep the furniture
+
+**Code:** [`walls.cpp:227`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L227) `dot loop` · [`walls.cpp:191`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L191) `distance_from_point_to_wall` · [`walls.cpp:178`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L178) `is_inside_any_outline`
+
+Each dot in the band (from `candidates.band_lo` = 30 cm to the wall height minus 10 cm) is sorted:
+
+| The dot is | It becomes |
+|---|---|
+| Within `object_clearance` = 10 cm of a wall's body (centre line ± half the thickness, along its length) | A dot **of that wall** (the nearest wall wins). It adds 1 to `points` |
+| Not near a wall, but inside a room outline | **Furniture**: it goes to the [object step](objects.qd) |
+| Past every outline | **Dropped**: it is outside |
+
+## Real numbers
+
+The room of the [Overview](introduction.qd). The map was turned by 16.8°. These are the walls in
+the **squared** map, worked back from the twin file (centre lines, in metres).
+
+| Wall | Constant | Runs from … to | Length | Dots |
+|---|---|---|---|---|
+| `wall-1` | x = −6.68 | y = −3.42 to 3.12 | 6.55 m | 761 |
+| `wall-2` | x = 1.84 | y = −3.43 to 3.12 | 6.55 m | 1,392 |
+| `wall-3` | y = −3.42 | x = −6.68 to 1.84 | 8.52 m | 1,533 |
+| `wall-4` | y = 3.12 | x = −6.68 to 1.84 | 8.52 m | 1,511 |
+
+- **1 room, 4 outline sides**: one side per way out, as the report says.
+- **Walls 1 and 2 are constant x**, walls 3 and 4 constant y: the naming rule of B4.
+- **Corners are snapped (B3)**: the ends of `wall-1` are at y = −3.42 and 3.12, exactly the centre
+  lines of `wall-3` and `wall-4`.
+- **Thickness is 0.10 m for all four.** That is the default, not a measure: each wall is seen from
+  one room only (B1). Working back, the inner faces lie at x = −6.63 and 1.79, y = −3.37 and 3.07.
+- **5,197 dots** belong to walls. **71,262** dots went on as furniture, into the 19 objects.
+
+## The settings of this chapter
+
+| Group | Settings | See |
+|---|---|---|
+| `outline` | `band_lo`, `strip`, `max_reach`, `max_gap`, `face_depth`, `segment_jump`, `min_strips_per_segment`, `merge_distance`, `dent_depth`, `dent_length`, `corner_max_extension`, `corner_overshoot` | A1 to A6 |
+| `walls` | `collinear_tolerance`, `min_gap`, `door_max`, `corner_gap`, `thickness`, `object_clearance` | B1 to B5 |
+| `candidates` | `band_lo`, `band_top_margin` | B5 and the band of stage A |
+
+`walls.door_max` is not used in this chapter; it is used by the [final rooms](rooms.qd). All the
+values are in [Settings](settings.qd).
+
+## Where it is in the code
+
+Every link goes to the line in the repository.
+
+| Step | Code |
+|---|---|
+| A1 strips | [`outline.cpp:115`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L115) `sample_wall_faces` · [`outline.cpp:123`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L123) `strip in cells` |
+| A2 farthest room cell | [`outline.cpp:50`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L50) `find_outermost_room_cell` |
+| A3 walk out | [`outline.cpp:73`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L73) `find_wall_cell` · [`outline.cpp:61`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L61) `has_band_point` |
+| A4 face | [`outline.cpp:94`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L94) `find_face` |
+| A5 sides | [`outline.cpp:273`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L273) `find_outline_sides` · [`outline.cpp:154`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L154) `split_into_segments` · [`outline.cpp:230`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L230) `drop_short_segments` · [`outline.cpp:172`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L172) `merge_close_segments` · [`outline.cpp:191`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L191) `bridge_dents` |
+| A6 corners | [`outline.cpp:290`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L290) `join_outline_corners` · [`outline.cpp:248`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L248) `find_corner` |
+| A all | [`outline.cpp:318`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L318) `find_room_outlines` · [`outline.cpp:303`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/outline.cpp#L303) `find_room_outline` |
+| B1 pair faces | [`walls.cpp:35`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L35) `find_other_face` · [`walls.cpp:58`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L58) `make_pieces` · [`walls.cpp:17`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L17) `kPairMin` · [`walls.cpp:18`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L18) `kPairMax` |
+| B2 join on a line | [`walls.cpp:89`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L89) `join_collinear` |
+| B3 snap corners | [`walls.cpp:143`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L143) `close_corners` |
+| B4 sort and name | [`walls.cpp:211`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L211) `sort` · [`walls.cpp:218`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L218) `id` |
+| B5 count dots | [`walls.cpp:227`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L227) `dot loop` · [`walls.cpp:191`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L191) `distance_from_point_to_wall` · [`walls.cpp:178`](https://github.com/unibo-dslab-projects/vCortex/blob/main/backend/src/model/wall/walls.cpp#L178) `is_inside_any_outline` |
+
+## What the tests check
+
+| File | Case | Checks |
+|---|---|---|
+| `outline_test` | Each room gets its own outline, and the wall between them is in both | 2 rooms with a door, 4 sides each; both faces of the shared wall near x = 1.75 |
+| `outline_steps_test` | An L-shaped room has two walls facing the same way | A5 |
+| | A door does not split the wall it is in | A5 |
+| | A short thing against the wall is covered | A5 |
+| | A thing longer than `dent_length` stays a wall | A5 |
+| | Two walls that stop short are stretched to meet | A6 |
+| | A wall that pokes past is trimmed back | A6 |
+| | A perpendicular wall that runs on far is not a corner | A6 |
+| `walls_test` | Faces from two rooms make one wall as thick as their distance | B1 |
+| | A face from one room makes a wall of default thickness | B1 |
+
+B2 to B5 have no test of their own.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| **Thickness is measured only for a wall shared by two rooms** (faces 5 to 35 cm apart). In a one-room map every wall gets the default 10 cm. The twin does not say which thickness is measured and which is assumed | `walls.cpp` |
+| **Right angles only.** A side is on the x or the y axis of the squared map | `outline.cpp` |
+| If the wall was not seen, the walk ends on the furniture in front of it, and the furniture becomes the "wall". Only the dent rules (short and shallow) undo this | `outline.cpp` |
+| Furniture longer than `dent_length` = 2.0 m within 50 cm of the wall counts as a wall | `outline.cpp` |
+| A wall farther than `max_reach` = 1.5 m from the free floor is not found | `outline.cpp` |
+| The wall step uses **two bands**: `outline.band_lo` = 10 cm for the walk, `candidates.band_lo` = 30 cm for counting dots and picking out furniture | `model.cpp`, `walls.cpp` |
+| The pairing limits 5 and 35 cm are fixed numbers, not settings | `walls.cpp` |
+| B2 to B5 have no test | `backend/tests/` |

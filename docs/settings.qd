@@ -1,0 +1,165 @@
+.docname {Settings}
+.include {docs}
+
+Every number the model reads, in one place. Change a value and the next run uses it.
+
+## Where settings come from
+
+.mermaid caption:{Three places set a value; the last one wins.}
+    flowchart LR
+        D[Built-in default<br/>settings.hpp] --> F[config/model.json<br/>read at start]
+        F --> P[PUT /api/settings<br/>while running]
+        P --> M[Model run]
+
+| Place | When | What it can change |
+|---|---|---|
+| Built-in default | Always there | Everything |
+| `config/model.json` | At start, with `--config` | Everything, plus `model_period_s` |
+| `PUT /api/settings` | While running | Everything except `model_period_s` |
+
+- The file lists **every** setting; a missing key keeps the built-in value.
+- Both the file and the `PUT` use the **same reader**. Both refuse an unknown key, a wrong type,
+  and a value that breaks a rule below.
+- A `PUT` can hold **only the keys you want to change**: `{"walls":{"door_max":1.0}}` changes one
+  number and leaves the rest.
+- A good `PUT` makes the model run again at once, on the same map.
+- Settings are **not saved**. Restart the backend and the file's values are back.
+- The web page only changes the wall height. The rest is reached by `PUT` or by the file.
+
+**Example.** The default `wall_height` is 2.70 m and its source is `"default"`. After
+`{"wall_height":3.1}` it is 3.1 and the source is `"user"`: the twin then says that a person gave
+the number. That is why the file's `wall_height` does **not** count as "user": the file is the
+deployment's start value.
+
+## How to read the tables
+
+- **Default** is the value of the built-in setting and of `model.json`; they are the same.
+- **Rule** is checked on every load and every `PUT`. An error names the key:
+  `wall_height must be in (1.5, 6) (got 9)`.
+- "Above the floor" always means measured from the floor plane, not from the map's zero.
+- Distances are in **metres**.
+
+## Top level
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `model_period_s` | 3.0 s | more than 0 | Pause after each run before the model looks at the map again. File only |
+| `wall_height` | 2.70 m | between 1.5 and 6, both excluded | Height of every wall of the level. The lidar does not see wall tops, so a person types it |
+
+## `outliers`: drop stray dots
+
+A dot whose average distance to its nearest neighbours is much bigger than usual is noise.
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `mean_k` | 20 | at least 1 | How many neighbours each dot looks at |
+| `stddev_mul` | 2.0 | more than 0 | How far above the average a dot may be before it goes. Lower drops more |
+
+The usual values from the point-cloud library (50 and 1.0) cut too much on sparse 5 cm maps.
+
+## `candidates`: dots that may be wall
+
+Only dots in a **height band** are looked at for walls. Below it is floor and skirting board;
+above it is ceiling.
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `band_lo` | 0.30 m | at least 0, and below the band top | Bottom of the band, above the floor. Cuts floor noise and skirting |
+| `band_top_margin` | 0.10 m | at least 0 | Band top = `wall_height` − this |
+| `cell` | 0.05 m | more than 0 | Side of a square of the top view |
+| `min_column` | 2 | at least 1 | Cubes in a column over a square before it counts as filled |
+
+**Example.** With the defaults, the band runs from 0.30 m to 2.70 − 0.10 = **2.60 m**. A dot at
+0.20 m is skirting; a dot at 1.0 m is wall or furniture.
+
+## `free_space`: the floor the robot could reach
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `floor_band` | 0.08 m | more than 0 | Thickness of the floor layer, around the floor plane |
+| `low_lo` | 0.10 m | at least `floor_band` | Bottom of the "low" layer: wall and glass bases, which a low lidar sees under desks |
+| `low_hi` | 0.30 m | more than `low_lo` | Top of the low layer |
+| `min_points` | 2 | at least 1 | Dots needed to trust a square. One alone is noise |
+| `tall_from` | 0.90 m | at least `low_hi` | From this height up, a cell is "tall": desks stay below it, walls and wardrobes reach it |
+| `door_radius` | 0.50 m | more than 0 | A gap between tall cells narrower than twice this is a door, and splits two rooms |
+
+## `outline`: walking out from a room to its walls
+
+From each room the model walks outward, strip by strip, until it hits wall dots.
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `band_lo` | 0.10 m | at least 0, and below the band top | Bottom of the band for this step. Lower than `candidates.band_lo`, so wall and glass bases show under desks |
+| `strip` | 0.25 m | at least `candidates.cell` | Width of the rows walked together. They fill each other's holes |
+| `max_reach` | 1.5 m | more than `max_gap` | The walk goes past the free floor at most this far |
+| `max_gap` | 0.30 m | at least `candidates.cell` | That much empty floor ends the walk: what lies past it is outside |
+| `face_depth` | 0.10 m | at least `candidates.cell` | Dots this deep up to the last filled cell give the wall face |
+| `segment_jump` | 0.15 m | more than 0 | A face this far from its line starts a new piece |
+| `min_strips_per_segment` | 2 | at least 1 | Shorter pieces are a chair leg or a bag, not a wall |
+| `merge_distance` | 0.10 m | at least 0, below `segment_jump` | Neighbour pieces this close are one line |
+| `dent_depth` | 0.50 m | more than `merge_distance` | A piece at most this far in… |
+| `dent_length` | 2.0 m | more than 0 | …and at most this long is furniture against the wall |
+| `corner_max_extension` | 8.0 m | at least 0 | How far a side may be stretched to meet a corner. Desks along a wall hide metres of it |
+| `corner_overshoot` | 0.5 m | at least 0 | A side may poke this far past a corner; it is trimmed back |
+
+## `walls`: from faces to walls
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `collinear_tolerance` | 0.10 m | at least 0 | Pieces whose lines are this close are on one line |
+| `min_gap` | 0.30 m | at least 0 | Gaps shorter than this between pieces on one line are closed |
+| `door_max` | 1.2 m | at least `min_gap` | Gaps up to this stay as openings: doors. Longer ones are not doors |
+| `corner_gap` | 0.5 m | at least 0 | A wall end this close to a perpendicular wall is joined to it |
+| `thickness` | 0.10 m | more than 0 | Thickness used when only **one** face was seen |
+| `object_clearance` | 0.10 m | at least 0 | Band dots closer than this to a wall face are wall, not furniture |
+
+**Example.** A gap of 0.9 m between two wall pieces: `min_gap` 0.30 does not close it (0.9 is
+more), and `door_max` 1.2 keeps it as an opening, a door. A gap of 1.5 m is longer than
+`door_max`, so it is not a door.
+
+## `rooms`
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `min_area` | 1.0 m² | at least 0 | A closed floor smaller than this is a pocket, not a room |
+| `wall_touch_distance` | 0.15 m | at least 0 | A wall face this close to a room's outline belongs to that room |
+
+## `objects`: boxes from what is left
+
+| Key | Default | Rule | Meaning |
+|---|---|---|---|
+| `cell` | 0.05 m | more than 0 | Side of a square. The same as the map's cube, so one cube column per square |
+| `cell_min_points` | 1 | at least 1 | Dots in a square to call it filled |
+| `close_radius` | 0.10 m | at least 0 | Gaps up to twice this are filled in |
+| `split_radius` | 0.10 m | at least 0 | Parts thinner than twice this stop sticking two objects together |
+| `height_step` | 0.0 m | at least 0 | 0 = off. Otherwise a jump of this size in height between squares splits a piece |
+| `min_box_side` | 0.20 m | at least 0 | A part thinner than this joins the nearest box of its own object |
+| `min_piece_cells` | 8 | at least 1 | A smaller region of the height split joins a neighbour |
+| `cluster_min_points` | 20 | at least 1 | An object needs at least this many dots, or it is dropped |
+
+## Rules between settings
+
+Some rules compare two settings, so the checks are about the **pair**, not one number.
+
+| Rule | Why |
+|---|---|
+| `candidates.band_lo` below `wall_height − band_top_margin` | Else the band is empty: no walls, and no error |
+| `outline.band_lo` below the same top | Same reason |
+| `outline.max_gap` at least `candidates.cell` | One missing square must not end a walk |
+| `outline.max_reach` more than `max_gap` | Else every walk ends at the reach, never at a gap |
+| `outline.strip` and `face_depth` at least `candidates.cell` | A strip narrower than a square holds no whole square |
+| `merge_distance` below `segment_jump` | Else merging undoes every split |
+| `dent_depth` more than `merge_distance` | A dent must be deeper than a merge, or it is already one line |
+| `walls.door_max` at least `min_gap` | Else no gap could be a door |
+| `free_space.low_lo` ≥ `floor_band`, `low_hi` > `low_lo`, `tall_from` ≥ `low_hi` | The layers must stack from floor to tall |
+
+**Example.** `wall_height` 2.1 gives a band top of 2.1 − 0.10 = 2.0 m. A `PUT` with
+`candidates.band_lo` 2.0 is refused, because 2.0 is not below 2.0.
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| `GET /api/settings` returns only the wall height, so a client cannot read the other values; they are in the file | `io/server.cpp` |
+| The page's input accepts 1.55 to 5.95; the backend accepts anything strictly between 1.5 and 6 | `StatusBar.vue`, `domain/settings.cpp` |
+| Settings are lost at restart: nothing writes them back to the file | `io/config.cpp` |

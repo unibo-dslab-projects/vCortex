@@ -1,0 +1,124 @@
+.docname {Glossary}
+.include {docs}
+
+Every term this documentation uses, in plain words. The first part is the **real world**: what a
+person who surveys a building talks about. The second part is **how vCortex works**: words from
+the program and its algorithm.
+
+## The real world
+
+| Term | Also called | Meaning |
+|---|---|---|
+| **Building** | | The physical space in which a survey is conducted. |
+| **Level** | floor (of a building) | One storey of a building, with its own floor height and wall height. |
+| **Floor** | | The surface the robot walks on. Every height is measured from it. |
+| **Room** | final room | The floor space that walls enclose. It is **closed** when walls go all the way round, **open** when a wall is missing. vCortex finds each room twice: first roughly, from the free floor; then the **final room**, closed by the walls it found. |
+| **Wall** | | A straight, upright piece of wall, with a start, an end and a thickness. |
+| **Wall height** | | How tall the walls of a level are. |
+| **Opening** | gap, door | A gap in a wall, such as a doorway. (In the [Objects](objects.qd) chapter, "opening" is also an image step; see below.) |
+| **Door** | | An opening a person walks through. |
+| **Object** | box, furniture | Anything in a room that is not a wall or the floor: a desk, a wardrobe, a bin. Shown as a box. |
+| **Robot** | Go2, robot dog | The Unitree Go2, a four-legged robot that carries the lidar. |
+| **Lidar** | laser | A laser sensor that spins and measures the distance to everything around it. |
+| **Scan** | | One turn of the lidar, about 10 per second. |
+| **Survey** | run, walk | One walk through a building with the robot. |
+| **Path** | trajectory | An ordered list of positions the robot walked through during a survey. |
+| **Pose** | robot position | A sample drawn from the robot's path. It holds the robot's position and orientation together with a timestamp. |
+| **Map** | point cloud | A 3D point cloud created by merging all scans from a survey. |
+| **Dot** | point | One spot of the map, where the laser touched something. |
+| **Digital twin** | twin, model output | A light description of a real building: walls, rooms and objects, measured in metres. |
+| **Manhattan world** | right angles | The idea that most indoor walls meet at right angles, like the streets of Manhattan. |
+
+## How vCortex works
+
+### The parts
+
+| Term | Also called | Meaning |
+|---|---|---|
+| **Model** | | The module that creates a twin from a map and a path. **Not** a 3D model: what it returns is the twin. |
+| **Model run** | run | An invocation of the model over a copy of the map and the robot path. |
+| **Backend** | server | The system component that receives the map, runs the model, and sends back the results. |
+| **Frontend** | browser, page | The web page that shows the dots and the twin. |
+| **Map store** | store | The backend's copy of the map and the path. |
+| **Output writer** | connector | Turns the building into one output format: twin JSON, DXF or PLY. |
+| **Format** | output format | One way to write the twin out. Each has an id, such as `twin-json`. |
+| **Report** | | Numbers about the last model run: dots in, rooms, walls, how long it took. |
+| **Settings** | config | The numbers the model reads, such as the door width. See [Settings](settings.qd). |
+| **Period** | | How long the worker sleeps between two runs: 3 seconds. |
+| **Live mode** | | The backend receives the map while the robot walks, and rebuilds the twin every few seconds. |
+| **Offline mode** | | When the backend opens a map saved earlier, with no robot connected. |
+
+### The robot link
+
+| Term | Also called | Meaning |
+|---|---|---|
+| **Source** | sender | Any program that sends a map to the backend. Today: the robot's bridge. |
+| **Bridge** | | The small program on the robot that sends the map to the backend. |
+| **Ingest** | | The backend endpoint from which map updates (from the sources) are expected. |
+| **Token** | ingest token | A password shared between the source and the backend for authorization purposes. |
+| **Cube** | voxel | A small box of space, 5 cm on each side. |
+| **Map message** | whole map | A message with every cube of the map. |
+| **Delta message** | delta, delta frame | A small message with only the cubes that are new or changed since the last one. |
+| **Poses message** | | A message with the newest poses of the robot. |
+| **run_id** | | A number for one survey. A new number means a new map. |
+| **seq** | sequence number | The number a source puts on each delta message: the number of the previous one plus 1. A gap in the numbers tells the backend that a delta message went missing. |
+| **Resync** | | Backend request for the full map from the source, triggered by a missing delta message. |
+| **Map frame** | frame, `camera_init` | The coordinate system of the map: where (0, 0, 0) is and which way x, y and z point. It starts where the robot started. |
+| **Viewer** | client | One open view in a browser. A **raw viewer** shows the dots, a **twin viewer** shows the twin. |
+| **Byte budget** | budget | How much the backend may send one raw viewer each second: 8 MiB. |
+| **Catch-up map** | | A whole map sent to a viewer that skipped deltas, so it is up to date again. |
+
+### The algorithm
+
+| Term | Also called | Meaning |
+|---|---|---|
+| **Stray dots** | strays, outliers | Lonely dots far from the others, usually noise. |
+| **Floor plane** | | The flat, maybe tilted, surface the floor lies on. |
+| **Tilt** | | How much the floor plane leans, in degrees. |
+| **Yaw** | turn, angle of the map | How far the map is turned around the up axis. |
+| **Squared map** | aligned map | The map turned by its yaw so the walls run along the x and y axes. |
+| **Grid** | top view | The map seen from above and cut into squares of 5 cm on each side, called **cells**. |
+| **Height band** | band | A range of heights the step looks at, for example 0.30 m to 2.60 m. |
+| **Flood** | flood fill, spread | Like water poured on one cell: it spreads to the cells next to it until something stops it. |
+| **Free floor** | free space, rough rooms | The portion of the floor that the robot can reach and occupy, split by doors. |
+| **Room core** | core | The middle of a room, where a 1 m coin fits. Cores are grown back into rooms. |
+| **Strip** | | A row of 5 cells side by side, 25 cm wide. To find a wall, the step checks it one cell at a time, from the room outwards, and stops at the first cell with wall dots. |
+| **Face** | inner face | Where the inner surface of a wall lies. |
+| **Side** | outline side | One straight line of a room outline. |
+| **Outline** | | The sides around one room. |
+| **Dent** | | A short bump inward along a wall (e.g., a cupboard against the wall). |
+| **Furniture dots** | | Dots inside a room but not near a wall. They become objects. |
+| **Image step** | morphology | A step borrowed from photo editing. It treats the grid as a black-and-white picture (occupied cells are black) and changes the shapes in it. Grow, shrink, closing and opening are image steps. |
+| **Occupied cell** | | A cell with enough dots in it to stand for something solid, not empty air. By default **one dot** is enough. |
+| **Grow** | dilate | Make shapes fatter by one radius. |
+| **Shrink** | erode | Make shapes thinner by one radius. |
+| **Closing** (image step) | | Grow, then shrink: fills small holes. |
+| **Opening** (image step) | | Shrink, then grow: cuts thin links. Not a door. |
+| **Piece** | blob | A group of occupied cells taken as one object. |
+
+### Files and tools
+
+| Term | Meaning |
+|---|---|
+| **JSON** | A plain-text format for structured data, read by almost every program. |
+| **DXF** | A file format for 2D drawings, read by CAD programs. |
+| **PLY** | A file format for point clouds, read by 3D tools. |
+| **PCD** | The point cloud file of PCL; how the robot saves a map (`map.pcd`). |
+| **TUM** | A plain-text path format, one pose per line (`trajectory.tum`). |
+| **IFC** | Industry Foundation Classes, the open standard for building data. vCortex borrows its names. |
+| **WebSocket** | A connection that stays open, so both sides can send messages at any time. |
+| **Docker compose** | Starts the backend and the frontend together, each in its own container. |
+| **Point-LIO** | The program on the robot that builds the map from the lidar while it walks (SLAM). |
+| **SLAM** | Building a map and finding your place in it at the same time. |
+| **map_builder** | The program on the robot that keeps one dot per cube and sends new cubes out. |
+| **Clean Architecture** | A way to arrange code in rings: the core logic in the middle knows nothing about files or the network. |
+
+## Words with two meanings
+
+| Word | Meaning 1 | Meaning 2 |
+|---|---|---|
+| **Opening** | A gap in a wall (real world) | An image step: shrink, then grow ([Objects](objects.qd)) |
+| **Frame** | The map's coordinate system (`camera_init`) | One message on the network |
+| **Run** | One survey (`run_id`) | One pass of the model (model run) |
+| **Model** | The method in vCortex | Never a 3D model: that is the twin |
+| **Floor** | The surface you walk on | A storey of a building: here called **level** |

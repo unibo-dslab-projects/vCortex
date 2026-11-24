@@ -1,0 +1,222 @@
+.docname {How it runs}
+.include {docs}
+
+This page shows vCortex while it works: who talks to whom, in which order, and what data moves
+between them. It stays at the big picture; later pages open each piece.
+
+## The big picture
+
+Three places take part: the **robot**, the **backend** on a laptop, and the **browser**.
+
+.mermaid caption:{The data path, from the lidar to the screen.}
+    flowchart TB
+        subgraph Robot
+            direction LR
+            L[Lidar and IMU] --> SLAM[Point-LIO<br/>builds the map]
+            SLAM --> MB[map_builder<br/>one dot per 5 cm cube]
+            MB --> BR[bridge]
+        end
+        subgraph Backend
+            direction LR
+            ST[(Map store)]
+            WK[Model worker<br/>every 3 s]
+            MO[Model]
+            CO[Connectors<br/>JSON · DXF · PLY]
+            ST --> WK --> MO --> CO
+        end
+        subgraph Browser
+            direction LR
+            LV[Left view<br/>raw dots]
+            RV[Right view<br/>digital twin]
+        end
+        FILE[/Saved map<br/>offline mode/] --> ST
+        BR -- "/ingest" --> ST
+        ST -- "/ws/raw" --> LV
+        CO -- "/ws/twin" --> RV
+
+- The robot keeps its own software to itself. A small **bridge** sends the map out over one
+  connection, `/ingest`.
+- The backend keeps a copy of the map in the **map store**. Every 3 seconds, if the map changed,
+  the **model worker** runs the model on a copy and writes the result in every format.
+- The browser gets two live streams: the **raw dots** (`/ws/raw`) and the **twin** in the chosen
+  format (`/ws/twin`).
+- Without a robot, a **saved map** fills the map store instead.
+
+## Clean Architecture
+
+The backend follows **Clean Architecture**: the important logic sits in the middle and knows
+nothing about the outside world. Each ring may use the rings inside it, never the ones outside.
+
+![Clean Architecture rings](images/clean-architecture.svg "The backend as rings: each ring uses only what is inside it.")
+
+| Ring | Folders | Libraries it may use |
+|---|---|---|
+| Domain | `domain/` | The C++ standard library, Eigen for vectors |
+| Use cases | `model/`, `geometry/` | PCL and Eigen, as math libraries |
+| Adapters | `connectors/`, `protocol/` | nlohmann/json |
+| Frameworks and drivers | `io/`, `main.cpp` | Crow (web server), threads, files |
+
+The model is **pure**: it gets a map, a path and settings, and returns a building. It never reads
+a file or the network. So the live robot, a saved map and the tests all run the very same code.
+
+## A live session, step by step
+
+### 1. The robot joins
+
+.mermaid caption:{A source connects and introduces itself.}
+    sequenceDiagram
+        participant R as Robot bridge
+        participant S as Backend server
+        participant M as Map store
+        participant W as Model worker
+        participant B as Browser (twin view)
+        R->>S: open /ingest
+        R->>S: hello (protocol 2, token, frame name, cube size)
+        alt wrong protocol or token
+            S-->>R: close
+        else accepted
+            S->>M: reset: forget the old map
+            S->>W: clear: forget the old twin
+            S-->>B: empty message: drop the old twin
+            S-->>R: welcome
+        end
+
+Only one source feeds the backend at a time. A newer source replaces the old one: a robot that
+lost Wi-Fi never says goodbye, and it must not lock everyone else out.
+
+**Two robots in the same building.** The project asks for one robot, so this case is not handled.
+If a second robot connects, it **replaces** the first: the map store is emptied and fills again
+with the second robot's map only. The two maps are not merged. When the first robot stops, nothing
+else changes: the second keeps feeding its own map.
+
+Merging would need one more step first. Each robot builds its map in its **own frame**, starting
+from where it stood, so the same wall has different coordinates in the two maps. Once the maps are
+lined up, the model itself would not care: it works on dots and poses, whatever robot they came
+from. See the limits in [Challenges](challenges.qd).
+
+.box {Planned: several robots} type:{tip}
+    Support for several robots mapping one building is planned. The missing piece is a step that
+    lines up their maps in one frame before they reach the map store. The model needs no change.
+
+### 2. The map streams in
+
+.mermaid caption:{Map pieces arrive and go straight on to the left view.}
+    sequenceDiagram
+        participant R as Robot bridge
+        participant S as Backend server
+        participant M as Map store
+        participant V as Browser (raw view)
+        R->>S: whole map (all cubes)
+        S->>M: store every cube
+        S-->>V: whole map
+        loop while the robot walks
+            R->>S: delta (new and changed cubes)
+            alt next in order
+                S->>M: add or replace those cubes
+                S-->>V: the same cubes
+            else a delta went missing
+                S-->>R: resync: send the whole map again
+            end
+            R->>S: poses (where the robot is)
+            S->>M: add to the path
+        end
+
+Each cube travels as 20 bytes: its position, its brightness and how many laser turns saw it.
+A viewer on a slow connection skips some deltas and later gets the whole map at once, so it never
+falls behind for good.
+
+### 3. The model runs
+
+.mermaid caption:{Every few seconds, the worker turns the latest map into a twin.}
+    sequenceDiagram
+        participant W as Model worker
+        participant M as Map store
+        participant MO as Model
+        participant C as Connectors
+        participant B as Browser (twin view)
+        loop every 3 s, or at once after new settings
+            W->>M: take a copy, if the map changed
+            M-->>W: dots and path
+            W->>MO: run the model
+            MO-->>W: building and report
+            W->>C: write JSON, DXF and PLY
+            C-->>W: one file per format
+            W-->>B: the file in the format each viewer chose
+        end
+
+The worker copies the map and runs on the copy, so new map pieces keep arriving while the model
+works. If many deltas arrive in 3 seconds, they cost one model run, not many.
+
+### 4. The person at the screen
+
+.mermaid caption:{What the browser asks for, and when.}
+    sequenceDiagram
+        actor U as You
+        participant B as Browser
+        participant S as Backend server
+        participant W as Model worker
+        U->>B: open the page
+        B->>S: formats, settings, status
+        B->>S: open /ws/raw and /ws/twin?format=twin-json
+        S-->>B: the current map and the latest twin
+        loop every 2 s
+            B->>S: status (points, last run, what was found)
+        end
+        U->>B: pick another format
+        B->>S: close the twin stream, open it again with the new format
+        U->>B: type a wall height
+        B->>S: new settings
+        S->>W: new settings: run now
+        W-->>B: a new twin
+        U->>B: export
+        B->>S: download the latest twin file
+
+## Offline mode
+
+With `--map`, the backend opens a saved map at start and needs no robot.
+
+.mermaid caption:{Offline mode: a saved map takes the robot's place.}
+    sequenceDiagram
+        participant F as Saved map
+        participant S as Backend
+        participant M as Map store
+        participant W as Model worker
+        participant R as Robot bridge
+        S->>F: read the map and the path beside it
+        S->>M: store them, once
+        W->>M: take a copy
+        W->>W: run the model, once
+        R->>S: open /ingest
+        S-->>R: close: offline mode
+
+After that, the browser works just like in a live session. The map never changes, so the model
+runs again only when you change a setting.
+
+## Inside one model run
+
+One run follows the same steps every time. Each step takes what the one before it found.
+
+.mermaid caption:{The steps of one model run, with what passes between them.}
+    flowchart TD
+        IN[/Dots and path/] --> CL[Clean<br/>drop stray dots]
+        CL --> FL[Floor<br/>find the floor plane]
+        FL --> AL[Align<br/>turn the map square]
+        AL --> FS[Free floor<br/>where the robot could walk, split at doors]
+        FS --> OU[Outlines<br/>walk out of each room to the wall faces]
+        OU --> WA[Walls<br/>faces become walls]
+        WA --> OB[Objects<br/>leftover dots become boxes]
+        WA --> RO[Rooms<br/>the space the walls close]
+        OB --> BACK[Turn back<br/>to the map's own angle]
+        RO --> BACK
+        BACK --> OUT[/Building: walls, rooms, objects/]
+
+| Step | Real numbers, from the room in the [Overview](introduction.qd) |
+|---|---|
+| Dots in | 192,149 |
+| After cleaning | 186,427 (97%) |
+| Floor tilt | 2.4° |
+| Turn to square the map | 16.8° |
+| Found | 4 walls, 1 room, 19 objects |
+| Time | about 1.5 s |
+
+The [Algorithm](algorithm.qd) section explains each step in detail.

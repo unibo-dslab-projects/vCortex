@@ -1,0 +1,248 @@
+.docname {Usage}
+.include {docs}
+
+How to run vCortex and feed it a map. To build or change the code, see [Development](development.qd).
+
+There are two ways to give vCortex a map:
+
+| Way | Where the map comes from | When to use it |
+|---|---|---|
+| **Live mode** | A robot, while it walks | A real survey |
+| **Offline mode** | A map saved earlier | Trying vCortex, or looking again at an old survey |
+
+## What you need
+
+| Thing | Why |
+|---|---|
+| Docker or Podman, with `compose` | Runs the backend and the frontend with one command |
+| A browser | Shows the dots and the twin |
+| For live mode: the robot and the laptop on the **same network** | The robot sends its map to the laptop |
+
+## 1. Start vCortex
+
+```sh
+cp .env.example .env            # once; see the next section
+docker compose up --build       # or: podman compose up --build
+```
+
+Then open **<http://localhost:8081>**.
+
+| Service | Port on the laptop | Who connects to it |
+|---|---|---|
+| `frontend` | **8081** | You, from the browser |
+| `backend` | **9002** | The robot, on `/ingest` |
+
+- The first build takes a while: the backend image builds PCL from source. Later starts are quick.
+- Stop with `Ctrl+C`, or `docker compose down`.
+- With no robot connected, the header says "Live · waiting for the robot". That is normal.
+
+## 2. The `.env` file
+
+### What it is
+
+`.env` is a small text file next to `compose.yaml`. It holds **one setting**: the
+**ingest token**, a password the robot must give before vCortex accepts its map.
+
+| File | In git? | What it is |
+|---|---|---|
+| `.env.example` | yes | The **template**. It lists the setting, empty, with a comment |
+| `.env` | **no** (`.gitignore` skips it) | **Your copy**, with your real value |
+
+The template, as it is in the repository:
+
+```sh
+# copy to .env; compose reads it automatically
+# shared secret the robot bridge sends in its hello; empty: no check
+VCORTEX_INGEST_TOKEN=
+```
+
+### Why it exists
+
+- The backend takes a map from **anyone** who connects to port 9002 and speaks the
+  [protocol](protocol.qd).
+- Only **one source** feeds it at a time, and a newer one **replaces** the old one.
+- So on a shared Wi-Fi, a second robot or a forgotten test script could take over the survey.
+- The token stops that: a source with the wrong token is turned away.
+
+The value is kept out of git so it never ends up in a public repository.
+
+### How the value travels
+
+.mermaid caption:{The same token is set in two places: the laptop and the robot.}
+    flowchart LR
+        ENV["#46;env on the laptop"] -- "compose reads it" --> C[compose.yaml]
+        C -- "environment variable" --> BE[backend]
+        RB[robot: ingest_token] -- "hello on /ingest" --> BE
+        BE -- "equal: welcome" --> OK[map accepted]
+        BE -- "different: close 1008, bad token" --> NO[map refused]
+
+1. `docker compose` reads `.env` by itself, from the folder where you run it.
+2. `compose.yaml` passes the value to the backend as the variable `VCORTEX_INGEST_TOKEN`.
+3. The backend reads that variable **once, at start**.
+4. Each source sends a token in its first message (the *hello*). The backend compares the two.
+
+### What to put in it
+
+| `VCORTEX_INGEST_TOKEN` | What happens |
+|---|---|
+| empty (the default) | **No check.** Any source is accepted. Fine at home or on your own network |
+| a value | Only a source that sends **the same value** is accepted |
+
+**Example.** Make a random value and write it in `.env`:
+
+```sh
+openssl rand -hex 16            # prints, for example, 3f9c2a7e5b1d48e6a0c4f7b2d9e1a835
+```
+
+```sh
+VCORTEX_INGEST_TOKEN=3f9c2a7e5b1d48e6a0c4f7b2d9e1a835
+```
+
+Then give **the same value** to the robot (see section 4).
+
+### Good to know
+
+- **A change needs a restart.** Run `docker compose up` again; compose sees the new value and
+  restarts the backend.
+- **No `.env` at all** works too: the token is then empty, so there is no check. The `cp` step
+  is only needed to set a token.
+- **Without compose, `.env` is not read.** When you run the backend by hand, set the variable
+  yourself: `env VCORTEX_INGEST_TOKEN=3f9c… build/vcortex`.
+- **Use letters and digits only.** The robot's bridge writes the token into its hello as it is, so
+  a quote `"` or a backslash `\` breaks the message. A hex value like the one above is safe.
+- **It is a lock against mistakes, not strong security.** The token travels as plain text over
+  the network (`ws://`, not encrypted). Anyone who can read the Wi-Fi traffic can read it.
+- The token guards **only** `/ingest`. The browser routes (`/api`, `/ws`) have no password.
+
+## 3. Offline mode: open a saved map
+
+The robot saves each survey in its own folder, with two files:
+
+| File | Holds |
+|---|---|
+| `map.pcd` | The map: one dot per 5 cm cube |
+| `trajectory.tum` | The robot's path. **Needed**: without a path the model finds no room |
+
+Steps:
+
+1. Copy the survey folder into `data/`, for example `data/2026-10-19_line_01/`.
+2. In `compose.yaml`, change the backend's `command` line:
+
+   ```yaml
+   command: ["--port", "9002", "--map", "/data/2026-10-19_line_01/map.pcd"]
+   ```
+
+3. Run `docker compose up` again.
+
+- `data/` is mounted read-only at `/data` in the backend. So the path starts with `/data`.
+- `trajectory.tum` is found by itself, because it sits next to `map.pcd`.
+- In offline mode the backend **refuses every robot** (close code 1013, `offline mode`).
+- The header says "Offline · map.pcd".
+
+## 4. Connect the robot
+
+The robot does not run vCortex. A small program on the robot, the **bridge**
+(`vcortex_bridge`, in the robot repository `unitree_go2`), reads the map that the robot builds
+and sends it to the laptop.
+
+.mermaid caption:{Where the robot meets vCortex. The bold arrow is the only link.}
+    flowchart LR
+        subgraph Robot
+            ML[map_builder<br/>one dot per 5 cm cube] -- "map_builder/get_map<br/>map_builder/delta<br/>map_builder/pose" --> BR[vcortex_bridge]
+        end
+        subgraph Laptop
+            BE[vCortex backend<br/>port 9002]
+            FE[frontend<br/>port 8081]
+        end
+        BR == "ws://LAPTOP_IP:9002/ingest<br/>hello with token, then map, deltas, poses" ==> BE
+        BE --> FE
+
+### The connection points
+
+Five things must match between the robot and the laptop. If one is wrong, nothing arrives.
+
+| # | Point | Robot side | Laptop side | Must be |
+|---|---|---|---|---|
+| 1 | **Address** | launch argument `backend_host` | the laptop's IP address | The laptop's IP, as the robot sees it |
+| 2 | **Port** | bridge parameter `backend_port`, default 9002 | `"9002:9002"` in `compose.yaml` | The same number. Leave both at 9002 |
+| 3 | **Token** | launch argument `ingest_token` | `VCORTEX_INGEST_TOKEN` in `.env` | Equal, or both empty |
+| 4 | **Protocol version** | built into the bridge | built into the backend | Both `2` |
+| 5 | **Mode** | | backend started **without** `--map` | Live mode |
+
+Points 4 and 5 need nothing from you, as long as both sides are up to date and `compose.yaml` has
+no `--map`. The cube size (5 cm) and the map frame (`camera_init`) are sent by the bridge in
+its hello, so the backend always uses the robot's values.
+
+### Step by step
+
+1. **Start vCortex** on the laptop (section 1), in live mode.
+2. **Find the laptop's address** on the shared network:
+
+   ```sh
+   ip -4 addr                      # look for the Wi-Fi interface, for example 192.168.1.42
+   ```
+
+3. **Check that the robot can reach it**, from a shell on the robot:
+
+   ```sh
+   ping 192.168.1.42
+   ```
+
+4. **Start the mapping on the robot**, with the address and the token:
+
+   ```sh
+   ros2 launch go2_mapping_bringup mapping.launch.py \
+       calibration_file:=/abs/path/go2_calibration.yaml \
+       backend_host:=192.168.1.42 \
+       ingest_token:=3f9c2a7e5b1d48e6a0c4f7b2d9e1a835
+   ```
+
+   - **`backend_host` turns the bridge on.** Left empty (the default), the bridge does not start
+     at all, and the robot only maps for itself.
+   - `ingest_token` can be left out: it then takes the robot's own `VCORTEX_INGEST_TOKEN`
+     variable, or empty if that is not set.
+
+5. **Walk.** The dots appear on the left within a second or so; the twin follows every 3 seconds.
+
+**The other layout.** If `map_builder` runs on the laptop instead (`map_builder_host:=laptop`),
+the bridge runs there too. Then pass `backend_host:=localhost` to `laptop.launch.py`. The
+bridge always runs next to `map_builder`, so the whole map never crosses the Wi-Fi as ROS
+messages.
+
+### Check that it works
+
+| Where | What you should see |
+|---|---|
+| Bridge log, on the robot | `backend 192.168.1.42:9002, voxel size 0.050 m, poses every 0.50 s, token on` |
+| | `connected to 192.168.1.42:9002` |
+| | `sent map: 45195 voxels, run_id …, seq …` |
+| Browser header | "Live · unitree_go2", with the run and `seq` going up |
+| `curl http://localhost:9002/api/status` | `"connected": true`, `"source": "unitree_go2"`, `points` growing |
+
+The bridge waits for the robot's first scan before it connects: it needs the map frame for its
+hello. So "connected" comes only once the lidar is running.
+
+### When it does not connect
+
+The bridge never gives up: after a failure it tries again after 1 s, then 2, 4, 8, and then
+every 10 s. Its log says why, in brackets.
+
+| Bridge log | Cause | Fix |
+|---|---|---|
+| `connect failed: … , retry in …` | The robot cannot reach the laptop | Check `backend_host`, the network, a firewall on port 9002, and that vCortex runs |
+| `read failed: … (bad token)` | Tokens differ | Make `ingest_token` equal to `VCORTEX_INGEST_TOKEN` in `.env`, then restart |
+| `read failed: … (offline mode)` | The backend was started with `--map` | Remove `--map` from `compose.yaml`, then `docker compose up` |
+| `read failed: … (unsupported protocol)` | The bridge and the backend are from different versions | Update the older side |
+| `read failed: … (replaced by a newer source)` | Another source connected after this one | Stop the other source |
+| `backend asked for a full map` | A delta was lost on the way | Nothing: the bridge sends the whole map again by itself |
+| No bridge log at all | `backend_host` was empty | Pass `backend_host:=…` |
+
+## Gaps found
+
+| What | Where |
+|---|---|
+| The README says to open port 8080, but `compose.yaml` puts the frontend on **8081** | `README.md` |
+| The backend container starts without `--config`, so it uses the built-in settings, not `config/model.json` that the image ships | `compose.yaml`, `backend/Dockerfile` |
+| `compose.yaml` has a stale TODO: it says `--map` does not exist yet, and points to `/data/maps/`, a folder nobody makes | `compose.yaml` |
+| The bridge does not escape the token in its hello: a quote or a backslash breaks it | `unitree_go2: vcortex_bridge/src/node.cpp` |
+| The token travels unencrypted (`ws://`) | `/ingest` |

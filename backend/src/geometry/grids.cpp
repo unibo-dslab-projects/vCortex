@@ -9,15 +9,6 @@ namespace {
 constexpr double kSlack = 1e-9;
 }  // namespace
 
-bool is_in_grid(const Grid& grid, int x, int y) {
-    return x >= 0 && x < grid.width && y >= 0 && y < grid.height;
-}
-
-std::size_t at(const Grid& grid, int x, int y) {
-    return static_cast<std::size_t>(y) * static_cast<std::size_t>(grid.width) +
-           static_cast<std::size_t>(x);
-}
-
 bool cell_of(const Grid& g, double x, double y, int& ix, int& iy) {
     ix = static_cast<int>(std::floor((x - g.origin.x()) / g.cell));
     iy = static_cast<int>(std::floor((y - g.origin.y()) / g.cell));
@@ -81,13 +72,8 @@ bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uin
         for (int column_offset = -radius_cells; column_offset <= radius_cells; ++column_offset) {
             const int neighbour_row = row + row_offset;
             const int neighbour_column = column + column_offset;
-            if (neighbour_row < 0 || neighbour_row >= grid.height || neighbour_column < 0 ||
-                neighbour_column >= grid.width) {
-                continue;
-            }
-            const auto index =
-                static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column);
-            if (marked_cells[index] == value) return true;
+            if (!is_in_grid(grid, neighbour_column, neighbour_row)) continue;
+            if (marked_cells[at(grid, neighbour_column, neighbour_row)] == value) return true;
         }
     }
     return false;
@@ -101,12 +87,8 @@ std::vector<std::size_t> get_neighbour_indices(const ObjectGrid& grid, std::size
     for (const auto& step : steps) {
         const int neighbour_row = row + step[0];
         const int neighbour_column = column + step[1];
-        if (neighbour_row < 0 || neighbour_row >= grid.height || neighbour_column < 0 ||
-            neighbour_column >= grid.width) {
-            continue;
-        }
-        neighbours.push_back(
-            static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column));
+        if (!is_in_grid(grid, neighbour_column, neighbour_row)) continue;
+        neighbours.push_back(at(grid, neighbour_column, neighbour_row));
     }
     return neighbours;
 }

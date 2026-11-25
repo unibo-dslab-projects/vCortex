@@ -11,10 +11,18 @@
 
 namespace vcortex {
 
-/// Check if the given coordinates are within the grid bounds
-bool is_in_grid(const Grid& grid, int x, int y);
-/// Returns the index of the cell at the given coordinates
-std::size_t at(const Grid& grid, int x, int y);
+/// Whether cell (x, y) lies inside grid; works for Grid and ObjectGrid.
+template <typename AnyGrid>
+bool is_in_grid(const AnyGrid& grid, int x, int y) {
+    return x >= 0 && x < grid.width && y >= 0 && y < grid.height;
+}
+/// Index of cell (x, y), column x and row y, in the row-major vectors of grid; works for Grid
+/// and ObjectGrid. The one place the layout is written down, so x and y are never swapped.
+template <typename AnyGrid>
+std::size_t at(const AnyGrid& grid, int x, int y) {
+    return static_cast<std::size_t>(y) * static_cast<std::size_t>(grid.width) +
+           static_cast<std::size_t>(x);
+}
 /// Takes a point and populate the ix/iy cell coordinates, returning if the point is within the grid
 bool cell_of(const Grid& g, double x, double y, int& ix, int& iy);
 /// Returns the coordinates covered by a disk of the given radius, centered at the origin

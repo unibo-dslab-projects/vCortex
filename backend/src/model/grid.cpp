@@ -62,8 +62,7 @@ Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, doub
     for (const Eigen::Vector2d& v : band) {
         const int ix = cell_index(v.x(), grid.origin.x(), cell, grid.width);
         const int iy = cell_index(v.y(), grid.origin.y(), cell, grid.height);
-        const std::size_t i = static_cast<std::size_t>(iy) * static_cast<std::size_t>(grid.width) +
-                              static_cast<std::size_t>(ix);
+        const std::size_t i = at(grid, ix, iy);
         std::uint16_t& count = grid.column[i];
         // saturate: a wrap to 0 would erase the densest cell
         if (count < std::numeric_limits<std::uint16_t>::max()) {
@@ -82,9 +81,7 @@ std::vector<Eigen::Vector2d> band_cells(const Grid& grid, std::uint16_t min_colu
     std::vector<Eigen::Vector2d> out;
     for (int iy = 0; iy < grid.height; ++iy) {
         for (int ix = 0; ix < grid.width; ++ix) {
-            const std::size_t i =
-                static_cast<std::size_t>(iy) * static_cast<std::size_t>(grid.width) +
-                static_cast<std::size_t>(ix);
+            const std::size_t i = at(grid, ix, iy);
             if (grid.column[i] >= min_column) {
                 out.push_back(grid.mean[i]);
             }

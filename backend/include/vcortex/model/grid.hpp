@@ -21,7 +21,8 @@ struct Grid {
 };
 
 /// Counts the points between band_lo and band_hi, metres above the floor, per cell of a grid
-/// that covers the whole cloud; throws when the grid would be too large for one level.
+/// that covers those points only: floor, ceiling and stray points outside the band neither
+/// fill it nor grow it. Throws when the band would be too large for one level.
 Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, double band_lo,
                 double band_hi, double cell);
 

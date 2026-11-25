@@ -1,12 +1,13 @@
 #include "vcortex/model/grid.hpp"
 #include "vcortex/geometry/grids.hpp"
-#include "vcortex/geometry/points.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
 #include <string>
+
+#include <Eigen/Geometry>
 
 namespace vcortex {
 
@@ -27,11 +28,13 @@ Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, doub
     grid.cell = cell;
 
     std::vector<Eigen::Vector2d> band;
-    const Eigen::AlignedBox3f bounds = get_points_bounding_box(aligned);
+    // sized on the band alone: a stray floor or ceiling point far away must not grow it
+    Eigen::AlignedBox2d bounds;
     for (const LidarPoint& p : aligned) {
         const double h = height_above(floor, p);
         if (h >= band_lo && h < band_hi) {
             band.push_back(p.position.head<2>().cast<double>());
+            bounds.extend(band.back());
         }
     }
     if (band.empty()) {

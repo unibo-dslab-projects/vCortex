@@ -21,7 +21,6 @@ constexpr double kEpsilon = 1e-9;
 // the four ways out of a room, one per wall direction once the map is squared
 constexpr Direction kWaysOut[4] = {{Axis::X, 1}, {Axis::X, -1}, {Axis::Y, 1}, {Axis::Y, -1}};
 
-
 /// A band of row_count grid rows from first_row, walked out of the room together.
 /// Walk cells run along the walk direction, from 0 to walk_cell_count; rows run along the wall.
 /// For an X direction a walk cell is a grid x index and a row a grid y index; for Y, swapped.
@@ -113,8 +112,8 @@ std::optional<double> find_face(const Grid& band_grid, const Strip& strip, int w
 /// touches the room gives one sample, with or without a face. Strips that miss the room give
 /// none. Neighbouring samples are joined into outline sides afterwards.
 std::vector<detail::WallFaceSample> sample_wall_faces(const FreeSpace& space, std::uint32_t room,
-                                              const Grid& band_grid, Direction direction,
-                                              const OutlineParams& parameters) {
+                                                      const Grid& band_grid, Direction direction,
+                                                      const OutlineParams& parameters) {
     const int row_count = direction.axis == Axis::X ? band_grid.height : band_grid.width;
     const int walk_cell_count = direction.axis == Axis::X ? band_grid.width : band_grid.height;
     const double along_start =
@@ -270,8 +269,9 @@ double find_corner(const OutlineSide& side, int end_heading, const std::vector<O
 
 }  // namespace
 
-std::vector<OutlineSide> detail::find_outline_sides(const std::vector<detail::WallFaceSample>& samples,
-                                            Direction direction, const OutlineParams& parameters) {
+std::vector<OutlineSide> detail::find_outline_sides(
+    const std::vector<detail::WallFaceSample>& samples, Direction direction,
+    const OutlineParams& parameters) {
     std::vector<Segment> segments = split_into_segments(samples, parameters.segment_jump);
     drop_short_segments(segments, parameters.min_strips_per_segment);
     merge_close_segments(segments, parameters.merge_distance);
@@ -287,7 +287,8 @@ std::vector<OutlineSide> detail::find_outline_sides(const std::vector<detail::Wa
     return sides;
 }
 
-void detail::join_outline_corners(std::vector<OutlineSide>& sides, const OutlineParams& parameters) {
+void detail::join_outline_corners(std::vector<OutlineSide>& sides,
+                                  const OutlineParams& parameters) {
     // checks read the sides as they were, so a side already moved never changes the next checks
     const std::vector<OutlineSide> sides_before = sides;
     for (std::size_t i = 0; i < sides.size(); ++i) {
@@ -304,9 +305,9 @@ std::vector<OutlineSide> find_room_outline(const FreeSpace& space, std::uint32_t
                                            const Grid& band_grid, const OutlineParams& parameters) {
     std::vector<OutlineSide> outline;
     for (const Direction direction : kWaysOut) {
-        const std::vector<OutlineSide> sides =
-            detail::find_outline_sides(sample_wall_faces(space, room, band_grid, direction, parameters),
-                               direction, parameters);
+        const std::vector<OutlineSide> sides = detail::find_outline_sides(
+            sample_wall_faces(space, room, band_grid, direction, parameters), direction,
+            parameters);
         outline.insert(outline.end(), sides.begin(), sides.end());
     }
     detail::join_outline_corners(outline, parameters);

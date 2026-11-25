@@ -5,15 +5,12 @@
 #include <cstdint>
 #include <vector>
 
+#include "vcortex/geometry/grids.hpp"
 #include "vcortex/model/object/labels.hpp"
 
 namespace vcortex {
 
 namespace {
-
-std::size_t index_of(const ObjectGrid& grid, int column, int row) {
-    return static_cast<std::size_t>(row * grid.width + column);
-}
 
 /// Largest rectangle whose cells are all set in is_unboxed; an empty box when none is.
 /// Row by row, each column holds how many unboxed cells stack up to that row, and a stack of
@@ -30,7 +27,7 @@ Eigen::AlignedBox2i find_largest_full_rectangle(const ObjectGrid& grid,
     int largest_area = 0;
     for (int row = 0; row < grid.height; ++row) {
         for (int column = 0; column < grid.width; ++column) {
-            bar_of(column) = is_unboxed[index_of(grid, column, row)] ? bar_of(column) + 1 : 0;
+            bar_of(column) = is_unboxed[at(grid, column, row)] ? bar_of(column) + 1 : 0;
         }
         // columns whose rectangle can still grow right; their bars rise from bottom to top
         std::vector<int> open_columns;
@@ -79,8 +76,8 @@ BoxPieces split_into_boxes(const ObjectGrid& grid, const std::vector<std::uint32
             const auto box_label = static_cast<std::uint32_t>(pieces.boxes.size());
             for (int row = box.min().y(); row <= box.max().y(); ++row) {
                 for (int column = box.min().x(); column <= box.max().x(); ++column) {
-                    pieces.labels[index_of(grid, column, row)] = box_label;
-                    is_unboxed[index_of(grid, column, row)] = 0;
+                    pieces.labels[at(grid, column, row)] = box_label;
+                    is_unboxed[at(grid, column, row)] = 0;
                 }
             }
         }
@@ -94,7 +91,7 @@ BoxPieces split_into_boxes(const ObjectGrid& grid, const std::vector<std::uint32
     pieces.boxes.resize(*std::max_element(pieces.labels.begin(), pieces.labels.end()));
     for (int row = 0; row < grid.height; ++row) {
         for (int column = 0; column < grid.width; ++column) {
-            const std::uint32_t label = pieces.labels[index_of(grid, column, row)];
+            const std::uint32_t label = pieces.labels[at(grid, column, row)];
             if (label > found_box_count)
                 pieces.boxes[label - 1].extend(Eigen::Vector2i(column, row));
         }

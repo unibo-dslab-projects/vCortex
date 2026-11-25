@@ -22,10 +22,10 @@ ObjectGrid build_object_grid(const std::vector<LidarPoint>& furniture_points, co
     // adding padding to support spatial algorithms boundary conditions
     const double padding_metres = padding_cells * cell;
     grid.origin = {bounds.min().x() - padding_metres, bounds.min().y() - padding_metres};
-    grid.width =
-        static_cast<int>(std::floor((bounds.max().x() - bounds.min().x()) / cell)) + 1 + 2 * padding_cells;
-    grid.height = static_cast<int>(std::floor((bounds.max().y() - bounds.min().y()) / cell)) +
-                  1 + 2 * padding_cells;
+    grid.width = static_cast<int>(std::floor((bounds.max().x() - bounds.min().x()) / cell)) + 1 +
+                 2 * padding_cells;
+    grid.height = static_cast<int>(std::floor((bounds.max().y() - bounds.min().y()) / cell)) + 1 +
+                  2 * padding_cells;
 
     const auto cell_count =
         static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height);
@@ -37,14 +37,13 @@ ObjectGrid build_object_grid(const std::vector<LidarPoint>& furniture_points, co
     // voxeling the points cloud in a 2D grid, counting points per cell
     for (const LidarPoint& point : furniture_points) {
         // clamped: rounding can push a point on the max edge one cell past the data
-        const int column = std::clamp(
-            static_cast<int>(std::floor((point.position.x() - grid.origin.x()) / cell)), 0,
-            grid.width - 1);
-        const int row = std::clamp(
-            static_cast<int>(std::floor((point.position.y() - grid.origin.y()) / cell)), 0,
-            grid.height - 1);
-        const std::size_t index = static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.width) +
-                                  static_cast<std::size_t>(column);
+        const int column =
+            std::clamp(static_cast<int>(std::floor((point.position.x() - grid.origin.x()) / cell)),
+                       0, grid.width - 1);
+        const int row =
+            std::clamp(static_cast<int>(std::floor((point.position.y() - grid.origin.y()) / cell)),
+                       0, grid.height - 1);
+        const std::size_t index = at(grid, column, row);
         ++grid.point_count[index];
         grid.top_metres[index] =
             std::max(grid.top_metres[index], static_cast<float>(height_above(floor, point)));
@@ -66,7 +65,7 @@ std::vector<std::uint8_t> grow_by_cell(const ObjectGrid& grid,
         for (int column = 0; column < grid.width; ++column) {
             const bool is_full =
                 has_neighbour_with_value(grid, marked_cells, row, column, radius_cells, 1);
-            grown[static_cast<std::size_t>(row * grid.width + column)] = is_full;
+            grown[at(grid, column, row)] = is_full;
         }
     }
     return grown;
@@ -80,7 +79,7 @@ std::vector<std::uint8_t> shrink_by_cell(const ObjectGrid& grid,
         for (int column = 0; column < grid.width; ++column) {
             const bool is_square_full =
                 !has_neighbour_with_value(grid, marked_cells, row, column, radius_cells, 0);
-            shrunk[static_cast<std::size_t>(row * grid.width + column)] = is_square_full;
+            shrunk[at(grid, column, row)] = is_square_full;
         }
     }
     return shrunk;

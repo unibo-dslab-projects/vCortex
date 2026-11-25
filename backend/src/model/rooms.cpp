@@ -9,6 +9,8 @@
 
 #include <Eigen/Geometry>
 
+#include "vcortex/geometry/grids.hpp"
+
 namespace vcortex {
 
 namespace {
@@ -39,12 +41,10 @@ struct Mask {
     std::vector<int> label;  // -1 blocked, 0 free and unseen, k room k
 
     explicit Mask(const Grid& g)
-        : grid(g), label(static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height), 0) {}
+        : grid(g),
+          label(static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height), 0) {}
 
-    int& at(int ix, int iy) {
-        return label[static_cast<std::size_t>(iy) * static_cast<std::size_t>(grid.width) +
-                     static_cast<std::size_t>(ix)];
-    }
+    int& at(int ix, int iy) { return label[vcortex::at(grid, ix, iy)]; }
 
     // every cell the box touches, not only cells whose center it covers: a 7 cm wall can
     // fall between two centers and leave a leak
@@ -97,7 +97,7 @@ void close_doors(const std::vector<Body>& bodies, double door_max, Mask& m) {
 struct Fill {
     std::size_t cells = 0;
     Eigen::AlignedBox2i cell_box;  // first and last cell reached in x and y
-    bool leaked = false;  // reached the grid edge: a wall is missing, so the room is open
+    bool leaked = false;           // reached the grid edge: a wall is missing, so the room is open
 };
 
 // 4 neighbours, not 8: diagonal steps slip between two wall cells that meet at a corner
@@ -117,7 +117,7 @@ Fill flood(Mask& m, int sx, int sy, int k) {
         const int step[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
         for (const auto& s : step) {
             const int nx = ix + s[0], ny = iy + s[1];
-            if (nx < 0 || ny < 0 || nx >= g.width || ny >= g.height || m.at(nx, ny) != 0) continue;
+            if (!is_in_grid(g, nx, ny) || m.at(nx, ny) != 0) continue;
             m.at(nx, ny) = k;
             todo.push({nx, ny});
         }
@@ -141,8 +141,7 @@ bool touches(const Body& b, double x0, double x1, double y0, double y1, double d
 }  // namespace
 
 std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
-                             const Trajectory& aligned_traj, double door_max,
-                             const RoomParams& p) {
+                             const Trajectory& aligned_traj, double door_max, const RoomParams& p) {
     std::vector<Body> bodies;
     bodies.reserve(walls.size());
     for (const Wall& w : walls) bodies.push_back(body_of(w));
@@ -159,7 +158,7 @@ std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
         const int iy =
             static_cast<int>(std::floor((pose.position.y() - grid.origin.y()) / grid.cell));
         // a pose close to a wall can fall on its drawn cells; later poses cover the room
-        if (ix < 0 || iy < 0 || ix >= grid.width || iy >= grid.height || m.at(ix, iy) != 0) {
+        if (!is_in_grid(grid, ix, iy) || m.at(ix, iy) != 0) {
             continue;
         }
         const Fill f = flood(m, ix, iy, ++k);

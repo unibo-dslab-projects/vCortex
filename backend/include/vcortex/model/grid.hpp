@@ -11,7 +11,7 @@ namespace vcortex {
 /// Top view of the band points: how many fall in each square cell, and where on average.
 // built twice per run (raw for dominant_yaw, then aligned): turning moves points into other cells
 struct Grid {
-    double cell = 0.0;                  // side of one square cell
+    double cell = 0.0;                                 // side of one square cell
     Eigen::Vector2d origin = Eigen::Vector2d::Zero();  // lower-left corner of cell (0, 0)
     int width = 0, height = 0;          // int, not size_t: neighbour walks step by -1
     std::vector<std::uint16_t> column;  // row-major, column[iy * width + ix]; points in band
@@ -21,7 +21,8 @@ struct Grid {
 };
 
 /// Counts the points between band_lo and band_hi, metres above the floor, per cell of a grid
-/// that covers the whole cloud; throws when the grid would be too large for one level.
+/// that covers those points only: floor, ceiling and stray points outside the band neither
+/// fill it nor grow it. Throws when the band would be too large for one level.
 Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, double band_lo,
                 double band_hi, double cell);
 

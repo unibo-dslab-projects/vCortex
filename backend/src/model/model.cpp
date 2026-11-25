@@ -32,7 +32,8 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.points_in = snap.points.size();
 
     // cleaning
-    std::vector<LidarPoint> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
+    std::vector<LidarPoint> pts =
+        drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
     // floor; heights are taken above the plane, so the cloud is never levelled

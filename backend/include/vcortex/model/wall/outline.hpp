@@ -5,10 +5,10 @@
 
 #include "vcortex/domain/lidar_point.hpp"
 #include "vcortex/domain/settings.hpp"
+#include "vcortex/geometry/vectors.hpp"
 #include "vcortex/model/floor/floor.hpp"
 #include "vcortex/model/floor/free_space.hpp"
 #include "vcortex/model/grid.hpp"
-#include "vcortex/geometry/vectors.hpp"
 
 namespace vcortex {
 
@@ -21,9 +21,9 @@ struct Direction {
 
 /// One straight wall of a room outline, seen from inside (aligned frame, metres).
 struct OutlineSide {
-    Direction direction;            // the axis the wall is across, and which way is out
-    double face = 0.0;              // where the wall's inner face sits on that axis
-    double from = 0.0, to = 0.0;    // where the wall starts and ends along it
+    Direction direction;          // the axis the wall is across, and which way is out
+    double face = 0.0;            // where the wall's inner face sits on that axis
+    double from = 0.0, to = 0.0;  // where the wall starts and ends along it
 };
 
 /// One outline per room of space, at index room - 1: the straight walls around the room,

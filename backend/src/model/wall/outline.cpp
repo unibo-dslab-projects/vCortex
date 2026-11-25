@@ -108,9 +108,10 @@ std::optional<double> find_face(const Grid& band_grid, const Strip& strip, int w
 }
 
 /// The wall faces of room seen in direction, as one WallFaceSample per strip, in order along
-/// the wall. The grid is cut into strips of parameters.strip across the walls; each strip that
-/// touches the room gives one sample, with or without a face. Strips that miss the room give
-/// none. Neighbouring samples are joined into outline sides afterwards.
+/// the wall. The grid is cut into strips of parameters.strip across the walls, the last one
+/// shorter when the grid is not a whole number of strips; each strip that touches the room gives
+/// one sample, with or without a face. Strips that miss the room give none. Neighbouring samples
+/// are joined into outline sides afterwards.
 std::vector<detail::WallFaceSample> sample_wall_faces(const FreeSpace& space, std::uint32_t room,
                                                       const Grid& band_grid, Direction direction,
                                                       const OutlineParams& parameters) {
@@ -125,13 +126,14 @@ std::vector<detail::WallFaceSample> sample_wall_faces(const FreeSpace& space, st
     const int face_depth_cells = num_cells_in_len(parameters.face_depth, band_grid.cell);
 
     std::vector<detail::WallFaceSample> samples;
-    for (int row = 0; row + cells_per_strip <= row_count; row += cells_per_strip) {
-        const Strip strip{direction, row, cells_per_strip, walk_cell_count};
+    for (int row = 0; row < row_count; row += cells_per_strip) {
+        const int strip_rows = std::min(cells_per_strip, row_count - row);
+        const Strip strip{direction, row, strip_rows, walk_cell_count};
         const int outermost_cell = find_outermost_room_cell(space, room, band_grid, strip);
         if (outermost_cell < 0) continue;
         detail::WallFaceSample sample;
         sample.from = along_start + row * band_grid.cell;
-        sample.to = sample.from + cells_per_strip * band_grid.cell;
+        sample.to = sample.from + strip_rows * band_grid.cell;
         const int wall_cell =
             find_wall_cell(band_grid, strip, outermost_cell, max_reach_cells, max_gap_cells);
         if (wall_cell >= 0) sample.face = find_face(band_grid, strip, wall_cell, face_depth_cells);

@@ -79,9 +79,9 @@ std::vector<Eigen::Vector2d> band_cells(const Grid& grid, std::uint16_t min_colu
     std::vector<Eigen::Vector2d> out;
     for (int iy = 0; iy < grid.height; ++iy) {
         for (int ix = 0; ix < grid.width; ++ix) {
-            const std::size_t i = static_cast<std::size_t>(iy) *
-                                      static_cast<std::size_t>(grid.width) +
-                                  static_cast<std::size_t>(ix);
+            const std::size_t i =
+                static_cast<std::size_t>(iy) * static_cast<std::size_t>(grid.width) +
+                static_cast<std::size_t>(ix);
             if (grid.column[i] >= min_column) {
                 out.push_back(grid.mean[i]);
             }

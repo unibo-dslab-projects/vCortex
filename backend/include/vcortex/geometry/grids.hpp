@@ -34,7 +34,8 @@ int num_cells_in_len(double length, double cell);
 /// Returns true if the given cell has a neighbour with the given value
 bool has_neighbour_with_value(const ObjectGrid& grid, const std::vector<std::uint8_t>& marked_cells,
                               int row, int column, int radius_cells, std::uint8_t value);
-/// Returns the indices of the neighbour cells of the given cell, it returns only horizontal/vertical neighbours
+/// Returns the indices of the neighbour cells of the given cell, it returns only
+/// horizontal/vertical neighbours
 std::vector<std::size_t> get_neighbour_indices(const ObjectGrid& grid, std::size_t index);
 /// Shoelace sum, doubled to stay in integers: positive for a counter-clockwise vertex vector
 long long doubled_signed_area(const std::vector<Eigen::Vector2i>& polygon);

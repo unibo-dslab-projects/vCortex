@@ -6,8 +6,8 @@
 namespace vcortex {
 
 namespace {
-    constexpr double kSlack = 1e-9;
-} // namespace
+constexpr double kSlack = 1e-9;
+}  // namespace
 
 bool is_in_grid(const Grid& grid, int x, int y) {
     return x >= 0 && x < grid.width && y >= 0 && y < grid.height;
@@ -15,7 +15,7 @@ bool is_in_grid(const Grid& grid, int x, int y) {
 
 std::size_t at(const Grid& grid, int x, int y) {
     return static_cast<std::size_t>(y) * static_cast<std::size_t>(grid.width) +
-        static_cast<std::size_t>(x);
+           static_cast<std::size_t>(x);
 }
 
 bool cell_of(const Grid& g, double x, double y, int& ix, int& iy) {
@@ -105,7 +105,8 @@ std::vector<std::size_t> get_neighbour_indices(const ObjectGrid& grid, std::size
             neighbour_column >= grid.width) {
             continue;
         }
-        neighbours.push_back(static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column));
+        neighbours.push_back(
+            static_cast<std::size_t>(neighbour_row * grid.width + neighbour_column));
     }
     return neighbours;
 }

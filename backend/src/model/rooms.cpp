@@ -39,7 +39,8 @@ struct Mask {
     std::vector<int> label;  // -1 blocked, 0 free and unseen, k room k
 
     explicit Mask(const Grid& g)
-        : grid(g), label(static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height), 0) {}
+        : grid(g),
+          label(static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height), 0) {}
 
     int& at(int ix, int iy) {
         return label[static_cast<std::size_t>(iy) * static_cast<std::size_t>(grid.width) +
@@ -97,7 +98,7 @@ void close_doors(const std::vector<Body>& bodies, double door_max, Mask& m) {
 struct Fill {
     std::size_t cells = 0;
     Eigen::AlignedBox2i cell_box;  // first and last cell reached in x and y
-    bool leaked = false;  // reached the grid edge: a wall is missing, so the room is open
+    bool leaked = false;           // reached the grid edge: a wall is missing, so the room is open
 };
 
 // 4 neighbours, not 8: diagonal steps slip between two wall cells that meet at a corner
@@ -141,8 +142,7 @@ bool touches(const Body& b, double x0, double x1, double y0, double y1, double d
 }  // namespace
 
 std::vector<Room> find_rooms(const std::vector<Wall>& walls, const Grid& grid,
-                             const Trajectory& aligned_traj, double door_max,
-                             const RoomParams& p) {
+                             const Trajectory& aligned_traj, double door_max, const RoomParams& p) {
     std::vector<Body> bodies;
     bodies.reserve(walls.size());
     for (const Wall& w : walls) bodies.push_back(body_of(w));

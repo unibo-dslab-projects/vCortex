@@ -319,16 +319,10 @@ std::vector<OutlineSide> find_room_outline(const FreeSpace& space, std::uint32_t
 }  // namespace
 
 std::vector<std::vector<OutlineSide>> find_room_outlines(const FreeSpace& space, const Grid& grid,
-                                                         const std::vector<LidarPoint>& aligned,
-                                                         const Plane& floor, double band_top_metres,
                                                          const OutlineParams& parameters) {
-    // same points and cell as grid, so the same cells: room_of_cell indexes both
-    const Grid band_grid =
-        build_grid(aligned, floor, parameters.band_lo, band_top_metres, grid.cell);
     std::vector<std::vector<OutlineSide>> outlines(space.room_count);
-    if (band_grid.column.size() != space.room_of_cell.size()) return outlines;
     for (std::uint32_t room = 1; room <= space.room_count; ++room) {
-        outlines[room - 1] = find_room_outline(space, room, band_grid, parameters);
+        outlines[room - 1] = find_room_outline(space, room, grid, parameters);
     }
     return outlines;
 }

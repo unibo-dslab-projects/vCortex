@@ -32,7 +32,8 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     rep.points_in = snap.points.size();
 
     // cleaning
-    std::vector<LidarPoint> pts = drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
+    std::vector<LidarPoint> pts =
+        drop_outliers(snap.points, settings.outlier_mean_k, settings.outlier_stddev_mul);
     rep.after_outliers = pts.size();
 
     // floor; heights are taken above the plane, so the cloud is never levelled
@@ -68,13 +69,15 @@ ModelResult run_model(const Snapshot& snap, const Trajectory& traj, const ModelS
     aligned_floor.a = aligned_slope.x();
     aligned_floor.b = aligned_slope.y();
     // rooms on the floor, then the outline of each: the wall faces met walking out of it
-    const Grid grid = build_grid(aligned, aligned_floor, band_lo, band_hi, cp.cell);
+    // from outline.band_lo, not band_lo: wall and glass bases under it bound the rooms too
+    const Grid grid =
+        build_grid(aligned, aligned_floor, settings.outline.band_lo, band_hi, cp.cell);
     const FreeSpace space =
         find_floor_rooms(aligned, aligned_floor, grid, aligned_traj, settings.free_space);
     rep.free_space_area = space.area;
     rep.free_space_rooms = space.room_count;
     const std::vector<std::vector<OutlineSide>> room_outlines =
-        find_room_outlines(space, grid, aligned, aligned_floor, band_hi, settings.outline);
+        find_room_outlines(space, grid, settings.outline);
     for (const std::vector<OutlineSide>& room_outline : room_outlines) {
         rep.outline_sides += room_outline.size();
     }

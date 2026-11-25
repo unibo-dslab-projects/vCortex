@@ -127,6 +127,7 @@ if(BUILD_TESTING)
     tests/model/wall/outline_test.cpp
     tests/model/wall/outline_steps_test.cpp
     tests/model/grid_test.cpp
+    tests/model/model_test.cpp
     tests/model/wall/walls_test.cpp
     tests/model/object/boxes_test.cpp
   )

@@ -40,8 +40,7 @@ TEST_CASE("each room gets its own outline, and the wall between them is in both"
     const FreeSpace space = find_floor_rooms(drawing.points, test::kFlatFloor, drawing.grid,
                                              drawing.poses, FreeSpaceParams{});
     const std::vector<std::vector<OutlineSide>> outlines =
-        find_room_outlines(space, drawing.grid, drawing.points, test::kFlatFloor,
-                           test::detail::kBandHighMetres, OutlineParams{});
+        find_room_outlines(space, drawing.grid, OutlineParams{});
 
     REQUIRE(outlines.size() == 2);
     CHECK(outlines[0].size() == 4);
@@ -68,8 +67,7 @@ std::optional<OutlineSide> east_side_of_open_top_room(int floor_rows) {
     const FreeSpace space = find_floor_rooms(drawing.points, test::kFlatFloor, drawing.grid,
                                              drawing.poses, FreeSpaceParams{});
     const std::vector<std::vector<OutlineSide>> outlines =
-        find_room_outlines(space, drawing.grid, drawing.points, test::kFlatFloor,
-                           test::detail::kBandHighMetres, OutlineParams{});
+        find_room_outlines(space, drawing.grid, OutlineParams{});
     REQUIRE(outlines.size() == 1);
     return side_facing(outlines[0], Axis::X, 1);
 }

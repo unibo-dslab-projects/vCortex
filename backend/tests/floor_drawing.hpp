@@ -18,6 +18,7 @@ namespace vcortex::test {
 ///   '.'  floor seen
 ///   '#'  wall: floor, low points (10-30 cm) and tall points (1.0, 1.8 m)
 ///   'd'  desk: floor, low points and its top (0.75 m), nothing tall
+///   'g'  glass wall: floor and its base (10-30 cm); the lidar sees through the rest
 ///   'P'  floor seen, with a robot pose in the middle
 ///   ' '  nothing seen
 /// Each character gets 4 x 4 points 2.5 cm apart, so every 5 cm grid cell holds
@@ -44,9 +45,9 @@ namespace detail {
 constexpr double kCharacterMetres = 0.10;
 constexpr int kPointsPerCharacterSide = 4;
 constexpr double kGridCellMetres = 0.05;
-// band of run_model with the default wall height 2.70 m: candidates.band_lo
+// band of run_model's grid with the default wall height 2.70 m: outline.band_lo
 // to 2.70 - 0.10
-constexpr double kBandLowMetres = 0.30;
+constexpr double kBandLowMetres = 0.10;
 constexpr double kBandHighMetres = 2.60;
 
 inline std::vector<double> heights_of(char symbol) {
@@ -58,6 +59,8 @@ inline std::vector<double> heights_of(char symbol) {
             return {0.0, 0.15, 0.25, 1.0, 1.8};
         case 'd':
             return {0.0, 0.15, 0.25, 0.75};
+        case 'g':
+            return {0.0, 0.15, 0.25};
         default:
             return {};
     }

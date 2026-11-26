@@ -9,9 +9,9 @@
 #include <utility>
 
 #include "vcortex/io/config.hpp"
-#include "vcortex/io/store.hpp"
 #include "vcortex/io/offline.hpp"
 #include "vcortex/io/server.hpp"
+#include "vcortex/io/store.hpp"
 
 namespace {
 

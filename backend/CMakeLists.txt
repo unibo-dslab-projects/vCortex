@@ -135,6 +135,12 @@ if(BUILD_TESTING)
   target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)
   add_test(NAME vcortex_tests COMMAND vcortex_tests)
+  # a port outside 1..65535 gets the usage message, not a wrapped port; the timeout catches a
+  # server that starts instead
+  add_test(NAME vcortex_refuses_port_0 COMMAND vcortex --port 0)
+  add_test(NAME vcortex_refuses_port_70000 COMMAND vcortex --port 70000)
+  set_tests_properties(vcortex_refuses_port_0 vcortex_refuses_port_70000 PROPERTIES
+    PASS_REGULAR_EXPRESSION "usage" TIMEOUT 5)
 endif()
 
 install(TARGETS vcortex RUNTIME DESTINATION bin)

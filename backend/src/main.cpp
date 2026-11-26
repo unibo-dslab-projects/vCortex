@@ -3,6 +3,7 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -19,6 +20,9 @@ using namespace vcortex;
 
 // a saved pcd need not hold one point per 5 cm voxel: 0.1 mm keeps its points apart
 constexpr double kOfflineVoxel = 0.0001;
+
+constexpr const char* kUsage =
+    "usage: vcortex [--port 9002] [--config model.json] [--map map.pcd]\n";
 
 void load_map(MapStore& store, const std::filesystem::path& file) {
     const OfflineInput in = load_offline(file);
@@ -51,13 +55,20 @@ int main(int argc, char** argv) {
         for (int i = 1; i < argc; ++i) {
             const std::string_view arg = argv[i];
             if (arg == "--port" && i + 1 < argc) {
-                port = static_cast<std::uint16_t>(std::stoi(argv[++i]));
+                // port 0 would let the system pick a random one
+                const int requested_port = std::stoi(argv[++i]);
+                if (requested_port < 1 ||
+                    requested_port > std::numeric_limits<std::uint16_t>::max()) {
+                    std::cerr << kUsage;
+                    return EXIT_FAILURE;
+                }
+                port = static_cast<std::uint16_t>(requested_port);
             } else if (arg == "--config" && i + 1 < argc) {
                 config_file = argv[++i];
             } else if (arg == "--map" && i + 1 < argc) {
                 map_file = argv[++i];
             } else {
-                std::cerr << "usage: vcortex [--port 9002] [--config model.json] [--map map.pcd]\n";
+                std::cerr << kUsage;
                 return EXIT_FAILURE;
             }
         }

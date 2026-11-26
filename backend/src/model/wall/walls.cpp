@@ -155,10 +155,12 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const WallParams& p
 }
 
 /// Closes corners of wall pieces by snapping their ends to the centerline of a perpendicular wall
-/// within corner_gap, extending or trimming them as needed.
+/// within corner_gap, extending or trimming them as needed. Each end snaps only to walls on its
+/// own half of the piece, so a short piece never has both ends on one wall and no length left.
 void close_corners(std::vector<Piece>& walls, const WallParams& p) {
     const std::vector<Piece> before = walls;
     for (Piece& w : walls) {
+        const double middle = (w.from + w.to) / 2.0;
         for (double* end : {&w.from, &w.to}) {
             double best = std::numeric_limits<double>::max();
             for (const Piece& q : before) {
@@ -166,12 +168,12 @@ void close_corners(std::vector<Piece>& walls, const WallParams& p) {
                     w.center > q.to + p.corner_gap) {
                     continue;
                 }
+                if (end == &w.from ? q.center >= middle : q.center <= middle) continue;
                 const double d = std::abs(q.center - *end);
                 if (d <= p.corner_gap + kEps && d < std::abs(best - *end)) best = q.center;
             }
             if (best != std::numeric_limits<double>::max()) *end = best;
         }
-        if (w.from > w.to) std::swap(w.from, w.to);
     }
 }
 

@@ -218,7 +218,8 @@ WallsAndFurniture find_walls(const std::vector<std::vector<OutlineSide>>& room_o
         wall.id = "wall-" + std::to_string(i + 1);
         wall.start = w.axis == Axis::X ? Eigen::Vector2d{w.center, w.from}
                                        : Eigen::Vector2d{w.from, w.center};
-        wall.end = w.axis == Axis::X ? Eigen::Vector2d{w.center, w.to} : Eigen::Vector2d{w.to, w.center};
+        wall.end =
+            w.axis == Axis::X ? Eigen::Vector2d{w.center, w.to} : Eigen::Vector2d{w.to, w.center};
         wall.thickness = w.thickness;
         out.walls.push_back(wall);
     }
@@ -230,7 +231,8 @@ WallsAndFurniture find_walls(const std::vector<std::vector<OutlineSide>>& room_o
         std::size_t nearest = walls.size();
         double nearest_d = p.object_clearance + kEps;
         for (std::size_t i = 0; i < walls.size(); ++i) {
-            const double d = distance_from_point_to_wall(pt.position.x(), pt.position.y(), walls[i]);
+            const double d =
+                distance_from_point_to_wall(pt.position.x(), pt.position.y(), walls[i]);
             if (d <= nearest_d) {
                 nearest = i;
                 nearest_d = d;

@@ -10,6 +10,7 @@ namespace {
 constexpr Direction kEast{Axis::X, 1};
 constexpr Direction kWest{Axis::X, -1};
 constexpr Direction kNorth{Axis::Y, 1};
+constexpr Direction kSouth{Axis::Y, -1};
 
 const Plane kFlatFloor{0.0, 0.0, 0.0};
 
@@ -80,6 +81,20 @@ TEST_CASE("a short wall near a corner keeps its length") {
         result.walls[0].start.x() == doctest::Approx(1.75) ? result.walls[0] : result.walls[1];
     CHECK(short_wall.start.y() == doctest::Approx(0.0));
     CHECK(short_wall.end.y() == doctest::Approx(0.45));
+}
+
+TEST_CASE("a point diagonally past a room corner is not furniture") {
+    // room 0..10 m on both axes; (10.5, 10.5) has no side facing it, yet lies outside
+    const std::vector<OutlineSide> faces = {{kEast, 10.0, 0.0, 10.0},
+                                            {kWest, 0.0, 0.0, 10.0},
+                                            {kNorth, 10.0, 0.0, 10.0},
+                                            {kSouth, 0.0, 0.0, 10.0}};
+    const std::vector<LidarPoint> aligned = {{{5.0F, 5.0F, 1.0F}}, {{10.5F, 10.5F, 1.0F}}};
+    const WallsAndFurniture result =
+        find_walls({faces}, aligned, kFlatFloor, 0.3, 2.6, WallParams{});
+
+    REQUIRE(result.furniture_points.size() == 1);
+    CHECK(result.furniture_points[0].position.x() == doctest::Approx(5.0));
 }
 
 }  // namespace

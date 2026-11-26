@@ -8,6 +8,8 @@
 #include <tuple>
 #include <utility>
 
+#include <Eigen/Geometry>
+
 #include "vcortex/geometry/vectors.hpp"
 
 namespace vcortex {
@@ -192,12 +194,29 @@ bool is_out_outline_side(Axis axis, double normal_coordinate, double along_coord
     return false;
 }
 
-// inside when past no side of the outline by more than clearance, on either axis
+// the box around every side's ends; empty for an empty outline
+Eigen::AlignedBox2d find_outline_box(const std::vector<OutlineSide>& outline) {
+    Eigen::AlignedBox2d box;
+    for (const OutlineSide& side : outline) {
+        for (const double along : {side.from, side.to}) {
+            box.extend(side.direction.axis == Axis::X ? Eigen::Vector2d{side.face, along}
+                                                      : Eigen::Vector2d{along, side.face});
+        }
+    }
+    return box;
+}
+
+// inside when within the outline's box grown by clearance and past no side by more than it;
+// the box catches points past a corner, where no side faces them
 bool is_inside_any_outline(double x, double y,
                            const std::vector<std::vector<OutlineSide>>& room_outlines,
                            double clearance) {
     for (const std::vector<OutlineSide>& outline : room_outlines) {
-        if (!is_out_outline_side(Axis::X, x, y, outline, -clearance) &&
+        const Eigen::AlignedBox2d box = find_outline_box(outline);
+        const Eigen::Vector2d grow = Eigen::Vector2d::Constant(clearance);
+        const Eigen::AlignedBox2d grown_box(box.min() - grow, box.max() + grow);
+        if (grown_box.contains(Eigen::Vector2d{x, y}) &&
+            !is_out_outline_side(Axis::X, x, y, outline, -clearance) &&
             !is_out_outline_side(Axis::Y, y, x, outline, -clearance)) {
             return true;
         }

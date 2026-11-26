@@ -9,6 +9,7 @@ namespace {
 
 constexpr Direction kEast{Axis::X, 1};
 constexpr Direction kWest{Axis::X, -1};
+constexpr Direction kNorth{Axis::Y, 1};
 
 const Plane kFlatFloor{0.0, 0.0, 0.0};
 
@@ -38,11 +39,11 @@ TEST_CASE("a face seen from one room only makes a wall of default thickness behi
     CHECK(result.walls[0].thickness == doctest::Approx(0.10));
 }
 
-// one room's east faces, 0.10 m thick walls: each centerline is 5 cm behind its face
-WallsAndFurniture walls_behind(const std::vector<OutlineSide>& east_faces) {
+// one room's faces, 0.10 m thick walls: each centerline is 5 cm behind its face
+WallsAndFurniture walls_behind(const std::vector<OutlineSide>& faces) {
     WallParams parameters;
     parameters.thickness = 0.10;
-    return find_walls({east_faces}, {}, kFlatFloor, 0.3, 2.6, parameters);
+    return find_walls({faces}, {}, kFlatFloor, 0.3, 2.6, parameters);
 }
 
 TEST_CASE("pieces each near the next do not chain into one wall") {
@@ -66,6 +67,19 @@ TEST_CASE("a short stray piece at the end of a line does not split the wall") {
     REQUIRE(result.walls.size() == 1);
     CHECK(result.walls[0].start.x() ==
           doctest::Approx((1.71 * 0.3 + 1.76 + 1.80 * 2.0 + 1.84) / 4.3));
+}
+
+TEST_CASE("a short wall near a corner keeps its length") {
+    // wall at x = 1.75 from y = 0 to 0.6; a perpendicular wall's centerline at y = 0.45 is within
+    // corner_gap of both ends, but only the near end, to, snaps to it
+    const WallsAndFurniture result =
+        walls_behind({{kEast, 1.70, 0.0, 0.6}, {kNorth, 0.40, 0.0, 1.70}});
+
+    REQUIRE(result.walls.size() == 2);
+    const Wall& short_wall =
+        result.walls[0].start.x() == doctest::Approx(1.75) ? result.walls[0] : result.walls[1];
+    CHECK(short_wall.start.y() == doctest::Approx(0.0));
+    CHECK(short_wall.end.y() == doctest::Approx(0.45));
 }
 
 }  // namespace

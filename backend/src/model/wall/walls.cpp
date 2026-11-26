@@ -6,6 +6,7 @@
 #include <limits>
 #include <string>
 #include <tuple>
+#include <utility>
 
 #include "vcortex/geometry/vectors.hpp"
 
@@ -84,24 +85,40 @@ std::vector<Piece> make_pieces(const std::vector<OutlineSide>& sides, double wal
     return pieces;
 }
 
-/// Joins pieces on one line across gaps up to min_gap into one wall; center and thickness
+/// The pieces split into lines: the longest piece left opens a line, and every piece left with
+/// its axis and side, and its center within collinear_tolerance of the longest's, joins it.
+/// The longest leads because it was seen over the most metres: a short stray piece never
+/// decides where a line is, and a chain of pieces each near the next never grows past it.
+std::vector<std::vector<Piece>> group_into_lines(std::vector<Piece> pieces,
+                                                 double collinear_tolerance) {
+    std::stable_sort(pieces.begin(), pieces.end(), [](const Piece& a, const Piece& b) {
+        return piece_length(a) > piece_length(b);
+    });
+    std::vector<std::vector<Piece>> lines;
+    std::vector<bool> is_grouped(pieces.size(), false);
+    for (std::size_t i = 0; i < pieces.size(); ++i) {
+        if (is_grouped[i]) continue;
+        const Piece& longest = pieces[i];
+        std::vector<Piece> line;
+        for (std::size_t j = i; j < pieces.size(); ++j) {
+            const Piece& piece = pieces[j];
+            if (is_grouped[j] || piece.axis != longest.axis || piece.interior != longest.interior ||
+                std::abs(piece.center - longest.center) > collinear_tolerance + kEps) {
+                continue;
+            }
+            is_grouped[j] = true;
+            line.push_back(piece);
+        }
+        lines.push_back(std::move(line));
+    }
+    return lines;
+}
+
+/// Joins the pieces of each line across gaps up to min_gap into one wall; center and thickness
 /// become the means weighted by length.
 std::vector<Piece> join_collinear(std::vector<Piece> pieces, const WallParams& p) {
-    std::sort(pieces.begin(), pieces.end(), [](const Piece& a, const Piece& b) {
-        return std::tie(a.axis, a.interior, a.center) < std::tie(b.axis, b.interior, b.center);
-    });
     std::vector<Piece> out;
-    std::size_t i = 0;
-    while (i < pieces.size()) {
-        std::size_t j = i + 1;
-        // looking for the pieces on the same line
-        while (j < pieces.size() && pieces[j].axis == pieces[i].axis &&
-               pieces[j].interior == pieces[i].interior &&
-               pieces[j].center - pieces[j - 1].center <= p.collinear_tolerance + kEps) {
-            ++j;
-        }
-        std::vector<Piece> line(pieces.begin() + static_cast<std::ptrdiff_t>(i),
-                                pieces.begin() + static_cast<std::ptrdiff_t>(j));
+    for (std::vector<Piece>& line : group_into_lines(std::move(pieces), p.collinear_tolerance)) {
         std::sort(line.begin(), line.end(),
                   [](const Piece& a, const Piece& b) { return a.from < b.from; });
         Piece cur = line.front();
@@ -133,7 +150,6 @@ std::vector<Piece> join_collinear(std::vector<Piece> pieces, const WallParams& p
             }
         }
         flush();
-        i = j;
     }
     return out;
 }

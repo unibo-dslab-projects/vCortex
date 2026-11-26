@@ -57,7 +57,8 @@ struct IngestFrame {
     std::vector<Pose> poses;
 };
 
-// throws std::invalid_argument on a short frame, an unknown kind or a wrong size
+// throws std::invalid_argument on a short frame, an unknown kind, a wrong size, or a point or
+// pose that is not finite
 IngestFrame decode_frame(const std::string& bytes);
 
 }  // namespace vcortex

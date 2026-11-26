@@ -45,6 +45,10 @@ IngestFrame decode_frame(const std::string& bytes) {
             p.position.y() = static_cast<double>(read_at<float>(bytes, at + 12));
             p.position.z() = static_cast<double>(read_at<float>(bytes, at + 16));
             p.yaw = static_cast<double>(read_at<float>(bytes, at + 20));
+            // a cell index from nan is undefined behaviour
+            if (!p.position.allFinite() || !std::isfinite(p.yaw)) {
+                throw std::invalid_argument("frame holds a pose that is not finite");
+            }
             frame.poses.push_back(p);
         } else {
             LidarPoint p;

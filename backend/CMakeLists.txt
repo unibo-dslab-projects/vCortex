@@ -128,9 +128,11 @@ if(BUILD_TESTING)
     tests/model/wall/outline_steps_test.cpp
     tests/model/grid_test.cpp
     tests/model/model_test.cpp
+    tests/model/settings_test.cpp
     tests/protocol/ingest_test.cpp
     tests/model/wall/walls_test.cpp
     tests/model/object/boxes_test.cpp
+    tests/model/object/object_grid_test.cpp
   )
   target_include_directories(vcortex_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
   target_link_libraries(vcortex_tests PRIVATE vcortex_core doctest::doctest vcortex_warnings)

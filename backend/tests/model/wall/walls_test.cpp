@@ -28,6 +28,23 @@ TEST_CASE("the faces of a wall seen from two rooms make one wall as thick as the
     CHECK(result.walls[0].thickness == doctest::Approx(0.12));
 }
 
+TEST_CASE("a corridor face paired with one of two rooms makes one wall, not two") {
+    // corridor east face at x = 5.0 pairs with room B (y 0-5); room C (y 6-10) is left alone,
+    // its 0.10 m piece centered at 5.15 lies on the same line as the paired one at 5.10
+    const std::vector<std::vector<OutlineSide>> room_outlines = {
+        {{kEast, 5.0, 0.0, 10.0}},
+        {{kWest, 5.2, 0.0, 5.0}},
+        {{kWest, 5.2, 6.0, 10.0}},
+    };
+    WallParams parameters;
+    parameters.thickness = 0.10;
+    const WallsAndFurniture result =
+        find_walls(room_outlines, {}, kFlatFloor, 0.3, 2.6, parameters);
+
+    REQUIRE(result.walls.size() == 1);
+    CHECK(result.walls[0].start.x() == doctest::Approx((5.1 * 10.0 + 5.15 * 4.0) / 14.0));
+}
+
 TEST_CASE("a face seen from one room only makes a wall of default thickness behind it") {
     const std::vector<std::vector<OutlineSide>> room_outlines = {{{kEast, 1.70, 0.0, 3.0}}};
     WallParams parameters;

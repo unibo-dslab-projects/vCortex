@@ -55,13 +55,13 @@ The first message must be a hello. Anything else closes the connection.
 | `type` | yes | Always `"hello"` |
 | `protocol` | yes | Must be `2`. Another number is refused |
 | `token` | only if the backend has one | Must equal `VCORTEX_INGEST_TOKEN` |
-| `frame_id` | yes | Name of the map frame. Not empty |
-| `voxel_size` | yes | Side of one cube, in metres. More than 0 |
+| `frame_id` | yes | Name of the map frame. Not empty, no control characters (like a new line) |
+| `voxel_size` | yes | Side of one cube, in metres. From 0.0001 to 1 |
 | `source` | no | A name, shown in the status answer |
 
 The backend answers `{"type":"welcome"}`. If the hello is wrong, it closes with code **1008**
 and the reason in words: `unsupported protocol`, `bad token`, `hello first`,
-`bad frame_id or voxel_size`.
+`bad frame_id`, `bad voxel_size`.
 
 ### One header for every binary message
 

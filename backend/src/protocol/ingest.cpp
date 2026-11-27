@@ -1,5 +1,6 @@
 #include "vcortex/protocol/ingest.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <stdexcept>
@@ -18,6 +19,18 @@ T read_at(const std::string& bytes, std::size_t offset) {
 }
 
 }  // namespace
+
+bool is_valid_voxel_size(double voxel_size_metres) {
+    return voxel_size_metres >= kMinVoxelSizeMetres && voxel_size_metres <= kMaxVoxelSizeMetres;
+}
+
+bool is_valid_frame_id(const std::string& frame_id) {
+    // utf-8 bytes are 0x80 and up, so names in any language pass
+    const auto is_control = [](unsigned char character) {
+        return character < 0x20 || character == 0x7F;
+    };
+    return !frame_id.empty() && std::none_of(frame_id.begin(), frame_id.end(), is_control);
+}
 
 IngestFrame decode_frame(const std::string& bytes) {
     if (bytes.size() < kFrameHeaderSize) throw std::invalid_argument("frame shorter than a header");

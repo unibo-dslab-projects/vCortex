@@ -263,8 +263,9 @@ void WebServer::raw_send_delta(const std::string& delta_frame) {
 
 void WebServer::twin_open(Connection& conn) {
     const auto* connector = static_cast<const Connector*>(conn.userdata());
-    const std::shared_ptr<const ModelOutput> latest = worker_.latest();
     const std::lock_guard<std::mutex> lock(clients_mutex_);
+    // read under the lock: publish holds it too, so no model slips between read and subscribe
+    const std::shared_ptr<const ModelOutput> latest = worker_.latest();
     twin_[connector->id].insert(&conn);
     if (!latest) return;
     const auto bytes = latest->by_format.find(connector->id);

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "vcortex/geometry/grids.hpp"
@@ -22,10 +24,18 @@ ObjectGrid build_object_grid(const std::vector<LidarPoint>& furniture_points, co
     // adding padding to support spatial algorithms boundary conditions
     const double padding_metres = padding_cells * cell;
     grid.origin = {bounds.min().x() - padding_metres, bounds.min().y() - padding_metres};
-    grid.width = static_cast<int>(std::floor((bounds.max().x() - bounds.min().x()) / cell)) + 1 +
-                 2 * padding_cells;
-    grid.height = static_cast<int>(std::floor((bounds.max().y() - bounds.min().y()) / cell)) + 1 +
-                  2 * padding_cells;
+    // as doubles: a huge span would overflow an int before the size check
+    const double width =
+        std::floor((bounds.max().x() - bounds.min().x()) / cell) + 1 + 2 * padding_cells;
+    const double height =
+        std::floor((bounds.max().y() - bounds.min().y()) / cell) + 1 + 2 * padding_cells;
+    if (width * height > static_cast<double>(kMaxGridCells)) {
+        throw std::runtime_error(
+            "build_object_grid: objects span " + std::to_string(bounds.sizes().x()) + " x " +
+            std::to_string(bounds.sizes().y()) + " m, too large for one level");
+    }
+    grid.width = static_cast<int>(width);
+    grid.height = static_cast<int>(height);
 
     const auto cell_count =
         static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height);

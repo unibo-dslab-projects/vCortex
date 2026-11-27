@@ -11,14 +11,6 @@
 
 namespace vcortex {
 
-namespace {
-
-// 300 MB of counts and means (205 m square at 5 cm); a bigger grid means a stray point far
-// away, not a building
-constexpr std::size_t kMaxCells = std::size_t{1} << 24;
-
-}  // namespace
-
 Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, double band_lo,
                 double band_hi, double cell) {
     if (!(cell > 0.0)) {
@@ -46,7 +38,7 @@ Grid build_grid(const std::vector<LidarPoint>& aligned, const Plane& floor, doub
                    std::floor(bounds.min().y() / cell) * cell};
     const double w = std::floor((bounds.max().x() - grid.origin.x()) / cell) + 1.0;
     const double h = std::floor((bounds.max().y() - grid.origin.y()) / cell) + 1.0;
-    if (w * h > static_cast<double>(kMaxCells)) {
+    if (w * h > static_cast<double>(kMaxGridCells)) {
         throw std::runtime_error("build_grid: band spans " + std::to_string(bounds.sizes().x()) +
                                  " x " + std::to_string(bounds.sizes().y()) +
                                  " m, too large for one level");

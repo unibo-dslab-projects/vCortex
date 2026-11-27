@@ -20,7 +20,8 @@ struct ObjectGrid {
     std::vector<std::size_t> cell_of_point;
 };
 
-/// Build the map of furniture points onto a grid, for object detection.
+/// Build the map of furniture points onto a grid, for object detection. Throws when the points
+/// would need more than kMaxGridCells cells, padding included.
 ObjectGrid build_object_grid(const std::vector<LidarPoint>& furniture_points, const Plane& floor,
                              double cell, int padding_cells, int cell_min_points);
 

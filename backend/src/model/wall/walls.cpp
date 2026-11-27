@@ -26,8 +26,6 @@ struct Piece {
     Axis axis = Axis::X;
     double center = 0.0, thickness = 0.0;
     double from = 0.0, to = 0.0;
-    // +1 room at larger normal coordinate, -1 at smaller, 0 rooms on both sides
-    int interior = 0;
 };
 
 double piece_length(const Piece& piece) { return piece.to - piece.from; }
@@ -80,7 +78,6 @@ std::vector<Piece> make_pieces(const std::vector<OutlineSide>& sides, double wal
             piece.thickness = wall_thickness;
             piece.from = side.from;
             piece.to = side.to;
-            piece.interior = -side.direction.outward;
         }
         pieces.push_back(piece);
     }
@@ -88,7 +85,7 @@ std::vector<Piece> make_pieces(const std::vector<OutlineSide>& sides, double wal
 }
 
 /// The pieces split into lines: the longest piece left opens a line, and every piece left with
-/// its axis and side, and its center within collinear_tolerance of the longest's, joins it.
+/// its axis, and its center within collinear_tolerance of the longest's, joins it.
 /// The longest leads because it was seen over the most metres: a short stray piece never
 /// decides where a line is, and a chain of pieces each near the next never grows past it.
 std::vector<std::vector<Piece>> group_into_lines(std::vector<Piece> pieces,
@@ -104,7 +101,7 @@ std::vector<std::vector<Piece>> group_into_lines(std::vector<Piece> pieces,
         std::vector<Piece> line;
         for (std::size_t j = i; j < pieces.size(); ++j) {
             const Piece& piece = pieces[j];
-            if (is_grouped[j] || piece.axis != longest.axis || piece.interior != longest.interior ||
+            if (is_grouped[j] || piece.axis != longest.axis ||
                 std::abs(piece.center - longest.center) > collinear_tolerance + kEps) {
                 continue;
             }

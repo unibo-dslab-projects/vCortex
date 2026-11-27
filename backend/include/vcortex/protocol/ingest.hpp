@@ -16,6 +16,10 @@ namespace vcortex {
 inline constexpr int kIngestProtocol = 2;
 inline constexpr std::size_t kFrameHeaderSize = 16;
 
+// below 0.1 mm a point at a few metres overflows the int voxel key; above 1 m a room is one voxel
+inline constexpr double kMinVoxelSizeMetres = 1e-4;
+inline constexpr double kMaxVoxelSizeMetres = 1.0;
+
 enum class FrameKind : std::uint8_t {
     Map = 1,    // every voxel; seq = last delta included
     Delta = 2,  // new and updated voxels; replace by key; seq = this delta
@@ -56,6 +60,12 @@ struct IngestFrame {
     std::vector<LidarPoint> points;
     std::vector<Pose> poses;
 };
+
+// both ends count; false for nan
+bool is_valid_voxel_size(double voxel_size_metres);
+
+// not empty, no control characters: the name goes into the ply header, where a newline ends it
+bool is_valid_frame_id(const std::string& frame_id);
 
 // throws std::invalid_argument on a short frame, an unknown kind, a wrong size, or a point or
 // pose that is not finite

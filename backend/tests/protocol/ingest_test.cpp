@@ -38,5 +38,23 @@ TEST_CASE("a pose that is not finite is refused") {
     CHECK_THROWS_AS(decode_frame(one_pose_frame(1.5F, infinity)), std::invalid_argument);
 }
 
+TEST_CASE("a voxel size is accepted only from 0.1 mm to 1 m") {
+    CHECK(is_valid_voxel_size(0.05));
+    CHECK(is_valid_voxel_size(kMinVoxelSizeMetres));
+    CHECK(is_valid_voxel_size(kMaxVoxelSizeMetres));
+    CHECK_FALSE(is_valid_voxel_size(1e-9));
+    CHECK_FALSE(is_valid_voxel_size(1.5));
+    CHECK_FALSE(is_valid_voxel_size(0.0));
+    CHECK_FALSE(is_valid_voxel_size(std::numeric_limits<double>::quiet_NaN()));
+}
+
+TEST_CASE("a frame id is refused when empty or holding a control character") {
+    CHECK(is_valid_frame_id("camera_init"));
+    CHECK(is_valid_frame_id("caméra"));
+    CHECK_FALSE(is_valid_frame_id(""));
+    CHECK_FALSE(is_valid_frame_id("map\nend_header"));
+    CHECK_FALSE(is_valid_frame_id("map\x7F"));
+}
+
 }  // namespace
 }  // namespace vcortex

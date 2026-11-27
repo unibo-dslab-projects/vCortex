@@ -310,9 +310,8 @@ void WebServer::ingest_hello(Connection& conn, const std::string& text) {
         }
         const auto frame_id = hello.at("frame_id").get<std::string>();
         const auto voxel_size = hello.at("voxel_size").get<double>();
-        if (frame_id.empty() || !(voxel_size > 0.0)) {
-            throw std::invalid_argument("bad frame_id or voxel_size");
-        }
+        if (!is_valid_frame_id(frame_id)) throw std::invalid_argument("bad frame_id");
+        if (!is_valid_voxel_size(voxel_size)) throw std::invalid_argument("bad voxel_size");
         source_ = hello.value("source", "");
         store_.reset(frame_id, voxel_size);
     } catch (const std::exception& e) {
